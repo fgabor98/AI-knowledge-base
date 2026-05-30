@@ -55,7 +55,7 @@ This is the most important Bash topic. Most serious shell bugs come from misunde
 
 Planned pages:
 
-- `quoting.md`
+- [Quoting](quoting.md)
 - `variables-and-expansion.md`
 
 ### 3. Control Flow And Status
@@ -72,7 +72,7 @@ Bash control flow is built around command exit status, not boolean values in the
 
 Planned pages:
 
-- `exit-codes.md`
+- [Exit Codes](exit-codes.md)
 - `conditionals.md`
 
 ### 4. Script Structure
@@ -90,7 +90,7 @@ Once the basics are clear, focus on writing scripts that are readable and mainta
 Planned pages:
 
 - `functions.md`
-- `robust-scripts.md`
+- [Robust Scripts](robust-scripts.md)
 
 ### 5. Input, Output, And Processes
 
@@ -150,9 +150,9 @@ Planned page:
 
 Create the first detailed pages in this order:
 
-1. `quoting.md`
-2. `exit-codes.md`
-3. `robust-scripts.md`
+1. [Quoting](quoting.md)
+2. [Exit Codes](exit-codes.md)
+3. [Robust Scripts](robust-scripts.md)
 4. `redirection-and-pipes.md`
 5. `traps-and-cleanup.md`
 

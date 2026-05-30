@@ -33,7 +33,10 @@ nav:
   - C:
       - c/index.md
   - Bash:
-      - bash/index.md
+      - Overview: bash/index.md
+      - Quoting: bash/quoting.md
+      - Exit Codes: bash/exit-codes.md
+      - Robust Scripts: bash/robust-scripts.md
   - Python:
       - python/index.md
   - Linux Kernel:
