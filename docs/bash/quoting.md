@@ -33,10 +33,13 @@ Bash does not pass the text you wrote directly to the command. It parses the com
 A useful mental model is:
 
 1. Write the command line.
-2. Bash expands variables, command substitutions, arithmetic expressions, and globs.
-3. Bash splits unquoted expansion results into words.
-4. Bash removes quotes.
-5. The command receives the final arguments.
+2. Bash performs expansions such as parameter expansion, command substitution, and arithmetic expansion.
+3. Bash applies word splitting to unquoted expansion results.
+4. Bash applies pathname expansion to unquoted glob patterns.
+5. Bash removes quotes.
+6. The command receives the final arguments.
+
+This is simplified, but the important ordering is that unquoted variable output can be split first and then treated as glob patterns.
 
 Quoting is how you tell Bash which parts should survive expansion as data.
 

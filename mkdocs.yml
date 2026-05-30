@@ -37,6 +37,7 @@ nav:
       - Quoting: bash/quoting.md
       - Exit Codes: bash/exit-codes.md
       - Robust Scripts: bash/robust-scripts.md
+      - Review Notes: bash/review-notes.md
   - Python:
       - python/index.md
   - Linux Kernel:

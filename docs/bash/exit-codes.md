@@ -24,7 +24,7 @@ Exit status is how a script decides whether to continue, retry, report a failure
 - `&&` runs the right-hand command only if the left-hand command succeeds.
 - `||` runs the right-hand command only if the left-hand command fails.
 - A pipeline normally returns the status of its last command.
-- `set -o pipefail` makes a pipeline fail when any command in the pipeline fails.
+- `set -o pipefail` makes a pipeline return the rightmost non-zero status when any command in the pipeline fails.
 - `PIPESTATUS` contains the status of each command in the most recent foreground pipeline.
 - Functions return the status of their last command unless they use `return`.
 
@@ -92,6 +92,8 @@ Important special cases:
 ## Minimal Example
 
 ```bash
+dir=$1
+
 if mkdir -- "$dir"; then
     printf 'created: %s\n' "$dir"
 else

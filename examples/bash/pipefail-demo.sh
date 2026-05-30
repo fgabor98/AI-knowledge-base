@@ -20,21 +20,21 @@ show_result() {
 }
 
 set +o pipefail
-false | true
+false | cat >/dev/null
 status=$? parts=("${PIPESTATUS[@]}")
-show_result 'Without pipefail: false | true' "$status" "${parts[@]}"
+show_result 'Without pipefail: false | cat >/dev/null' "$status" "${parts[@]}"
 
 set -o pipefail
-false | true
+false | cat >/dev/null
 status=$? parts=("${PIPESTATUS[@]}")
-show_result 'With pipefail: false | true' "$status" "${parts[@]}"
+show_result 'With pipefail: false | cat >/dev/null' "$status" "${parts[@]}"
 
 set +o pipefail
-grep -q -- "needle" /path/that/does/not/exist | true
+grep -q -- "needle" /path/that/does/not/exist | cat >/dev/null
 status=$? parts=("${PIPESTATUS[@]}")
-show_result 'Without pipefail: failed grep hidden by true' "$status" "${parts[@]}"
+show_result 'Without pipefail: failed grep hidden by cat' "$status" "${parts[@]}"
 
 set -o pipefail
-grep -q -- "needle" /path/that/does/not/exist | true
+grep -q -- "needle" /path/that/does/not/exist | cat >/dev/null
 status=$? parts=("${PIPESTATUS[@]}")
 show_result 'With pipefail: failed grep affects pipeline' "$status" "${parts[@]}"

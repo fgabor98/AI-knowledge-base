@@ -90,6 +90,11 @@ Important notes:
 #!/usr/bin/env bash
 set -euo pipefail
 
+(($# == 1)) || {
+    printf 'Usage: %s INPUT\n' "${0##*/}" >&2
+    exit 2
+}
+
 tmpdir=$(mktemp -d)
 cleanup() {
     rm -rf -- "$tmpdir"

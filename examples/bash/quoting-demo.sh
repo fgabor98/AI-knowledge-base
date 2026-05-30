@@ -35,7 +35,7 @@ print_args() {
 
     items=("alpha" "two words" "")
 
-    printf '\nArray expansion with "${items[@]}":\n'
+    printf "\nArray expansion with \"\${items[@]}\":\n"
     print_args "${items[@]}"
 
     printf '\nForwarding positional arguments with "$@":\n'

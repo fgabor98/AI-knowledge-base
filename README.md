@@ -6,7 +6,7 @@ The project is intentionally structured like a small documentation codebase:
 
 - `docs/` contains rendered knowledge pages.
 - `docs/topic-map.md` owns the taxonomy before full pages are written.
-- `docs/templates/` contains the standard page structure.
+- `docs/topic-page-template.md` contains the standard page structure.
 - `examples/` contains executable examples referenced by documentation pages.
 - `prompts/` contains reusable AI prompts for controlled content generation.
 - `checklists/` contains review criteria for turning drafts into trusted notes.
@@ -32,6 +32,14 @@ Build the static site:
 ```sh
 mkdocs build
 ```
+
+Run the Bash documentation and example checks:
+
+```sh
+scripts/validate-bash.sh
+```
+
+This check expects `shellcheck` to be installed.
 
 ## Content Workflow
 

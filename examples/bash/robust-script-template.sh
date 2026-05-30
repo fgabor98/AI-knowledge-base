@@ -69,9 +69,9 @@ main() {
     need_command mktemp
 
     tmpdir=$(mktemp -d)
-    local manifest=$tmpdir/files.txt
+    local manifest=$tmpdir/files.bin
 
-    find "$source_dir" -maxdepth 1 -type f -print > "$manifest"
+    find "$source_dir" -maxdepth 1 -type f -print0 > "$manifest"
 
     if ((dry_run)); then
         log "would process files from: $source_dir"
@@ -80,7 +80,7 @@ main() {
     fi
 
     local path
-    while IFS= read -r path; do
+    while IFS= read -r -d '' path; do
         printf 'file: %s\n' "$path"
     done < "$manifest"
 }
