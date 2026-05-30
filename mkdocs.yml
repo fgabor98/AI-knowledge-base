@@ -1,0 +1,52 @@
+site_name: Tech Knowledge Base
+site_description: Programming, Linux, and embedded systems know-how.
+repo_name: knowhow
+theme:
+  name: readthedocs
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+nav:
+  - Home: index.md
+  - Topic Map: topic-map.md
+  - C:
+      - c/index.md
+  - Bash:
+      - bash/index.md
+  - Python:
+      - python/index.md
+  - Linux Kernel:
+      - linux-kernel/index.md
+  - Embedded Linux:
+      - embedded-linux/index.md
+  - Debugging:
+      - debugging/index.md
+  - Networking:
+      - networking/index.md
+  - Build Systems:
+      - build-systems/index.md
+  - Patterns:
+      - patterns/index.md
+  - Templates:
+      - Topic Page: topic-page-template.md
