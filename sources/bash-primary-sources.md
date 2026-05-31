@@ -7,6 +7,7 @@ Primary references for the Bash documentation pages.
 - [GNU Bash Reference Manual](https://www.gnu.org/software/bash/manual/bash.html)
 - [Shell Operation](https://www.gnu.org/software/bash/manual/html_node/Shell-Operation.html)
 - [Invoking Bash](https://www.gnu.org/software/bash/manual/html_node/Invoking-Bash.html)
+- [Looping Constructs](https://www.gnu.org/software/bash/manual/html_node/Looping-Constructs.html)
 - [Quoting](https://www.gnu.org/software/bash/manual/html_node/Quoting.html)
 - [Shell Expansions](https://www.gnu.org/software/bash/manual/html_node/Shell-Expansions.html)
 - [Shell Parameter Expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html)
@@ -58,6 +59,7 @@ Primary references for the Bash documentation pages.
 
 - [ShellCheck wiki](https://www.shellcheck.net/wiki/Home)
 - [SC2046](https://www.shellcheck.net/wiki/SC2046)
+- [SC2045](https://www.shellcheck.net/wiki/SC2045)
 - [SC2086](https://www.shellcheck.net/wiki/SC2086)
 - [SC2154](https://www.shellcheck.net/wiki/SC2154)
 - [SC2206](https://www.shellcheck.net/wiki/SC2206)

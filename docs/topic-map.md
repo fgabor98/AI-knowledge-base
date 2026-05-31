@@ -63,6 +63,7 @@ Beginner:
 - conditionals
 - `case`
 - loops
+- loop control
 - functions
 - robust script structure
 - Bash vs POSIX shell
@@ -85,6 +86,9 @@ Intermediate:
 - shellcheck-driven cleanup
 - logging from scripts
 - argument parsing with `getopts`
+- manual long-option parsing
+- usage messages
+- stdout vs stderr logging
 
 Advanced:
 

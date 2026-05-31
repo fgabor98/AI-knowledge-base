@@ -40,6 +40,7 @@ nav:
           - Variables And Expansion: bash/variables-and-expansion.md
           - Exit Codes: bash/exit-codes.md
           - Conditionals: bash/conditionals.md
+          - Loops: bash/loops.md
           - Functions: bash/functions.md
           - Robust Scripts: bash/robust-scripts.md
           - Bash Vs POSIX Sh: bash/bash-vs-posix-sh.md
@@ -47,6 +48,8 @@ nav:
           - Redirection And Pipes: bash/redirection-and-pipes.md
           - Subshells: bash/subshells.md
           - Read Lines Safely: bash/read-lines-safely.md
+          - Argument Parsing: bash/argument-parsing.md
+          - Logging: bash/logging.md
           - Traps And Cleanup: bash/traps-and-cleanup.md
           - Retries And Timeouts: bash/retries-and-timeouts.md
           - Safe Filesystem Operations: bash/safe-filesystem-operations.md

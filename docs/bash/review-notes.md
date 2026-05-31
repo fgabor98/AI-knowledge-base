@@ -113,3 +113,22 @@ Generated advanced examples:
 Review status:
 
 - These advanced pages are AI-generated drafts and are intentionally not marked reviewed.
+
+## Practical Polish Draft Generation
+
+Generated practical polish pages:
+
+- [Loops](loops.md)
+- [Argument Parsing](argument-parsing.md)
+- [Logging](logging.md)
+
+Generated practical polish examples:
+
+- `examples/bash/loops-demo.sh`
+- `examples/bash/getopts-demo.sh`
+- `examples/bash/manual-args-demo.sh`
+- `examples/bash/logging-demo.sh`
+
+Validation update:
+
+- `scripts/validate-bash.sh` now includes smoke runs for selected example scripts.

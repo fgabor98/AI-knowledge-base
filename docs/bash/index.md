@@ -37,9 +37,10 @@ These pages establish the core mental model and the habits that prevent most she
 3. [Variables And Expansion](variables-and-expansion.md)
 4. [Exit Codes](exit-codes.md)
 5. [Conditionals](conditionals.md)
-6. [Functions](functions.md)
-7. [Robust Scripts](robust-scripts.md)
-8. [Bash Vs POSIX Sh](bash-vs-posix-sh.md)
+6. [Loops](loops.md)
+7. [Functions](functions.md)
+8. [Robust Scripts](robust-scripts.md)
+9. [Bash Vs POSIX Sh](bash-vs-posix-sh.md)
 
 ### Intermediate
 
@@ -48,9 +49,11 @@ These pages cover process composition, input handling, cleanup, and filesystem s
 1. [Redirection And Pipes](redirection-and-pipes.md)
 2. [Subshells](subshells.md)
 3. [Read Lines Safely](read-lines-safely.md)
-4. [Traps And Cleanup](traps-and-cleanup.md)
-5. [Retries And Timeouts](retries-and-timeouts.md)
-6. [Safe Filesystem Operations](safe-filesystem-operations.md)
+4. [Argument Parsing](argument-parsing.md)
+5. [Logging](logging.md)
+6. [Traps And Cleanup](traps-and-cleanup.md)
+7. [Retries And Timeouts](retries-and-timeouts.md)
+8. [Safe Filesystem Operations](safe-filesystem-operations.md)
 
 ### Advanced
 
@@ -82,6 +85,7 @@ Beginner examples:
 - `exit-code-demo.sh`
 - `pipefail-demo.sh`
 - `conditionals-demo.sh`
+- `loops-demo.sh`
 - `functions-demo.sh`
 - `robust-script-template.sh`
 - `bash-vs-posix-demo.sh`
@@ -91,6 +95,9 @@ Intermediate examples:
 - `redirection-demo.sh`
 - `subshell-demo.sh`
 - `read-lines-safely.sh`
+- `getopts-demo.sh`
+- `manual-args-demo.sh`
+- `logging-demo.sh`
 - `trap-cleanup.sh`
 - `retry-demo.sh`
 - `safe-filesystem-operations.sh`
