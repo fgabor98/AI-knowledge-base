@@ -30,6 +30,13 @@ Primary references for the Bash documentation pages.
 - [Bash Builtin Commands](https://www.gnu.org/software/bash/manual/html_node/Bash-Builtins.html)
 - [The Set Builtin](https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html)
 - [Bash POSIX Mode](https://www.gnu.org/software/bash/manual/html_node/Bash-POSIX-Mode.html)
+- [Bash Variables](https://www.gnu.org/software/bash/manual/html_node/Bash-Variables.html)
+- [Lists of Commands](https://www.gnu.org/software/bash/manual/html_node/Lists.html)
+- [Job Control](https://www.gnu.org/software/bash/manual/html_node/Job-Control.html)
+- [Job Control Builtins](https://www.gnu.org/software/bash/manual/html_node/Job-Control-Builtins.html)
+- [Signals](https://www.gnu.org/software/bash/manual/html_node/Signals.html)
+- [Programmable Completion](https://www.gnu.org/software/bash/manual/html_node/Programmable-Completion.html)
+- [Programmable Completion Builtins](https://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html)
 
 ## POSIX
 
@@ -54,3 +61,7 @@ Primary references for the Bash documentation pages.
 - [SC2086](https://www.shellcheck.net/wiki/SC2086)
 - [SC2154](https://www.shellcheck.net/wiki/SC2154)
 - [SC2206](https://www.shellcheck.net/wiki/SC2206)
+
+## Bash Testing
+
+- [Bats-core documentation](https://bats-core.readthedocs.io/)

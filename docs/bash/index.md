@@ -10,7 +10,7 @@ last_reviewed: null
 
 Shell scripting topics focused on robust automation, predictable error handling, and maintainable command-line tooling.
 
-This section should build practical Bash knowledge from the execution model upward. The goal is not to memorize shell syntax, but to understand how Bash expands commands, handles errors, composes processes, and fails in real automation scripts.
+This section builds practical Bash knowledge from the execution model upward. The goal is not to memorize shell syntax, but to understand how Bash expands commands, handles errors, composes processes, and fails in real automation scripts.
 
 ## Scope
 
@@ -22,166 +22,94 @@ The Bash section covers:
 - using functions, arrays, traps, pipes, and redirection correctly
 - knowing when Bash is appropriate and when another language is a better fit
 - recognizing portability differences between Bash and POSIX shell
+- handling advanced failure, process, tracing, security, and portability concerns
 
 ## Learning Path
 
-### 1. Execution Basics
+Follow the pages in this order. Each group builds on the previous one.
 
-Start here to understand what Bash actually does before a command runs.
+### Beginner
 
-- shell execution model
-- simple commands
-- command lookup
-- environment variables
-- exit status
-- scripts vs interactive shell sessions
+These pages establish the core mental model and the habits that prevent most shell bugs.
 
-Planned page:
+1. [Execution Model](execution-model.md)
+2. [Quoting](quoting.md)
+3. [Variables And Expansion](variables-and-expansion.md)
+4. [Exit Codes](exit-codes.md)
+5. [Conditionals](conditionals.md)
+6. [Functions](functions.md)
+7. [Robust Scripts](robust-scripts.md)
+8. [Bash Vs POSIX Sh](bash-vs-posix-sh.md)
 
-- [Execution Model](execution-model.md)
+### Intermediate
 
-### 2. Expansion And Quoting
+These pages cover process composition, input handling, cleanup, and filesystem safety.
 
-This is the most important Bash topic. Most serious shell bugs come from misunderstanding expansion order, word splitting, or globbing.
+1. [Redirection And Pipes](redirection-and-pipes.md)
+2. [Subshells](subshells.md)
+3. [Read Lines Safely](read-lines-safely.md)
+4. [Traps And Cleanup](traps-and-cleanup.md)
+5. [Retries And Timeouts](retries-and-timeouts.md)
+6. [Safe Filesystem Operations](safe-filesystem-operations.md)
 
-- single quotes
-- double quotes
-- unquoted expansion
-- parameter expansion
-- command substitution
-- arithmetic expansion
-- word splitting
-- pathname expansion
+### Advanced
 
-Planned pages:
+These pages are for scripts that manage complex failure behavior, child processes, file descriptors, portability constraints, shell security, or developer tooling.
 
-- [Quoting](quoting.md)
-- [Variables And Expansion](variables-and-expansion.md)
+1. [Errexit And ERR Traps](errexit-and-err-traps.md)
+2. [Advanced File Descriptors](advanced-file-descriptors.md)
+3. [Signals, Process Groups, And Child Processes](signals-process-groups-and-child-processes.md)
+4. [Parallelism And Background Jobs](parallelism-and-background-jobs.md)
+5. [Advanced Parameter Expansion](advanced-parameter-expansion.md)
+6. [Associative Arrays](associative-arrays.md)
+7. [Eval, Injection, And Shell Security](eval-injection-and-shell-security.md)
+8. [Advanced Debugging And Tracing](advanced-debugging-and-tracing.md)
+9. [Programmable Completion](programmable-completion.md)
+10. [Bash Testing](bash-testing.md)
+11. [Portability Matrix](portability-matrix.md)
+12. [Performance Boundaries](performance-boundaries.md)
+13. [ShellCheck Configuration](shellcheck-configuration.md)
 
-### 3. Control Flow And Status
+## Example Inventory
 
-Bash control flow is built around command exit status, not boolean values in the usual programming-language sense.
+Runnable examples live under `examples/bash/` and are referenced from the relevant topic pages.
 
-- `if`, `case`, `while`, and `for`
-- `test`, `[`, and `[[`
-- `$?`
-- `&&` and `||`
-- pipeline status
-- `set -e`
-- `pipefail`
-
-Planned pages:
-
-- [Exit Codes](exit-codes.md)
-- [Conditionals](conditionals.md)
-
-### 4. Script Structure
-
-Once the basics are clear, focus on writing scripts that are readable and maintainable.
-
-- functions
-- local variables
-- argument parsing
-- logging
-- usage messages
-- script layout
-- shellcheck-driven cleanup
-
-Planned pages:
-
-- [Functions](functions.md)
-- [Robust Scripts](robust-scripts.md)
-
-### 5. Input, Output, And Processes
-
-Bash is strongest when connecting programs. This part should explain process composition precisely.
-
-- pipes
-- redirection
-- file descriptors
-- process substitution
-- command grouping
-- subshells
-- reading input safely
-- temporary files
-
-Planned pages:
-
-- [Redirection And Pipes](redirection-and-pipes.md)
-- [Subshells](subshells.md)
-- [Read Lines Safely](read-lines-safely.md)
-
-### 6. Cleanup And Reliability
-
-These topics matter for scripts used in CI, deployment, embedded development, and system maintenance.
-
-- traps
-- signal handling
-- cleanup on exit
-- timeouts
-- retries
-- locking
-- idempotent scripts
-- defensive filesystem operations
-
-Planned pages:
-
-- [Traps And Cleanup](traps-and-cleanup.md)
-- [Retries And Timeouts](retries-and-timeouts.md)
-- [Safe Filesystem Operations](safe-filesystem-operations.md)
-
-### 7. Portability Boundaries
-
-Many systems have `/bin/sh`, but not all systems have Bash as `/bin/sh`. This section should make Bash-specific choices explicit.
-
-- Bash vs POSIX shell
-- arrays
-- `[[ ... ]]`
-- process substitution
-- `mapfile`
-- `bashisms`
-- shebang selection
-
-Planned page:
-
-- [Bash Vs POSIX Sh](bash-vs-posix-sh.md)
-
-## First Content Batch
-
-Create the first detailed pages in this order:
-
-1. [Quoting](quoting.md)
-2. [Exit Codes](exit-codes.md)
-3. [Robust Scripts](robust-scripts.md)
-4. [Redirection And Pipes](redirection-and-pipes.md)
-5. [Traps And Cleanup](traps-and-cleanup.md)
-
-These topics prevent the most common real-world Bash bugs and establish conventions for later pages.
-
-## Example Files To Add
-
-Runnable examples should live under `examples/bash/` and be referenced from the relevant pages.
-
-Suggested first examples:
-
-- `quoting-demo.sh`
-- `exit-code-demo.sh`
-- `pipefail-demo.sh`
-- `trap-cleanup.sh`
-- `read-lines-safely.sh`
-- `robust-script-template.sh`
-
-Additional generated examples:
+Beginner examples:
 
 - `execution-model-demo.sh`
+- `quoting-demo.sh`
 - `expansion-demo.sh`
+- `exit-code-demo.sh`
+- `pipefail-demo.sh`
 - `conditionals-demo.sh`
 - `functions-demo.sh`
+- `robust-script-template.sh`
+- `bash-vs-posix-demo.sh`
+
+Intermediate examples:
+
 - `redirection-demo.sh`
 - `subshell-demo.sh`
+- `read-lines-safely.sh`
+- `trap-cleanup.sh`
 - `retry-demo.sh`
 - `safe-filesystem-operations.sh`
-- `bash-vs-posix-demo.sh`
+
+Advanced examples:
+
+- `errexit-err-trap-demo.sh`
+- `advanced-fd-demo.sh`
+- `process-management-demo.sh`
+- `bounded-parallelism-demo.sh`
+- `advanced-parameter-expansion-demo.sh`
+- `associative-arrays-demo.sh`
+- `eval-injection-demo.sh`
+- `tracing-demo.sh`
+- `completion-demo.sh`
+- `testable-calculator.sh`
+- `testable-calculator.bats`
+- `portability-matrix-demo.sh`
+- `performance-boundaries-demo.sh`
 
 ## Page Rules
 
@@ -207,3 +135,6 @@ Before marking a Bash page reviewed, check especially for:
 - examples that fail on paths with spaces
 - loops that mishandle empty lines or backslashes
 - traps that do not clean up reliably
+- process cleanup for background jobs
+- advanced tracing that may expose secrets
+- portability claims across Bash versions and non-GNU userlands

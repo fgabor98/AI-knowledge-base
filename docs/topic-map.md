@@ -48,29 +48,66 @@ This file owns the taxonomy. Add and reorganize topics here before expanding the
 
 ## Bash Programming
 
+Beginner:
+
 - shell execution model
+- command lookup
+- shell variables vs environment variables
 - quoting
-- variables
-- arrays
+- variables and expansion
 - parameter expansion
 - command substitution
 - arithmetic expansion
+- arrays
 - exit codes
 - conditionals
+- `case`
 - loops
 - functions
+- robust script structure
+- Bash vs POSIX shell
+
+Intermediate:
+
 - pipes
 - redirection
-- subshells
-- traps
-- signals
-- getopt and getopts
-- robust scripting patterns
-- shellcheck
-- logging from scripts
-- temporary files
+- file descriptors
 - process substitution
-- portable POSIX shell vs Bash
+- subshells
+- reading lines safely
+- NUL-delimited filename handling
+- traps and cleanup
+- signals
+- retries and timeouts
+- temporary files
+- safe filesystem operations
+- locking patterns
+- shellcheck-driven cleanup
+- logging from scripts
+- argument parsing with `getopts`
+
+Advanced:
+
+- `errexit`, `ERR` traps, and `errtrace`
+- advanced file descriptor handling
+- `exec` redirection and descriptor lifetime
+- `BASH_XTRACEFD`
+- signals, process groups, and child processes
+- background jobs and `wait`
+- bounded parallelism
+- advanced parameter expansion
+- indirect expansion and namerefs
+- associative arrays
+- `eval`, injection risks, and shell security
+- advanced debugging and tracing
+- `PS4`, `BASH_SOURCE`, `LINENO`, and `FUNCNAME`
+- `trap DEBUG`
+- programmable completion
+- Bash testing
+- Bats test structure
+- portability matrix across Bash versions and userlands
+- Bash performance boundaries
+- ShellCheck configuration and targeted suppressions
 
 ## Python Programming
 

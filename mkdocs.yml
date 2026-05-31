@@ -34,20 +34,36 @@ nav:
       - c/index.md
   - Bash:
       - Overview: bash/index.md
-      - Execution Model: bash/execution-model.md
-      - Variables And Expansion: bash/variables-and-expansion.md
-      - Quoting: bash/quoting.md
-      - Exit Codes: bash/exit-codes.md
-      - Conditionals: bash/conditionals.md
-      - Functions: bash/functions.md
-      - Robust Scripts: bash/robust-scripts.md
-      - Redirection And Pipes: bash/redirection-and-pipes.md
-      - Subshells: bash/subshells.md
-      - Read Lines Safely: bash/read-lines-safely.md
-      - Traps And Cleanup: bash/traps-and-cleanup.md
-      - Retries And Timeouts: bash/retries-and-timeouts.md
-      - Safe Filesystem Operations: bash/safe-filesystem-operations.md
-      - Bash Vs POSIX Sh: bash/bash-vs-posix-sh.md
+      - Beginner:
+          - Execution Model: bash/execution-model.md
+          - Quoting: bash/quoting.md
+          - Variables And Expansion: bash/variables-and-expansion.md
+          - Exit Codes: bash/exit-codes.md
+          - Conditionals: bash/conditionals.md
+          - Functions: bash/functions.md
+          - Robust Scripts: bash/robust-scripts.md
+          - Bash Vs POSIX Sh: bash/bash-vs-posix-sh.md
+      - Intermediate:
+          - Redirection And Pipes: bash/redirection-and-pipes.md
+          - Subshells: bash/subshells.md
+          - Read Lines Safely: bash/read-lines-safely.md
+          - Traps And Cleanup: bash/traps-and-cleanup.md
+          - Retries And Timeouts: bash/retries-and-timeouts.md
+          - Safe Filesystem Operations: bash/safe-filesystem-operations.md
+      - Advanced:
+          - Errexit And ERR Traps: bash/errexit-and-err-traps.md
+          - Advanced File Descriptors: bash/advanced-file-descriptors.md
+          - Signals, Process Groups, And Child Processes: bash/signals-process-groups-and-child-processes.md
+          - Parallelism And Background Jobs: bash/parallelism-and-background-jobs.md
+          - Advanced Parameter Expansion: bash/advanced-parameter-expansion.md
+          - Associative Arrays: bash/associative-arrays.md
+          - Eval, Injection, And Shell Security: bash/eval-injection-and-shell-security.md
+          - Advanced Debugging And Tracing: bash/advanced-debugging-and-tracing.md
+          - Programmable Completion: bash/programmable-completion.md
+          - Bash Testing: bash/bash-testing.md
+          - Portability Matrix: bash/portability-matrix.md
+          - Performance Boundaries: bash/performance-boundaries.md
+          - ShellCheck Configuration: bash/shellcheck-configuration.md
       - Review Notes: bash/review-notes.md
   - Python:
       - python/index.md

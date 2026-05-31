@@ -75,3 +75,41 @@ Review status:
 ## Source Traceability
 
 Added primary-source links directly to the Bash page reference sections and created `sources/bash-primary-sources.md` as a central source list.
+
+## Advanced Bash Draft Generation
+
+Generated advanced draft pages:
+
+- [Errexit And ERR Traps](errexit-and-err-traps.md)
+- [Advanced File Descriptors](advanced-file-descriptors.md)
+- [Signals, Process Groups, And Child Processes](signals-process-groups-and-child-processes.md)
+- [Parallelism And Background Jobs](parallelism-and-background-jobs.md)
+- [Advanced Parameter Expansion](advanced-parameter-expansion.md)
+- [Associative Arrays](associative-arrays.md)
+- [Eval, Injection, And Shell Security](eval-injection-and-shell-security.md)
+- [Advanced Debugging And Tracing](advanced-debugging-and-tracing.md)
+- [Programmable Completion](programmable-completion.md)
+- [Bash Testing](bash-testing.md)
+- [Portability Matrix](portability-matrix.md)
+- [Performance Boundaries](performance-boundaries.md)
+- [ShellCheck Configuration](shellcheck-configuration.md)
+
+Generated advanced examples:
+
+- `examples/bash/errexit-err-trap-demo.sh`
+- `examples/bash/advanced-fd-demo.sh`
+- `examples/bash/process-management-demo.sh`
+- `examples/bash/bounded-parallelism-demo.sh`
+- `examples/bash/advanced-parameter-expansion-demo.sh`
+- `examples/bash/associative-arrays-demo.sh`
+- `examples/bash/eval-injection-demo.sh`
+- `examples/bash/tracing-demo.sh`
+- `examples/bash/completion-demo.sh`
+- `examples/bash/testable-calculator.sh`
+- `examples/bash/testable-calculator.bats`
+- `examples/bash/portability-matrix-demo.sh`
+- `examples/bash/performance-boundaries-demo.sh`
+
+Review status:
+
+- These advanced pages are AI-generated drafts and are intentionally not marked reviewed.
