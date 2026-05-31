@@ -38,7 +38,7 @@ Start here to understand what Bash actually does before a command runs.
 
 Planned page:
 
-- `execution-model.md`
+- [Execution Model](execution-model.md)
 
 ### 2. Expansion And Quoting
 
@@ -56,7 +56,7 @@ This is the most important Bash topic. Most serious shell bugs come from misunde
 Planned pages:
 
 - [Quoting](quoting.md)
-- `variables-and-expansion.md`
+- [Variables And Expansion](variables-and-expansion.md)
 
 ### 3. Control Flow And Status
 
@@ -73,7 +73,7 @@ Bash control flow is built around command exit status, not boolean values in the
 Planned pages:
 
 - [Exit Codes](exit-codes.md)
-- `conditionals.md`
+- [Conditionals](conditionals.md)
 
 ### 4. Script Structure
 
@@ -89,7 +89,7 @@ Once the basics are clear, focus on writing scripts that are readable and mainta
 
 Planned pages:
 
-- `functions.md`
+- [Functions](functions.md)
 - [Robust Scripts](robust-scripts.md)
 
 ### 5. Input, Output, And Processes
@@ -107,9 +107,9 @@ Bash is strongest when connecting programs. This part should explain process com
 
 Planned pages:
 
-- `redirection-and-pipes.md`
-- `subshells.md`
-- `read-lines-safely.md`
+- [Redirection And Pipes](redirection-and-pipes.md)
+- [Subshells](subshells.md)
+- [Read Lines Safely](read-lines-safely.md)
 
 ### 6. Cleanup And Reliability
 
@@ -126,9 +126,9 @@ These topics matter for scripts used in CI, deployment, embedded development, an
 
 Planned pages:
 
-- `traps-and-cleanup.md`
-- `retries-and-timeouts.md`
-- `safe-filesystem-operations.md`
+- [Traps And Cleanup](traps-and-cleanup.md)
+- [Retries And Timeouts](retries-and-timeouts.md)
+- [Safe Filesystem Operations](safe-filesystem-operations.md)
 
 ### 7. Portability Boundaries
 
@@ -144,7 +144,7 @@ Many systems have `/bin/sh`, but not all systems have Bash as `/bin/sh`. This se
 
 Planned page:
 
-- `bash-vs-posix-sh.md`
+- [Bash Vs POSIX Sh](bash-vs-posix-sh.md)
 
 ## First Content Batch
 
@@ -153,8 +153,8 @@ Create the first detailed pages in this order:
 1. [Quoting](quoting.md)
 2. [Exit Codes](exit-codes.md)
 3. [Robust Scripts](robust-scripts.md)
-4. `redirection-and-pipes.md`
-5. `traps-and-cleanup.md`
+4. [Redirection And Pipes](redirection-and-pipes.md)
+5. [Traps And Cleanup](traps-and-cleanup.md)
 
 These topics prevent the most common real-world Bash bugs and establish conventions for later pages.
 
@@ -170,6 +170,18 @@ Suggested first examples:
 - `trap-cleanup.sh`
 - `read-lines-safely.sh`
 - `robust-script-template.sh`
+
+Additional generated examples:
+
+- `execution-model-demo.sh`
+- `expansion-demo.sh`
+- `conditionals-demo.sh`
+- `functions-demo.sh`
+- `redirection-demo.sh`
+- `subshell-demo.sh`
+- `retry-demo.sh`
+- `safe-filesystem-operations.sh`
+- `bash-vs-posix-demo.sh`
 
 ## Page Rules
 

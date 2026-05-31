@@ -34,9 +34,20 @@ nav:
       - c/index.md
   - Bash:
       - Overview: bash/index.md
+      - Execution Model: bash/execution-model.md
+      - Variables And Expansion: bash/variables-and-expansion.md
       - Quoting: bash/quoting.md
       - Exit Codes: bash/exit-codes.md
+      - Conditionals: bash/conditionals.md
+      - Functions: bash/functions.md
       - Robust Scripts: bash/robust-scripts.md
+      - Redirection And Pipes: bash/redirection-and-pipes.md
+      - Subshells: bash/subshells.md
+      - Read Lines Safely: bash/read-lines-safely.md
+      - Traps And Cleanup: bash/traps-and-cleanup.md
+      - Retries And Timeouts: bash/retries-and-timeouts.md
+      - Safe Filesystem Operations: bash/safe-filesystem-operations.md
+      - Bash Vs POSIX Sh: bash/bash-vs-posix-sh.md
       - Review Notes: bash/review-notes.md
   - Python:
       - python/index.md
