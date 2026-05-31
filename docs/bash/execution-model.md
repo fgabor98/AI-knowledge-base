@@ -133,5 +133,7 @@ This uses shell command lookup directly instead of assuming a command exists som
 
 ## References
 
-- `man bash`, sections `SHELL GRAMMAR`, `COMMAND EXECUTION`, and `ENVIRONMENT`
-- GNU Bash Reference Manual, sections `Shell Operation` and `Command Execution Environment`
+- [GNU Bash Reference Manual: Shell Operation](https://www.gnu.org/software/bash/manual/html_node/Shell-Operation.html)
+- [GNU Bash Reference Manual: Command Execution Environment](https://www.gnu.org/software/bash/manual/html_node/Command-Execution-Environment.html)
+- [GNU Bash Reference Manual: Shell Parameters](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameters.html)
+- [POSIX.1-2024: Shell Command Language](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html)

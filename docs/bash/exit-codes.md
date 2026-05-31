@@ -160,7 +160,8 @@ This matters because a missing pattern and an unreadable file are different outc
 
 ## References
 
-- `man bash`, sections `EXIT STATUS`, `PIPELINES`, and `SHELL BUILTIN COMMANDS`
-- GNU Bash Reference Manual, sections `Exit Status` and `Pipelines`
-- POSIX Shell Command Language, section on command exit status
-- `grep(1)`, section `EXIT STATUS`
+- [GNU Bash Reference Manual: Exit Status](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html)
+- [GNU Bash Reference Manual: Pipelines](https://www.gnu.org/software/bash/manual/html_node/Pipelines.html)
+- [GNU Bash Reference Manual: Bash Builtin Commands](https://www.gnu.org/software/bash/manual/html_node/Bash-Builtins.html)
+- [POSIX.1-2024: Shell Command Language](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html)
+- [GNU grep manual: Exit Status](https://www.gnu.org/software/grep/manual/html_node/Exit-Status.html)

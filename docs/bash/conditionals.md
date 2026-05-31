@@ -156,5 +156,7 @@ This is clearer than deeply nested `if` statements for mode and option dispatch.
 
 ## References
 
-- `man bash`, sections `CONDITIONAL EXPRESSIONS`, `Compound Commands`, and `Pattern Matching`
-- GNU Bash Reference Manual, sections `Bash Conditional Expressions` and `Conditional Constructs`
+- [GNU Bash Reference Manual: Bash Conditional Expressions](https://www.gnu.org/software/bash/manual/html_node/Bash-Conditional-Expressions.html)
+- [GNU Bash Reference Manual: Conditional Constructs](https://www.gnu.org/software/bash/manual/html_node/Conditional-Constructs.html)
+- [GNU Bash Reference Manual: Pattern Matching](https://www.gnu.org/software/bash/manual/html_node/Pattern-Matching.html)
+- [POSIX.1-2024: Shell Command Language](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html)

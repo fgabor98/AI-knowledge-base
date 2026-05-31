@@ -71,3 +71,7 @@ Generated additional runnable examples:
 Review status:
 
 - These pages are AI-generated drafts and are intentionally not marked reviewed.
+
+## Source Traceability
+
+Added primary-source links directly to the Bash page reference sections and created `sources/bash-primary-sources.md` as a central source list.

@@ -132,5 +132,7 @@ Each `cd` is isolated to the subshell for that iteration.
 
 ## References
 
-- `man bash`, sections `Compound Commands`, `COMMAND EXECUTION`, `COMMAND SUBSTITUTION`, and `PIPELINES`
-- GNU Bash Reference Manual, sections `Command Execution Environment` and `Pipelines`
+- [GNU Bash Reference Manual: Command Execution Environment](https://www.gnu.org/software/bash/manual/html_node/Command-Execution-Environment.html)
+- [GNU Bash Reference Manual: Command Substitution](https://www.gnu.org/software/bash/manual/html_node/Command-Substitution.html)
+- [GNU Bash Reference Manual: Pipelines](https://www.gnu.org/software/bash/manual/html_node/Pipelines.html)
+- [POSIX.1-2024: Shell Command Language](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html)

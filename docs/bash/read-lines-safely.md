@@ -135,6 +135,7 @@ Process substitution is Bash-specific.
 
 ## References
 
-- `man bash`, sections `SHELL BUILTIN COMMANDS` for `read` and `mapfile`
-- GNU Bash Reference Manual, sections for the `read` and `mapfile` builtins
-- `find(1)`, options `-print0` and `-exec`
+- [GNU Bash Reference Manual: Bash Builtin Commands](https://www.gnu.org/software/bash/manual/html_node/Bash-Builtins.html)
+- [GNU Bash Reference Manual: Redirections](https://www.gnu.org/software/bash/manual/html_node/Redirections.html)
+- [GNU Findutils manual: Safe File Name Handling](https://www.gnu.org/software/findutils/manual/html_node/find_html/Safe-File-Name-Handling.html)
+- [POSIX.1-2024: Shell Command Language](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html)

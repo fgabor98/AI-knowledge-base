@@ -128,5 +128,8 @@ This avoids constructing a single string such as `cmd="grep -n $pattern $file"`,
 
 ## References
 
-- `man bash`, sections `PARAMETERS`, `EXPANSION`, `Shell Parameters`, and `Arrays`
-- GNU Bash Reference Manual, sections `Shell Parameter Expansion`, `Arrays`, and `Shell Arithmetic`
+- [GNU Bash Reference Manual: Shell Parameter Expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html)
+- [GNU Bash Reference Manual: Shell Parameters](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameters.html)
+- [GNU Bash Reference Manual: Arrays](https://www.gnu.org/software/bash/manual/html_node/Arrays.html)
+- [GNU Bash Reference Manual: Shell Arithmetic](https://www.gnu.org/software/bash/manual/html_node/Shell-Arithmetic.html)
+- [POSIX.1-2024: Shell Command Language](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html)

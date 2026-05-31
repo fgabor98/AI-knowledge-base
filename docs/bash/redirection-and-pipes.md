@@ -130,5 +130,7 @@ This captures stdout into `output`. Error messages from `git` still go to stderr
 
 ## References
 
-- `man bash`, sections `REDIRECTION` and `PIPELINES`
-- GNU Bash Reference Manual, sections `Redirections` and `Pipelines`
+- [GNU Bash Reference Manual: Redirections](https://www.gnu.org/software/bash/manual/html_node/Redirections.html)
+- [GNU Bash Reference Manual: Pipelines](https://www.gnu.org/software/bash/manual/html_node/Pipelines.html)
+- [GNU Bash Reference Manual: Process Substitution](https://www.gnu.org/software/bash/manual/html_node/Process-Substitution.html)
+- [POSIX.1-2024: Shell Command Language](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html)

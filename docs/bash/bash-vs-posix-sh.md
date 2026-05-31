@@ -123,6 +123,8 @@ If Bash is not guaranteed on the target root filesystem, rewrite the script in P
 
 ## References
 
-- POSIX Shell Command Language
-- `man bash`, sections `INVOCATION`, `Bash Conditional Expressions`, and `Arrays`
-- BusyBox `ash` documentation for minimal embedded systems
+- [POSIX.1-2024: Shell Command Language](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html)
+- [GNU Bash Reference Manual: Invoking Bash](https://www.gnu.org/software/bash/manual/html_node/Invoking-Bash.html)
+- [GNU Bash Reference Manual: Bash POSIX Mode](https://www.gnu.org/software/bash/manual/html_node/Bash-POSIX-Mode.html)
+- [GNU Bash Reference Manual: Bash Conditional Expressions](https://www.gnu.org/software/bash/manual/html_node/Bash-Conditional-Expressions.html)
+- [GNU Bash Reference Manual: Arrays](https://www.gnu.org/software/bash/manual/html_node/Arrays.html)

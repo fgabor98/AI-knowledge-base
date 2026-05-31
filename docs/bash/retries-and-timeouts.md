@@ -127,6 +127,8 @@ This is common during embedded bring-up where devices may appear asynchronously.
 
 ## References
 
-- `timeout(1)`
-- `sleep(1)`
-- `man bash`, sections `SHELL FUNCTIONS`, `ARITHMETIC EVALUATION`, and `EXIT STATUS`
+- [GNU Coreutils manual: timeout invocation](https://www.gnu.org/software/coreutils/manual/html_node/timeout-invocation.html)
+- [GNU Coreutils manual: sleep invocation](https://www.gnu.org/software/coreutils/manual/html_node/sleep-invocation.html)
+- [GNU Bash Reference Manual: Shell Functions](https://www.gnu.org/software/bash/manual/html_node/Shell-Functions.html)
+- [GNU Bash Reference Manual: Shell Arithmetic](https://www.gnu.org/software/bash/manual/html_node/Shell-Arithmetic.html)
+- [GNU Bash Reference Manual: Exit Status](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html)

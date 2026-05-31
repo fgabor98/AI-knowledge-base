@@ -135,7 +135,10 @@ If the whole expression were written as `"$src_dir/*.log"`, the `*` would be lit
 
 ## References
 
-- `man bash`, sections `QUOTING` and `EXPANSION`
-- GNU Bash Reference Manual, sections `Quoting` and `Shell Expansions`
-- POSIX Shell Command Language, sections on quoting and word expansion
-- ShellCheck rules SC2086 and SC2046
+- [GNU Bash Reference Manual: Quoting](https://www.gnu.org/software/bash/manual/html_node/Quoting.html)
+- [GNU Bash Reference Manual: Shell Expansions](https://www.gnu.org/software/bash/manual/html_node/Shell-Expansions.html)
+- [GNU Bash Reference Manual: Word Splitting](https://www.gnu.org/software/bash/manual/html_node/Word-Splitting.html)
+- [GNU Bash Reference Manual: Filename Expansion](https://www.gnu.org/software/bash/manual/html_node/Filename-Expansion.html)
+- [POSIX.1-2024: Shell Command Language](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html)
+- [ShellCheck SC2086](https://www.shellcheck.net/wiki/SC2086)
+- [ShellCheck SC2046](https://www.shellcheck.net/wiki/SC2046)

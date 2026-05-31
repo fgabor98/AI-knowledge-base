@@ -140,5 +140,7 @@ This keeps dependency checks readable and testable.
 
 ## References
 
-- `man bash`, sections `SHELL FUNCTIONS`, `Shell Parameters`, and `SHELL BUILTIN COMMANDS`
-- GNU Bash Reference Manual, section `Shell Functions`
+- [GNU Bash Reference Manual: Shell Functions](https://www.gnu.org/software/bash/manual/html_node/Shell-Functions.html)
+- [GNU Bash Reference Manual: Shell Parameters](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameters.html)
+- [GNU Bash Reference Manual: Bash Builtin Commands](https://www.gnu.org/software/bash/manual/html_node/Bash-Builtins.html)
+- [POSIX.1-2024: Shell Command Language](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html)

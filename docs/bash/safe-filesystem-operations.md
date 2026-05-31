@@ -142,6 +142,10 @@ If generation fails, the old target remains unchanged.
 
 ## References
 
-- `mktemp(1)`
-- `cp(1)`, `mv(1)`, `rm(1)`, and `find(1)`
-- `man bash`, sections `EXPANSION` and `REDIRECTION`
+- [GNU Coreutils manual: mktemp invocation](https://www.gnu.org/software/coreutils/manual/html_node/mktemp-invocation.html)
+- [GNU Coreutils manual: cp invocation](https://www.gnu.org/software/coreutils/manual/html_node/cp-invocation.html)
+- [GNU Coreutils manual: mv invocation](https://www.gnu.org/software/coreutils/manual/html_node/mv-invocation.html)
+- [GNU Coreutils manual: rm invocation](https://www.gnu.org/software/coreutils/manual/html_node/rm-invocation.html)
+- [GNU Findutils manual: Safe File Name Handling](https://www.gnu.org/software/findutils/manual/html_node/find_html/Safe-File-Name-Handling.html)
+- [GNU Bash Reference Manual: Shell Expansions](https://www.gnu.org/software/bash/manual/html_node/Shell-Expansions.html)
+- [GNU Bash Reference Manual: Redirections](https://www.gnu.org/software/bash/manual/html_node/Redirections.html)

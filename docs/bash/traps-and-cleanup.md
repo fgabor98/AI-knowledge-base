@@ -133,6 +133,6 @@ Creating a directory is atomic on local POSIX filesystems. This is a common simp
 
 ## References
 
-- `man bash`, section `SHELL BUILTIN COMMANDS` for `trap`
-- GNU Bash Reference Manual, section `Bourne Shell Builtins`
-- `mktemp(1)`
+- [GNU Bash Reference Manual: Bourne Shell Builtins](https://www.gnu.org/software/bash/manual/html_node/Bourne-Shell-Builtins.html)
+- [GNU Bash Reference Manual: Exit Status](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html)
+- [GNU Coreutils manual: mktemp invocation](https://www.gnu.org/software/coreutils/manual/html_node/mktemp-invocation.html)

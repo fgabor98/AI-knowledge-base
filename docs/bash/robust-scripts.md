@@ -171,7 +171,9 @@ One caveat: the `while` loop is in a pipeline, so in Bash it runs in a subshell 
 
 ## References
 
-- `man bash`, sections `INVOCATION`, `SHELL BUILTIN COMMANDS`, `SHELL PARAMETERS`, and `trap`
-- GNU Bash Reference Manual, sections `The Set Builtin`, `Bourne Shell Builtins`, and `Bash Conditional Expressions`
-- ShellCheck rule documentation
-- POSIX Utility Syntax Guidelines for command-line option conventions
+- [GNU Bash Reference Manual: Invoking Bash](https://www.gnu.org/software/bash/manual/html_node/Invoking-Bash.html)
+- [GNU Bash Reference Manual: The Set Builtin](https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html)
+- [GNU Bash Reference Manual: Bourne Shell Builtins](https://www.gnu.org/software/bash/manual/html_node/Bourne-Shell-Builtins.html)
+- [GNU Bash Reference Manual: Bash Conditional Expressions](https://www.gnu.org/software/bash/manual/html_node/Bash-Conditional-Expressions.html)
+- [ShellCheck wiki](https://www.shellcheck.net/wiki/Home)
+- [POSIX.1-2024: Utility Conventions](https://pubs.opengroup.org/onlinepubs/9799919799.2024edition/basedefs/V1_chap12.html)

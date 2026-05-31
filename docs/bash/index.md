@@ -194,7 +194,7 @@ Good Bash pages should include:
 - at least one common failure mode
 - commands or tests the reader can run locally
 - notes about Bash-specific behavior when relevant
-- references to `man bash`, Bash manual sections, ShellCheck notes, or POSIX shell documentation where appropriate
+- direct links to primary references such as the GNU Bash manual, POSIX shell documentation, GNU userland manuals, or ShellCheck rule notes
 
 ## Review Priorities
 
