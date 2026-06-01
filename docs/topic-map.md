@@ -52,8 +52,15 @@ Beginner:
 
 - when to use Bash
 - shell background and interpretation model
+- interactive shell usage
+- startup files and login vs non-login shells
+- history, Readline, and prompt basics
+- aliases vs functions vs scripts
+- terminal job control basics
 - shell execution model
 - command lookup
+- shell builtins
+- `type`, `command`, `builtin`, `hash`, and `enable`
 - shell variables vs environment variables
 - quoting
 - variables and expansion
@@ -61,6 +68,7 @@ Beginner:
 - basic command substitution
 - arithmetic expansion
 - arrays
+- word splitting and `IFS`
 - filename expansion and globbing
 - shell options with `shopt`
 - `nullglob`, `failglob`, `globstar`, `extglob`, and `dotglob`
@@ -78,11 +86,15 @@ Intermediate:
 - pipes
 - redirection
 - file descriptors
+- here documents and here strings
 - process substitution
 - command and process substitution patterns
 - subshells
 - reading lines safely
+- `read` builtin options and status behavior
 - NUL-delimited filename handling
+- standard Unix tools from Bash
+- `find`, `xargs`, `grep`, `sed`, `awk`, `sort`, `cut`, `tee`
 - traps and cleanup
 - signals
 - retries and timeouts

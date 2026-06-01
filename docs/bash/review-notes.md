@@ -153,3 +153,26 @@ Generated additional runnable examples:
 Validation update:
 
 - `scripts/validate-bash.sh` now smoke-runs the new examples.
+
+## Interactive And Unix Tools Draft Generation
+
+Generated additional draft pages:
+
+- [Interactive Shell Usage](interactive-shell-usage.md)
+- [Shell Builtins And Command Lookup](shell-builtins-and-command-lookup.md)
+- [Word Splitting And IFS](word-splitting-and-ifs.md)
+- [Here Documents And Here Strings](here-documents-and-here-strings.md)
+- [Read Builtin](read-builtin.md)
+- [Standard Unix Tools](standard-unix-tools.md)
+
+Generated additional runnable examples:
+
+- `examples/bash/builtins-command-lookup-demo.sh`
+- `examples/bash/ifs-word-splitting-demo.sh`
+- `examples/bash/here-docs-demo.sh`
+- `examples/bash/read-builtin-demo.sh`
+- `examples/bash/unix-tools-demo.sh`
+
+Validation update:
+
+- `scripts/validate-bash.sh` now smoke-runs the new examples.

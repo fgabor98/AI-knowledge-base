@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2035
 set -euo pipefail
 
 shopt -s extglob

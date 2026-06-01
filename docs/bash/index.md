@@ -17,9 +17,11 @@ This section builds practical Bash knowledge from the execution model upward. Th
 The Bash section covers:
 
 - writing maintainable Bash scripts
+- using Bash effectively as an interactive shell
 - understanding expansion, quoting, and word splitting
 - handling exit status and errors deliberately
 - using functions, arrays, traps, pipes, and redirection correctly
+- composing standard Unix tools from Bash
 - knowing when Bash is appropriate and when another language is a better fit
 - recognizing portability differences between Bash and POSIX shell
 - handling advanced failure, process, tracing, security, and portability concerns
@@ -33,30 +35,36 @@ Follow the pages in this order. Each group builds on the previous one.
 These pages establish the core mental model and the habits that prevent most shell bugs.
 
 1. [When To Use Bash](when-to-use-bash.md)
-2. [Execution Model](execution-model.md)
-3. [Quoting](quoting.md)
-4. [Variables And Expansion](variables-and-expansion.md)
-5. [Globbing And Shell Options](globbing-and-shell-options.md)
-6. [Exit Codes](exit-codes.md)
-7. [Conditionals](conditionals.md)
-8. [Loops](loops.md)
-9. [Functions](functions.md)
-10. [Robust Scripts](robust-scripts.md)
-11. [Bash Vs POSIX Sh](bash-vs-posix-sh.md)
+2. [Interactive Shell Usage](interactive-shell-usage.md)
+3. [Execution Model](execution-model.md)
+4. [Shell Builtins And Command Lookup](shell-builtins-and-command-lookup.md)
+5. [Quoting](quoting.md)
+6. [Variables And Expansion](variables-and-expansion.md)
+7. [Word Splitting And IFS](word-splitting-and-ifs.md)
+8. [Globbing And Shell Options](globbing-and-shell-options.md)
+9. [Exit Codes](exit-codes.md)
+10. [Conditionals](conditionals.md)
+11. [Loops](loops.md)
+12. [Functions](functions.md)
+13. [Robust Scripts](robust-scripts.md)
+14. [Bash Vs POSIX Sh](bash-vs-posix-sh.md)
 
 ### Intermediate
 
 These pages cover process composition, input handling, cleanup, and filesystem safety.
 
 1. [Redirection And Pipes](redirection-and-pipes.md)
-2. [Command And Process Substitution](command-and-process-substitution.md)
-3. [Subshells](subshells.md)
-4. [Read Lines Safely](read-lines-safely.md)
-5. [Argument Parsing](argument-parsing.md)
-6. [Logging](logging.md)
-7. [Traps And Cleanup](traps-and-cleanup.md)
-8. [Retries And Timeouts](retries-and-timeouts.md)
-9. [Safe Filesystem Operations](safe-filesystem-operations.md)
+2. [Here Documents And Here Strings](here-documents-and-here-strings.md)
+3. [Command And Process Substitution](command-and-process-substitution.md)
+4. [Subshells](subshells.md)
+5. [Read Lines Safely](read-lines-safely.md)
+6. [Read Builtin](read-builtin.md)
+7. [Argument Parsing](argument-parsing.md)
+8. [Standard Unix Tools](standard-unix-tools.md)
+9. [Logging](logging.md)
+10. [Traps And Cleanup](traps-and-cleanup.md)
+11. [Retries And Timeouts](retries-and-timeouts.md)
+12. [Safe Filesystem Operations](safe-filesystem-operations.md)
 
 ### Advanced
 
@@ -82,7 +90,9 @@ Runnable examples live under `examples/bash/` and are referenced from the releva
 
 Beginner examples:
 
+- `builtins-command-lookup-demo.sh`
 - `globbing-options-demo.sh`
+- `ifs-word-splitting-demo.sh`
 - `execution-model-demo.sh`
 - `quoting-demo.sh`
 - `expansion-demo.sh`
@@ -97,11 +107,14 @@ Beginner examples:
 Intermediate examples:
 
 - `redirection-demo.sh`
+- `here-docs-demo.sh`
 - `substitution-demo.sh`
 - `subshell-demo.sh`
 - `read-lines-safely.sh`
+- `read-builtin-demo.sh`
 - `getopts-demo.sh`
 - `manual-args-demo.sh`
+- `unix-tools-demo.sh`
 - `logging-demo.sh`
 - `trap-cleanup.sh`
 - `retry-demo.sh`

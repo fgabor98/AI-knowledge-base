@@ -8,6 +8,12 @@ Primary references for the Bash documentation pages.
 - [Shell Operation](https://www.gnu.org/software/bash/manual/html_node/Shell-Operation.html)
 - [Introduction](https://www.gnu.org/software/bash/manual/html_node/Introduction.html)
 - [Invoking Bash](https://www.gnu.org/software/bash/manual/html_node/Invoking-Bash.html)
+- [Bash Startup Files](https://www.gnu.org/software/bash/manual/html_node/Bash-Startup-Files.html)
+- [Interactive Shells](https://www.gnu.org/software/bash/manual/html_node/Interactive-Shells.html)
+- [Bash History Facilities](https://www.gnu.org/software/bash/manual/html_node/Bash-History-Facilities.html)
+- [Controlling the Prompt](https://www.gnu.org/software/bash/manual/html_node/Controlling-the-Prompt.html)
+- [Job Control Basics](https://www.gnu.org/software/bash/manual/html_node/Job-Control-Basics.html)
+- [Command Search and Execution](https://www.gnu.org/software/bash/manual/html_node/Command-Search-and-Execution.html)
 - [Looping Constructs](https://www.gnu.org/software/bash/manual/html_node/Looping-Constructs.html)
 - [Quoting](https://www.gnu.org/software/bash/manual/html_node/Quoting.html)
 - [Shell Expansions](https://www.gnu.org/software/bash/manual/html_node/Shell-Expansions.html)
@@ -21,6 +27,7 @@ Primary references for the Bash documentation pages.
 - [Exit Status](https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html)
 - [Pipelines](https://www.gnu.org/software/bash/manual/html_node/Pipelines.html)
 - [Redirections](https://www.gnu.org/software/bash/manual/html_node/Redirections.html)
+- [Here Documents](https://www.gnu.org/software/bash/manual/html_node/Here-Documents.html)
 - [Process Substitution](https://www.gnu.org/software/bash/manual/html_node/Process-Substitution.html)
 - [Bash Conditional Expressions](https://www.gnu.org/software/bash/manual/html_node/Bash-Conditional-Expressions.html)
 - [Conditional Constructs](https://www.gnu.org/software/bash/manual/html_node/Conditional-Constructs.html)
@@ -48,6 +55,11 @@ Primary references for the Bash documentation pages.
 
 ## GNU Userland Manuals
 
+- [GNU Coreutils manual](https://www.gnu.org/software/coreutils/manual/coreutils.html)
+- [GNU Findutils manual](https://www.gnu.org/software/findutils/manual/find.html)
+- [GNU grep manual](https://www.gnu.org/software/grep/manual/grep.html)
+- [GNU sed manual](https://www.gnu.org/software/sed/manual/sed.html)
+- [GNU Awk User's Guide](https://www.gnu.org/software/gawk/manual/gawk.html)
 - [GNU grep: Exit Status](https://www.gnu.org/software/grep/manual/html_node/Exit-Status.html)
 - [GNU Coreutils: timeout invocation](https://www.gnu.org/software/coreutils/manual/html_node/timeout-invocation.html)
 - [GNU Coreutils: sleep invocation](https://www.gnu.org/software/coreutils/manual/html_node/sleep-invocation.html)
