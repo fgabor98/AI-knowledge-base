@@ -6,6 +6,7 @@ Primary references for the Bash documentation pages.
 
 - [GNU Bash Reference Manual](https://www.gnu.org/software/bash/manual/bash.html)
 - [Shell Operation](https://www.gnu.org/software/bash/manual/html_node/Shell-Operation.html)
+- [Introduction](https://www.gnu.org/software/bash/manual/html_node/Introduction.html)
 - [Invoking Bash](https://www.gnu.org/software/bash/manual/html_node/Invoking-Bash.html)
 - [Looping Constructs](https://www.gnu.org/software/bash/manual/html_node/Looping-Constructs.html)
 - [Quoting](https://www.gnu.org/software/bash/manual/html_node/Quoting.html)
@@ -24,6 +25,7 @@ Primary references for the Bash documentation pages.
 - [Bash Conditional Expressions](https://www.gnu.org/software/bash/manual/html_node/Bash-Conditional-Expressions.html)
 - [Conditional Constructs](https://www.gnu.org/software/bash/manual/html_node/Conditional-Constructs.html)
 - [Pattern Matching](https://www.gnu.org/software/bash/manual/html_node/Pattern-Matching.html)
+- [The Shopt Builtin](https://www.gnu.org/software/bash/manual/html_node/The-Shopt-Builtin.html)
 - [Shell Functions](https://www.gnu.org/software/bash/manual/html_node/Shell-Functions.html)
 - [Shell Parameters](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameters.html)
 - [Command Execution Environment](https://www.gnu.org/software/bash/manual/html_node/Command-Execution-Environment.html)

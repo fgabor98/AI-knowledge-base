@@ -19,6 +19,7 @@ shellcheck "${scripts[@]}"
 printf 'Running Bash example smoke tests...\n'
 bash examples/bash/execution-model-demo.sh >/dev/null 2>&1
 REQUIRED_VALUE=present bash examples/bash/expansion-demo.sh Example >/dev/null 2>&1
+bash examples/bash/globbing-options-demo.sh >/dev/null 2>&1
 bash examples/bash/quoting-demo.sh >/dev/null 2>&1
 bash examples/bash/exit-code-demo.sh >/dev/null 2>&1
 bash examples/bash/pipefail-demo.sh >/dev/null 2>&1
@@ -28,6 +29,7 @@ bash examples/bash/functions-demo.sh docs/bash/quoting.md >/dev/null 2>&1
 bash examples/bash/robust-script-template.sh --dry-run examples/bash >/dev/null 2>&1
 bash examples/bash/bash-vs-posix-demo.sh >/dev/null 2>&1
 bash examples/bash/redirection-demo.sh >/dev/null 2>&1
+bash examples/bash/substitution-demo.sh >/dev/null 2>&1
 bash examples/bash/subshell-demo.sh >/dev/null 2>&1
 bash examples/bash/read-lines-safely.sh >/dev/null 2>&1
 bash examples/bash/getopts-demo.sh -v -o out.txt input.txt >/dev/null 2>&1

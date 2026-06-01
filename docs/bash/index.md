@@ -32,28 +32,31 @@ Follow the pages in this order. Each group builds on the previous one.
 
 These pages establish the core mental model and the habits that prevent most shell bugs.
 
-1. [Execution Model](execution-model.md)
-2. [Quoting](quoting.md)
-3. [Variables And Expansion](variables-and-expansion.md)
-4. [Exit Codes](exit-codes.md)
-5. [Conditionals](conditionals.md)
-6. [Loops](loops.md)
-7. [Functions](functions.md)
-8. [Robust Scripts](robust-scripts.md)
-9. [Bash Vs POSIX Sh](bash-vs-posix-sh.md)
+1. [When To Use Bash](when-to-use-bash.md)
+2. [Execution Model](execution-model.md)
+3. [Quoting](quoting.md)
+4. [Variables And Expansion](variables-and-expansion.md)
+5. [Globbing And Shell Options](globbing-and-shell-options.md)
+6. [Exit Codes](exit-codes.md)
+7. [Conditionals](conditionals.md)
+8. [Loops](loops.md)
+9. [Functions](functions.md)
+10. [Robust Scripts](robust-scripts.md)
+11. [Bash Vs POSIX Sh](bash-vs-posix-sh.md)
 
 ### Intermediate
 
 These pages cover process composition, input handling, cleanup, and filesystem safety.
 
 1. [Redirection And Pipes](redirection-and-pipes.md)
-2. [Subshells](subshells.md)
-3. [Read Lines Safely](read-lines-safely.md)
-4. [Argument Parsing](argument-parsing.md)
-5. [Logging](logging.md)
-6. [Traps And Cleanup](traps-and-cleanup.md)
-7. [Retries And Timeouts](retries-and-timeouts.md)
-8. [Safe Filesystem Operations](safe-filesystem-operations.md)
+2. [Command And Process Substitution](command-and-process-substitution.md)
+3. [Subshells](subshells.md)
+4. [Read Lines Safely](read-lines-safely.md)
+5. [Argument Parsing](argument-parsing.md)
+6. [Logging](logging.md)
+7. [Traps And Cleanup](traps-and-cleanup.md)
+8. [Retries And Timeouts](retries-and-timeouts.md)
+9. [Safe Filesystem Operations](safe-filesystem-operations.md)
 
 ### Advanced
 
@@ -79,6 +82,7 @@ Runnable examples live under `examples/bash/` and are referenced from the releva
 
 Beginner examples:
 
+- `globbing-options-demo.sh`
 - `execution-model-demo.sh`
 - `quoting-demo.sh`
 - `expansion-demo.sh`
@@ -93,6 +97,7 @@ Beginner examples:
 Intermediate examples:
 
 - `redirection-demo.sh`
+- `substitution-demo.sh`
 - `subshell-demo.sh`
 - `read-lines-safely.sh`
 - `getopts-demo.sh`

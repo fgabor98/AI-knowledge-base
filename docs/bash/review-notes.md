@@ -132,3 +132,24 @@ Generated practical polish examples:
 Validation update:
 
 - `scripts/validate-bash.sh` now includes smoke runs for selected example scripts.
+
+## Topic Expansion Draft Generation
+
+Generated additional draft pages:
+
+- [When To Use Bash](when-to-use-bash.md)
+- [Globbing And Shell Options](globbing-and-shell-options.md)
+- [Command And Process Substitution](command-and-process-substitution.md)
+
+Expanded existing draft pages:
+
+- [Portability Matrix](portability-matrix.md) now includes concrete shell feature and userland tool matrices for Bash, POSIX `sh`, macOS/BSD-style systems, and BusyBox-style systems.
+
+Generated additional runnable examples:
+
+- `examples/bash/globbing-options-demo.sh`
+- `examples/bash/substitution-demo.sh`
+
+Validation update:
+
+- `scripts/validate-bash.sh` now smoke-runs the new examples.

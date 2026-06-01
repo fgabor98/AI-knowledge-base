@@ -35,9 +35,11 @@ nav:
   - Bash:
       - Overview: bash/index.md
       - Beginner:
+          - When To Use Bash: bash/when-to-use-bash.md
           - Execution Model: bash/execution-model.md
           - Quoting: bash/quoting.md
           - Variables And Expansion: bash/variables-and-expansion.md
+          - Globbing And Shell Options: bash/globbing-and-shell-options.md
           - Exit Codes: bash/exit-codes.md
           - Conditionals: bash/conditionals.md
           - Loops: bash/loops.md
@@ -46,6 +48,7 @@ nav:
           - Bash Vs POSIX Sh: bash/bash-vs-posix-sh.md
       - Intermediate:
           - Redirection And Pipes: bash/redirection-and-pipes.md
+          - Command And Process Substitution: bash/command-and-process-substitution.md
           - Subshells: bash/subshells.md
           - Read Lines Safely: bash/read-lines-safely.md
           - Argument Parsing: bash/argument-parsing.md

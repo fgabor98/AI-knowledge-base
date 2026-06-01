@@ -50,15 +50,20 @@ This file owns the taxonomy. Add and reorganize topics here before expanding the
 
 Beginner:
 
+- when to use Bash
+- shell background and interpretation model
 - shell execution model
 - command lookup
 - shell variables vs environment variables
 - quoting
 - variables and expansion
 - parameter expansion
-- command substitution
+- basic command substitution
 - arithmetic expansion
 - arrays
+- filename expansion and globbing
+- shell options with `shopt`
+- `nullglob`, `failglob`, `globstar`, `extglob`, and `dotglob`
 - exit codes
 - conditionals
 - `case`
@@ -74,6 +79,7 @@ Intermediate:
 - redirection
 - file descriptors
 - process substitution
+- command and process substitution patterns
 - subshells
 - reading lines safely
 - NUL-delimited filename handling
@@ -110,6 +116,7 @@ Advanced:
 - Bash testing
 - Bats test structure
 - portability matrix across Bash versions and userlands
+- GNU vs BSD/macOS vs BusyBox command differences
 - Bash performance boundaries
 - ShellCheck configuration and targeted suppressions
 
