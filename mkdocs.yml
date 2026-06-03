@@ -79,6 +79,29 @@ nav:
       - Review Notes: bash/review-notes.md
   - Python:
       - python/index.md
+  - Signal Processing:
+      - Overview: signal-processing/index.md
+      - Diagram Instructions: signal-processing/diagram-instructions.md
+      - Signals And Systems:
+          - Overview: signal-processing/signals-and-systems/index.md
+          - Theory: signal-processing/signals-and-systems/theory.md
+          - Programming: signal-processing/signals-and-systems/programming.md
+          - References: signal-processing/signals-and-systems/references.md
+      - Digital Signal Processing:
+          - Overview: signal-processing/digital-signal-processing/index.md
+          - Theory: signal-processing/digital-signal-processing/theory.md
+          - Programming: signal-processing/digital-signal-processing/programming.md
+          - References: signal-processing/digital-signal-processing/references.md
+      - Measurement And Instrumentation:
+          - Overview: signal-processing/measurement-and-instrumentation/index.md
+          - Theory: signal-processing/measurement-and-instrumentation/theory.md
+          - Programming: signal-processing/measurement-and-instrumentation/programming.md
+          - References: signal-processing/measurement-and-instrumentation/references.md
+      - Infocommunication:
+          - Overview: signal-processing/infocommunication/index.md
+          - Theory: signal-processing/infocommunication/theory.md
+          - Programming: signal-processing/infocommunication/programming.md
+          - References: signal-processing/infocommunication/references.md
   - Linux Kernel:
       - linux-kernel/index.md
   - Embedded Linux:
