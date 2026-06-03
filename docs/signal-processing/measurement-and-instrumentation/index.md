@@ -21,7 +21,7 @@ last_reviewed: null
 
 ## Scope
 
-Measurement And Instrumentation owns the signal path from physical process to recorded data: sensors, signal conditioning, ADC/DAC behavior, oscilloscopes, measurement records, timing, distributed synchronization, calibration, compensation, and lab validation workflows.
+Measurement And Instrumentation owns the signal path from physical process to recorded data: sensors, signal conditioning, ADC/DAC behavior, oscilloscopes, measurement records, uncertainty, timing, distributed synchronization, calibration, compensation, and lab validation workflows.
 
 ## Learning Order
 
@@ -29,9 +29,10 @@ Measurement And Instrumentation owns the signal path from physical process to re
 2. Time-domain measurement
 3. Frequency-domain measurement
 4. Transfer-characteristic measurement
-5. Compensation and calibration
-6. Distributed measurements and synchronization
-7. Real-time lab workflows
+5. Measurement uncertainty and calibration traceability
+6. Compensation and calibration
+7. Distributed measurements and synchronization
+8. Real-time lab workflows
 
 ## Page Responsibilities
 

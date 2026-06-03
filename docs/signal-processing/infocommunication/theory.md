@@ -44,13 +44,20 @@ last_reviewed: null
 
 ### 3. Error-Control Coding
 
+- CRC
 - Hamming distance
 - error detection
 - error correction
+- interleaving
 - linear block codes
 - generator matrix
 - parity-check matrix
 - syndrome decoding
+- convolutional codes
+- Viterbi decoding
+- soft-decision decoding
+- LDPC codes
+- Turbo codes
 
 ### 4. Analog Modulation
 
@@ -91,7 +98,19 @@ last_reviewed: null
 - frequency hopping
 - OFDM and subcarrier orthogonality
 
-### 7. Communication Systems Context
+### 7. Communication Synchronization And Equalization
+
+- communication synchronization
+- symbol timing recovery
+- carrier recovery
+- clock recovery
+- phase-locked loop
+- Costas loop
+- channel estimation
+- adaptive equalization
+- decision-directed tracking
+
+### 8. Communication Systems Context
 
 - frequency-division multiplexing
 - time-division multiple access

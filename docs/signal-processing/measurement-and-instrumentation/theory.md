@@ -68,7 +68,18 @@ last_reviewed: null
 - stepped-sine measurement
 - transfer-characteristic measurement
 
-### 5. Compensation And Calibration
+### 5. Measurement Uncertainty
+
+- measurement uncertainty
+- uncertainty budgets
+- resolution vs accuracy vs precision
+- error propagation
+- confidence intervals
+- calibration traceability
+- sampling-clock uncertainty
+- uncertainty propagation in compensated measurements
+
+### 6. Compensation And Calibration
 
 - measurement-chain transfer model
 - convolution matrix and Toeplitz model
@@ -81,8 +92,10 @@ last_reviewed: null
 - equivalent-time sampling
 - bandwidth extension
 - oscilloscope calibration by inverse filtering
+- frequency-response-function estimation
+- coherence-based measurement validation
 
-### 6. Distributed Measurement Systems
+### 7. Distributed Measurement Systems
 
 - wireless sensor nodes
 - local clocks
@@ -95,7 +108,7 @@ last_reviewed: null
 - resonator-observer data compression
 - active noise control over a measurement loop
 
-### 7. Lab Workflow Concepts
+### 8. Lab Workflow Concepts
 
 - MATLAB measurement scripts
 - DSP-card experiments

@@ -19,6 +19,7 @@ The structure separates mathematical foundations, DSP algorithms, measurement pr
 - [Digital Signal Processing](digital-signal-processing/index.md): programmable DSP algorithms, spectral analysis, digital filters, adaptive filters, compensation, sensor fusion, and reproducible DSP tests.
 - [Measurement And Instrumentation](measurement-and-instrumentation/index.md): sensors, ADC/DAC measurement chains, oscilloscope workflows, timing, synchronization, calibration, transfer measurement, and lab data processing.
 - [Infocommunication](infocommunication/index.md): communication channels, coding, modulation, pulse shaping, ISI, OFDM, broadcast, mobile, and VoIP context.
+- [Authoring Instructions](authoring-instructions.md): terminology, taxonomy, and page-consistency rules for AI-generated signal-processing pages.
 - [Diagram Instructions](diagram-instructions.md): Markdown-renderable diagram rules for all signal-processing pages.
 
 ## Learning Order
@@ -53,3 +54,7 @@ Each subtopic uses the same four-page structure:
 - `theory.md`: concepts, definitions, algorithms, equations, and design tradeoffs in learning order.
 - `programming.md`: practical implementation path, exercises, deliverables, and verification.
 - `references.md`: source PDFs, extraction confidence, and pending reference work.
+
+## Terminology Rule
+
+When introducing a new technical term in a signal-processing page, include the correct Hungarian term in square brackets on first appearance. See [Authoring Instructions](authoring-instructions.md).

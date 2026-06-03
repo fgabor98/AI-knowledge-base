@@ -38,3 +38,4 @@ last_reviewed: null
 - Add page references for coding, modulation, and OFDM formulas.
 - Decide which communications simulations should live under `examples/infocommunication/`.
 - Add source checks for any modern protocol/system details before expanding beyond the supplied notes.
+- Add or verify sources for carrier recovery, symbol timing recovery, PLL/Costas loop, channel estimation, adaptive equalization, convolutional codes, Viterbi decoding, LDPC codes, and Turbo codes before turning them into detailed lessons.

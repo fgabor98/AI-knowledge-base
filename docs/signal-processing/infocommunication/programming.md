@@ -48,17 +48,24 @@ Deliverables:
 
 ### 3. Error-Control Coding
 
+- CRC generation and checking
 - Hamming distance calculation
 - nearest-codeword decoding
+- interleaving and deinterleaving
 - generator-matrix encoding
 - parity-check matrix
 - syndrome decoding
+- convolutional encoder
+- Viterbi decoder
+- soft-decision metrics
 - bit-error counting
 
 Deliverables:
 
 - small linear block code
 - syndrome decoder
+- CRC checker
+- convolutional code with Viterbi decoder
 - coding-gain experiment over a binary symmetric channel
 
 ### 4. Analog Modulation Simulations
@@ -105,7 +112,25 @@ Deliverables:
 - constellation before and after channel impairments
 - BER vs SNR sweep for at least one modulation
 
-### 7. OFDM And System Context
+### 7. Communication Synchronization And Equalization
+
+- symbol timing offset simulation
+- carrier frequency offset simulation
+- carrier recovery
+- symbol timing recovery
+- phase-locked loop
+- Costas loop for PSK
+- pilot-based channel estimation
+- adaptive equalization
+
+Deliverables:
+
+- simulate carrier frequency offset and recover it
+- implement a simple Costas loop for BPSK or QPSK
+- estimate a flat or frequency-selective channel from pilots
+- compare unequalized and equalized constellations
+
+### 8. OFDM And System Context
 
 - subcarrier mapping
 - IFFT/FFT modulation and demodulation
