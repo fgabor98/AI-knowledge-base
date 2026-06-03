@@ -21,7 +21,7 @@ last_reviewed: null
 
 ## Scope
 
-Digital Signal Processing owns finite-record algorithms, DFT/FFT analysis, digital filters, sampling and quantization implementation, adaptive filters, inverse filtering, sensor fusion algorithms, and testable programming workflows.
+Digital Signal Processing owns finite-record algorithms, DFT/FFT analysis, time-frequency analysis, multirate processing, fast convolution, digital filters, sampling and quantization implementation, adaptive filters, system identification, inverse filtering, sensor fusion algorithms, fixed-point implementation concerns, and testable programming workflows.
 
 Concepts that are mostly mathematical foundations belong in [Signals And Systems](../signals-and-systems/index.md). Instrument procedures belong in [Measurement And Instrumentation](../measurement-and-instrumentation/index.md). Communication-system architecture belongs in [Infocommunication](../infocommunication/index.md).
 
@@ -31,11 +31,12 @@ Concepts that are mostly mathematical foundations belong in [Signals And Systems
 2. Sampling, quantization, and finite records
 3. Averaging and basic digital filtering
 4. Discrete frequency-domain analysis
-5. Practical FFT and spectral estimation
+5. Practical FFT, time-frequency analysis, and spectral estimation
 6. Digital filter design and implementation
-7. Model fitting and adaptive filtering
-8. Inverse filtering, compensation, and sensor fusion
-9. Real-time DSP workflow and reproducible tests
+7. Multirate processing, fast convolution, and streaming DSP
+8. Model fitting, system identification, and adaptive filtering
+9. Inverse filtering, compensation, and sensor fusion
+10. Fixed-point, real-time workflow, and reproducible tests
 
 ## Page Responsibilities
 

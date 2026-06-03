@@ -77,7 +77,22 @@ Deliverables:
 - compare single-shot and averaged measurements
 - estimate noise reduction vs number of averages
 
-### 5. Compensation And Calibration
+### 5. Measurement Uncertainty
+
+- uncertainty budget tables
+- resolution, accuracy, and precision reporting
+- confidence interval computation
+- error propagation from input metrics
+- sampling-clock uncertainty estimates
+- calibration metadata capture
+
+Deliverables:
+
+- uncertainty report for one time-domain metric
+- error-propagation helper for derived measurements
+- calibration metadata schema
+
+### 6. Compensation And Calibration
 
 - measurement-chain impulse response model
 - convolution matrix construction
@@ -85,14 +100,17 @@ Deliverables:
 - Tikhonov regularization sweep
 - Wiener filtering
 - equivalent-time sampling reconstruction
+- uncertainty propagation through compensation
+- coherence and frequency-response-function validation
 
 Deliverables:
 
 - simulate bandwidth-limited measurement and compensate it
 - plot noise amplification vs regularization strength
 - calibrate a synthetic oscilloscope response
+- estimate a frequency response function and coherence from input/output records
 
-### 6. Distributed Synchronization
+### 7. Distributed Synchronization
 
 - synchronization timestamp pairs
 - clock offset and drift estimation
@@ -106,7 +124,7 @@ Deliverables:
 - transform one node timebase into another
 - resynchronize two sampled sensor streams
 
-### 7. Lab And Real-Time Integration
+### 8. Lab And Real-Time Integration
 
 - data acquisition log structure
 - DSP-card result import

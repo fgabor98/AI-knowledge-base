@@ -53,3 +53,5 @@ last_reviewed: null
 - Add page references for lab workflows and figures.
 - Manually confirm `inflab-4m.pdf`.
 - Decide where measured-data examples should live under `examples/`.
+- Add or verify a measurement uncertainty source before writing detailed uncertainty-budget formulas.
+- Add page references for calibration traceability, sampling-clock uncertainty, and coherence-based validation once source material is available.

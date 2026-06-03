@@ -68,7 +68,19 @@ last_reviewed: null
 - Bartlett and Welch averaging
 - autocorrelation and cross-correlation estimation
 
-### 5. Digital Filters
+### 5. Time-Frequency Analysis
+
+- short-time Fourier transform
+- spectrogram
+- analysis window length
+- time resolution vs frequency resolution
+- hop size
+- overlap
+- overlap-dependent averaging
+- reassigned or smoothed spectrograms as advanced context
+- wavelets as an optional advanced extension
+
+### 6. Digital Filters
 
 - FIR and IIR systems
 - direct forms and second-order sections
@@ -81,10 +93,36 @@ last_reviewed: null
 - equiripple/Remez FIR design
 - FIR vs IIR tradeoffs: phase, order, stability, runtime, and finite precision
 
-### 6. Model Fitting And Adaptive Filtering
+### 7. Multirate DSP And Fast Convolution
+
+- decimation
+- interpolation
+- rational resampling
+- sample-rate conversion
+- anti-imaging filters
+- anti-alias filters in decimators
+- polyphase filters
+- CIC filters
+- multirate filter banks
+- circular vs linear convolution
+- overlap-add convolution
+- overlap-save convolution
+- block convolution
+- partitioned convolution
+- streaming buffers
+- latency and block-size tradeoffs
+
+### 8. Model Fitting, System Identification, And Adaptive Filtering
 
 - regression and model fitting
 - parameter estimation vs adaptation
+- system identification
+- impulse-response estimation
+- transfer-function fitting
+- chirp, MLS, and PRBS excitation
+- coherence
+- frequency-response-function estimation
+- validation residuals
 - adaptive linear combiner
 - mean-square error cost
 - Wiener-Hopf equation
@@ -99,7 +137,7 @@ last_reviewed: null
 - echo cancellation
 - active noise control
 
-### 7. Compensation And Sensor Fusion Algorithms
+### 9. Compensation And Sensor Fusion Algorithms
 
 - measurement-chain transfer model
 - inverse filtering as deconvolution
@@ -111,12 +149,19 @@ last_reviewed: null
 - Dempster-Shafer fusion
 - reliability weighting and conflict handling
 
-### 8. Real-Time And Validation Concepts
+### 10. Fixed-Point, Real-Time, And Validation Concepts
 
 - sample-by-sample processing
 - block processing
 - latency and state
-- overflow and finite precision
+- fixed-point arithmetic
+- Q formats
+- scaling and headroom
+- saturation vs wraparound
+- coefficient quantization
+- IIR limit cycles
+- overflow analysis
+- block floating point
 - processor workflow
 - reproducible plotted artifacts
 - golden-signal tests

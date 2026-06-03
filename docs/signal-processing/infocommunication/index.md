@@ -21,7 +21,7 @@ last_reviewed: null
 
 ## Scope
 
-Infocommunication owns communication channels, source and channel coding, analog and digital modulation, pulse shaping, ISI, OFDM, broadcast systems, mobile systems, and VoIP context.
+Infocommunication owns communication channels, source and channel coding, analog and digital modulation, synchronization, pulse shaping, ISI, OFDM, broadcast systems, mobile systems, and VoIP context.
 
 ## Learning Order
 
@@ -31,7 +31,8 @@ Infocommunication owns communication channels, source and channel coding, analog
 4. Analog modulation
 5. Baseband digital transmission
 6. Carrier digital modulation
-7. Multiplexing, OFDM, broadcast, mobile, and VoIP systems
+7. Communication synchronization and equalization
+8. Multiplexing, OFDM, broadcast, mobile, and VoIP systems
 
 ## Page Responsibilities
 

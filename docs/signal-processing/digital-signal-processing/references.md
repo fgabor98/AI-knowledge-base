@@ -60,3 +60,5 @@ last_reviewed: null
 - Add page references for major formulas and algorithms.
 - Add executable examples under `examples/dsp/`.
 - Review numerical formulas against course material before treating them as canonical.
+- Add or verify sources for multirate DSP, fast convolution, fixed-point arithmetic, and time-frequency analysis if the current university notes do not cover them deeply enough.
+- Add a dedicated source for system identification if chirp, MLS, PRBS, coherence, and frequency-response-function estimation become full lessons.

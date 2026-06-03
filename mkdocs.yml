@@ -81,6 +81,7 @@ nav:
       - python/index.md
   - Signal Processing:
       - Overview: signal-processing/index.md
+      - Authoring Instructions: signal-processing/authoring-instructions.md
       - Diagram Instructions: signal-processing/diagram-instructions.md
       - Signals And Systems:
           - Overview: signal-processing/signals-and-systems/index.md

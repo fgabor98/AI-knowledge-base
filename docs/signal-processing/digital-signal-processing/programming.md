@@ -80,7 +80,24 @@ Deliverables:
 - sliding recursive DFT demo
 - narrowband zoom FFT demo
 
-### 5. Digital Filter Implementation
+### 5. Time-Frequency Analysis
+
+- STFT implementation
+- spectrogram generation
+- window length selection
+- hop size and overlap
+- time-frequency resolution experiments
+- spectrogram averaging or smoothing
+- optional wavelet transform comparison
+
+Deliverables:
+
+- STFT and inverse-STFT round-trip demo
+- spectrogram of a chirp and a transient signal
+- window-length vs frequency-resolution comparison
+- hop-size vs time-resolution comparison
+
+### 6. Digital Filter Implementation
 
 - direct-form FIR
 - direct-form I/II IIR
@@ -89,15 +106,6 @@ Deliverables:
 - filter state and initial conditions
 - coefficient normalization
 - numerical robustness checks
-
-Deliverables:
-
-- FIR implementation tested against direct convolution
-- IIR implementation tested against `scipy.signal.lfilter`
-- SOS implementation compared with direct form
-
-### 6. Digital Filter Design
-
 - low-pass, high-pass, band-pass, and band-stop specifications
 - IIR design with Butterworth, Chebyshev, and elliptic families
 - bilinear transform and prewarping
@@ -107,6 +115,9 @@ Deliverables:
 
 Deliverables:
 
+- FIR implementation tested against direct convolution
+- IIR implementation tested against `scipy.signal.lfilter`
+- SOS implementation compared with direct form
 - design one specification as FIR and IIR
 - compare order, phase, runtime, and numerical behavior
 - commit plots generated from scripts
@@ -128,9 +139,36 @@ Deliverables:
 - SQNR sweep
 - dithered vs non-dithered error spectrum
 
-### 8. Model Fitting And Adaptive Filters
+### 8. Multirate DSP And Fast Convolution
+
+- decimator and interpolator implementation
+- rational resampling with `upfirdn`-style processing
+- anti-imaging and anti-alias filter placement
+- polyphase FIR implementation
+- CIC filter simulation
+- linear vs circular convolution
+- overlap-add convolution
+- overlap-save convolution
+- partitioned convolution
+- streaming buffer management
+- latency measurement
+
+Deliverables:
+
+- resample a signal by a rational factor and verify spectrum placement
+- implement polyphase decimation or interpolation
+- compare direct convolution, FFT convolution, overlap-add, and overlap-save
+- measure block size vs runtime vs latency
+
+### 9. System Identification And Adaptive Filters
 
 - least-squares FIR identification
+- impulse-response estimation
+- transfer-function fitting
+- chirp, MLS, and PRBS excitation generation
+- frequency-response-function estimation
+- coherence computation
+- residual validation
 - LMS
 - NLMS
 - LMS-Newton or recursive correlation estimate
@@ -143,11 +181,14 @@ Deliverables:
 Deliverables:
 
 - FIR identification from noisy input/output pairs
+- identify a system with chirp, MLS, or PRBS excitation
+- estimate a frequency response and coherence from input/output records
+- validate residuals after fitting
 - LMS vs NLMS convergence comparison
 - filtered-x LMS secondary-path simulation
 - active noise control toy example
 
-### 9. Compensation And Fusion
+### 10. Compensation And Fusion
 
 - inverse filtering with noise amplification
 - Tikhonov regularization sweep
@@ -163,7 +204,25 @@ Deliverables:
 - regularization tradeoff plot
 - two-sensor fusion demo with different noise variances
 
-### 10. Test And Review Harness
+### 11. Fixed-Point And Embedded DSP Numerics
+
+- Q-format conversion
+- scaling and headroom strategy
+- saturation vs wraparound arithmetic
+- coefficient quantization
+- fixed-point FIR and IIR simulation
+- IIR limit-cycle detection
+- overflow analysis
+- block floating point
+
+Deliverables:
+
+- quantize FIR and IIR coefficients and compare responses
+- simulate saturation and wraparound failures
+- detect limit cycles in a recursive filter
+- produce a scaling report for one fixed-point filter
+
+### 12. Test And Review Harness
 
 - property tests for linearity and time invariance
 - causality checks

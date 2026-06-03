@@ -161,6 +161,7 @@ Advanced:
 ### Page Taxonomy
 
 - Root page: `docs/signal-processing/index.md`
+- Authoring instructions: `docs/signal-processing/authoring-instructions.md`
 - Diagram instructions: `docs/signal-processing/diagram-instructions.md`
 - Subtopic page pattern: each subtopic has `index.md`, `theory.md`, `programming.md`, and `references.md`
 - Signals And Systems:
@@ -186,6 +187,7 @@ Advanced:
 - Theory pages own definitions, equations, algorithms, assumptions, and design tradeoffs.
 - Programming pages own implementation sequence, exercises, deliverables, test strategy, and reusable code plans.
 - References pages own source PDFs, confidence notes, extraction limits, and pending review tasks.
+- New technical terms must include the correct Hungarian term in square brackets on first appearance.
 
 ### Signals And Systems
 
@@ -293,6 +295,23 @@ Intermediate:
 - resonator-based Fourier analyzer
 - adaptive Fourier analyzer
 - band-selective and zoom FFT
+- time-frequency analysis
+- short-time Fourier transform
+- spectrograms
+- window length vs frequency resolution
+- hop size and overlap
+- multirate DSP
+- decimation
+- interpolation
+- rational resampling
+- sample-rate conversion
+- anti-imaging filters
+- polyphase filters
+- fast convolution
+- circular vs linear convolution
+- overlap-add convolution
+- overlap-save convolution
+- block convolution
 - digital filter design
 - Butterworth filters
 - Chebyshev filters
@@ -316,6 +335,15 @@ Advanced:
 - model fitting
 - parameter estimation
 - regression
+- system identification
+- impulse-response estimation
+- transfer-function fitting
+- chirp excitation
+- MLS excitation
+- PRBS excitation
+- coherence
+- frequency-response-function estimation
+- validation residuals
 - Wiener-Hopf equation
 - adaptive linear combiner
 - steepest descent
@@ -336,6 +364,20 @@ Advanced:
 - Dempster-Shafer fusion
 - resonator-observer data compression
 - real-time DSP processor workflow
+- streaming buffers
+- streaming latency
+- partitioned convolution
+- fixed-point arithmetic
+- Q formats
+- scaling and headroom
+- saturation vs wraparound
+- coefficient quantization
+- IIR limit cycles
+- overflow analysis
+- block floating point
+- CIC filters
+- multirate filter banks
+- wavelets
 - reproducible DSP testing
 
 ### Measurement And Instrumentation
@@ -355,6 +397,7 @@ Beginner:
 - averaging for noise reduction
 - finite measurement records
 - measurement saturation and dynamic range
+- resolution vs accuracy vs precision
 
 Intermediate:
 
@@ -375,10 +418,17 @@ Intermediate:
 - local timestamps
 - synchronization points
 - linear timestamp transformation
+- measurement uncertainty
+- uncertainty budgets
+- error propagation
+- confidence intervals
+- calibration traceability
+- sampling-clock uncertainty
 
 Advanced:
 
 - measurement-chain compensation
+- uncertainty propagation in compensated measurements
 - clock offset and drift estimation
 - timestamp transformation
 - interpolation-based resynchronization
@@ -393,6 +443,8 @@ Advanced:
 - equivalent-time sampling
 - oscilloscope calibration by inverse filtering
 - multisensor fusion for range and bandwidth extension
+- frequency-response-function estimation
+- coherence-based measurement validation
 - real-time DSP card experiments
 - neural-network spectral classification
 
@@ -419,6 +471,7 @@ Beginner:
 - Hamming distance
 - error detection
 - error correction
+- CRC
 
 Intermediate:
 
@@ -433,6 +486,8 @@ Intermediate:
 - generator matrix
 - parity-check matrix
 - syndrome decoding
+- interleaving
+- convolutional codes
 - amplitude modulation
 - DSB, DSB-SC, and SSB
 - envelope detection
@@ -462,6 +517,18 @@ Intermediate:
 
 Advanced:
 
+- communication synchronization
+- symbol timing recovery
+- carrier recovery
+- clock recovery
+- phase-locked loop
+- Costas loop
+- channel estimation
+- adaptive equalization
+- Viterbi decoding
+- soft-decision decoding
+- LDPC codes
+- Turbo codes
 - matched transmit and receive filters
 - channel equalization basics
 - decision thresholds

@@ -15,6 +15,7 @@ last_reviewed: null
 - Page type: authoring/reference support
 - Applies to: Signals And Systems, Digital Signal Processing, Measurement And Instrumentation, and Infocommunication
 - Purpose: keep figures version-controlled and renderable from Markdown whenever practical
+- Companion instruction page: [Authoring Instructions](authoring-instructions.md)
 
 ## Diagram Policy
 
