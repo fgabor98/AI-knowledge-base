@@ -39,6 +39,36 @@ Do not guess Hungarian terminology. If the correct Hungarian term is not known f
 
 Do not translate variable names or standard mathematical symbols. Translate the concept name, not the notation.
 
+## Equation Rule
+
+Use LaTeX equation notation [LaTeX egyenletjelölés] for mathematical expressions that are more complex than a short scalar assignment.
+
+Preferred forms:
+
+- inline equation [sorközi egyenlet]: `\(x(t)\)` inside prose
+- display equation [kiemelt egyenlet]: `\[...\]` on its own lines
+- aligned derivation [rendezett levezetés]: `\begin{aligned}...\end{aligned}` inside a display equation
+
+Example:
+
+```text
+\[
+\begin{aligned}
+y(t)
+  &= \int_{-\infty}^{\infty} x(\tau) h(t-\tau)\,d\tau \\
+  &= (x * h)(t)
+\end{aligned}
+\]
+```
+
+Keep equations inspectable in plain text:
+
+- define every non-obvious symbol near the equation
+- prefer one conceptual step per displayed equation
+- use `\mathrm{}` for named operators only when it improves readability
+- do not replace important equations with screenshots
+- keep simple programming formulas in code fences only when the purpose is pseudocode rather than mathematical notation
+
 ## Page Consistency Rules
 
 - Every subtopic page must state its taxonomy near the top.
