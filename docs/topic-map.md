@@ -160,8 +160,16 @@ Advanced:
 
 - kernel source tree layout
 - building the kernel
+- Linux kernel build system roadmap
+- Kbuild
+- Kconfig
+- defconfig
+- menuconfig
+- out-of-tree builds with O=
 - kernel configuration
+- kernel image outputs
 - kernel modules
+- external modules with M=
 - module parameters
 - init and exit paths
 - character devices
@@ -201,6 +209,10 @@ Advanced:
 - BootROM
 - SPL
 - U-Boot
+- U-Boot build system roadmap
+- U-Boot board defconfigs
+- U-Boot SPL and TPL
+- U-Boot FIT images
 - Linux handoff
 - kernel command line
 - device tree overlays
@@ -259,13 +271,29 @@ Advanced:
 
 ## Build Systems
 
+- build systems for embedded Linux roadmap
+- Linux kernel build system roadmap
+- U-Boot build system roadmap
+- direct compiler invocation
+- object files and linking
 - Make basics
 - recursive Make
 - CMake basics
+- Ninja
+- Meson
+- Autotools
 - pkg-config
 - cross-compilation
+- target triples
 - sysroots
+- staging directories
 - toolchain files
+- kernel module builds
+- Kbuild
+- Kconfig
+- defconfig
+- U-Boot SPL and TPL
+- FIT images
 - dependency tracking
 - reproducible builds
 - CI build checks

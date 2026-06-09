@@ -88,7 +88,10 @@ nav:
   - Networking:
       - networking/index.md
   - Build Systems:
-      - build-systems/index.md
+      - Overview: build-systems/index.md
+      - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
+      - Linux Kernel Build System Roadmap: build-systems/linux-kernel-build-roadmap.md
+      - U-Boot Build System Roadmap: build-systems/u-boot-build-roadmap.md
   - Patterns:
       - patterns/index.md
   - Templates:
