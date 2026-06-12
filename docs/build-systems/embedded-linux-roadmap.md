@@ -27,7 +27,12 @@ This roadmap explains how Makefiles, CMake, and related build tools fit together
 - Sysroots
 - `pkg-config`
 - Kernel module builds
-- Buildroot and Yocto
+- System build frameworks
+- Buildroot
+- Yocto and OpenEmbedded
+- TI Processor SDK
+- Root filesystem image tools
+- Update artifact tooling
 
 ## Mental Model
 
@@ -42,7 +47,7 @@ source files
 -> final image deployed to hardware
 ```
 
-A Makefile usually describes concrete build commands directly. CMake describes the project and generates files for another build executor, such as Make or Ninja. Buildroot and Yocto sit above project-level builds and assemble complete embedded Linux systems.
+A Makefile usually describes concrete build commands directly. CMake describes the project and generates files for another build executor, such as Make or Ninja. Buildroot, Yocto/OpenEmbedded, and vendor SDKs sit above project-level builds and assemble complete embedded Linux systems.
 
 For embedded Linux, always ask:
 
@@ -193,6 +198,26 @@ make -C /path/to/linux \
   M=$PWD modules
 ```
 
+### System Build Frameworks
+
+Complete embedded Linux products need tools above Make and CMake. These tools build or assemble the toolchain, bootloader, kernel, root filesystem, packages, images, and sometimes update bundles.
+
+Base summary:
+
+- Buildroot: simpler full-system builder; good first system build framework.
+- Yocto/OpenEmbedded: metadata-driven distribution build ecosystem; learn in detail for production BSPs and long-lived products.
+- PTXdist: industrial embedded Linux build framework used in some professional environments.
+- OpenWrt build system: important for routers, gateways, Wi-Fi devices, and network appliances.
+- Vendor BSP build systems: board-vendor workflows that often wrap Yocto/OE, Buildroot, Make, shell scripts, and image tools.
+- Root filesystem image tools: `cpio`, `mkfs.ext4`, `mksquashfs`, `mkfs.ubifs`, `ubinize`, and WIC-style partition image generation.
+- Update systems: RAUC, SWUpdate, Mender, and OSTree-style update flows.
+- Containerized build environments: Docker or Podman used to stabilize host build environments and CI builds.
+
+Treat Yocto/OpenEmbedded and TI Processor SDK as detailed follow-on topics:
+
+- [Yocto and OpenEmbedded Roadmap](yocto-openembedded-roadmap.md)
+- [TI Processor SDK Roadmap](ti-processor-sdk-roadmap.md)
+
 ## Minimal Example
 
 Build a small C program manually, then move it into Make:
@@ -238,7 +263,10 @@ A practical embedded Linux learning sequence:
 9. Build the CMake project with Ninja.
 10. Build a simple out-of-tree kernel module.
 11. Add the userspace app to Buildroot as a package.
-12. Later, write a Yocto recipe for the same app.
+12. Write a Yocto recipe for the same app.
+13. Build the app into a Yocto image from a custom layer.
+14. Reproduce a TI Processor SDK image for one supported EVM.
+15. Add the same app to the TI SDK build through a custom layer.
 
 This progression keeps the project small while adding the constraints that embedded Linux work actually has.
 
@@ -251,6 +279,8 @@ This progression keeps the project small while adding the constraints that embed
 - Ignoring sysroot configuration until dependency discovery breaks.
 - Writing install rules that install into the host filesystem instead of a staging directory or root filesystem.
 - Building a kernel module against headers that do not match the target kernel.
+- Mixing vendor BSP releases, layers, toolchains, and documentation from different versions.
+- Treating system image generation as only a filesystem copy operation.
 
 ## Debugging Checklist
 
@@ -288,13 +318,30 @@ This progression keeps the project small while adding the constraints that embed
 
 1. Kernel module builds
 2. Buildroot packages
-3. Yocto recipes and BitBake tasks
-4. Reproducible builds
-5. CI checks for cross-builds
+3. Yocto/OpenEmbedded recipes, layers, images, and BitBake tasks
+4. TI Processor SDK source builds and image customization
+5. Root filesystem and partition image generation
+6. Update artifact generation
+7. Reproducible builds
+8. CI checks for cross-builds
+
+### System Build Framework Survey
+
+Learn the purpose of these even if they are not the main focus:
+
+1. Buildroot
+2. PTXdist
+3. OpenWrt build system
+4. Vendor BSP build flows
+5. Root filesystem image tools
+6. RAUC, SWUpdate, Mender, and OSTree-style update systems
+7. Containerized build environments
 
 ## Related Topics
 
 - [Build Systems](index.md)
+- [Yocto and OpenEmbedded Roadmap](yocto-openembedded-roadmap.md)
+- [TI Processor SDK Roadmap](ti-processor-sdk-roadmap.md)
 - [Embedded Linux](../embedded-linux/index.md)
 - [Linux Kernel Programming](../linux-kernel/index.md)
 - [C Programming](../c/index.md)
@@ -307,3 +354,4 @@ This progression keeps the project small while adding the constraints that embed
 - Linux kernel documentation for external modules
 - Buildroot manual
 - Yocto Project documentation
+- TI Processor SDK Linux documentation

@@ -92,6 +92,8 @@ nav:
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
       - Linux Kernel Build System Roadmap: build-systems/linux-kernel-build-roadmap.md
       - U-Boot Build System Roadmap: build-systems/u-boot-build-roadmap.md
+      - Yocto And OpenEmbedded Roadmap: build-systems/yocto-openembedded-roadmap.md
+      - TI Processor SDK Roadmap: build-systems/ti-processor-sdk-roadmap.md
   - Patterns:
       - patterns/index.md
   - Templates:

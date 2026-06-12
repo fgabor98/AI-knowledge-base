@@ -221,7 +221,23 @@ Advanced:
 - systemd basics
 - BusyBox systems
 - Yocto basics
+- Yocto and OpenEmbedded detailed roadmap
+- BitBake
+- Yocto layers
+- Yocto recipes
+- Yocto images
+- Yocto machine configuration
+- Yocto distro configuration
+- TI Processor SDK detailed roadmap
+- TI Arago layers
+- TI oe-layersetup
+- TI Processor SDK image targets
 - Buildroot basics
+- PTXdist basics
+- OpenWrt build system basics
+- vendor BSP build flows
+- root filesystem image tools
+- update artifact systems
 - cross-compilation
 - toolchains
 - kernel configuration
@@ -274,6 +290,8 @@ Advanced:
 - build systems for embedded Linux roadmap
 - Linux kernel build system roadmap
 - U-Boot build system roadmap
+- Yocto and OpenEmbedded detailed roadmap
+- TI Processor SDK detailed roadmap
 - direct compiler invocation
 - object files and linking
 - Make basics
@@ -298,8 +316,22 @@ Advanced:
 - reproducible builds
 - CI build checks
 - Yocto recipes
+- Yocto layers
+- Yocto images
 - BitBake tasks
+- OpenEmbedded metadata
+- TI Arago layers
+- TI oe-layersetup
+- TI Processor SDK image targets
 - Buildroot packages
+- PTXdist
+- OpenWrt build system
+- vendor BSP build flows
+- root filesystem image tools
+- RAUC
+- SWUpdate
+- Mender
+- OSTree
 
 ## Patterns
 

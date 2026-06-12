@@ -21,7 +21,7 @@ This section covers the tools and workflows that turn source code into native bi
 - `pkg-config` and target dependency discovery
 - cross-compilation, toolchains, and sysroots
 - kernel module build integration
-- Buildroot packages and Yocto recipes
+- Buildroot packages, Yocto/OpenEmbedded recipes, and TI Processor SDK builds
 - reproducible builds and CI checks
 
 ## Learning Path
@@ -31,6 +31,8 @@ Start with the embedded Linux roadmap:
 1. [Build Systems for Embedded Linux](embedded-linux-roadmap.md)
 2. [Linux Kernel Build System Roadmap](linux-kernel-build-roadmap.md)
 3. [U-Boot Build System Roadmap](u-boot-build-roadmap.md)
+4. [Yocto and OpenEmbedded Roadmap](yocto-openembedded-roadmap.md)
+5. [TI Processor SDK Roadmap](ti-processor-sdk-roadmap.md)
 
 Then expand individual topic pages from the [Topic Map](../topic-map.md).
 
