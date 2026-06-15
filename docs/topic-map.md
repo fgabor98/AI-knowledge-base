@@ -209,6 +209,7 @@ Advanced:
 - BootROM
 - SPL
 - U-Boot
+- SoC boot flow
 - U-Boot build system roadmap
 - U-Boot board defconfigs
 - U-Boot SPL and TPL
@@ -217,6 +218,10 @@ Advanced:
 - kernel command line
 - device tree overlays
 - root filesystem layout
+- image layout and storage
+- SD/eMMC/NAND/NOR storage
+- WIC images
+- UBI and UBIFS
 - init systems
 - systemd basics
 - BusyBox systems
@@ -232,6 +237,15 @@ Advanced:
 - TI Arago layers
 - TI oe-layersetup
 - TI Processor SDK image targets
+- TI Sitara platform notes
+- AM62x
+- AM64x
+- AM335x
+- PRU basics
+- remoteproc and rpmsg
+- TI CPSW Ethernet
+- TI pinmux workflow
+- TI TRM reading workflow
 - Buildroot basics
 - PTXdist basics
 - OpenWrt build system basics
@@ -242,12 +256,18 @@ Advanced:
 - toolchains
 - kernel configuration
 - board bring-up
+- device tree for board bring-up
+- DTS and DTSI layering
+- pinmux
+- regulators and clocks
+- Ethernet PHY device tree debugging
 - serial console
 - networking bring-up
 - storage layout
 - partitioning
 - A/B update schemes
 - secure boot concepts
+- verified boot
 - field diagnostics
 - production logging
 
@@ -267,6 +287,13 @@ Advanced:
 - logic analyzer workflow
 - serial console workflow
 - logging strategy
+- hardware-in-the-loop testing
+- board farm workflow
+- boot log parsing
+- automated flashing tests
+- production diagnostics
+- persistent log collection
+- crash dump workflow
 
 ## Networking
 
@@ -294,18 +321,44 @@ Advanced:
 - TI Processor SDK detailed roadmap
 - direct compiler invocation
 - object files and linking
+- preprocessing, compilation, assembly, and linking pipeline
+- static libraries
+- shared libraries
+- symbol visibility
+- ABI compatibility
+- linker search paths
+- runtime dynamic linker paths
+- RPATH and RUNPATH
+- debug symbols and build IDs
 - Make basics
 - recursive Make
+- non-recursive Make
+- generated dependency files
+- parallel builds
 - CMake basics
+- modern CMake targets
+- CMake presets
+- CMake toolchain files
+- CMake `find_package`
+- CMake imported targets
+- CMake exported targets
+- CMake install rules
+- CPack basics
 - Ninja
 - Meson
 - Autotools
+- Bazel-like hermetic build concepts
+- remote build cache concepts
 - pkg-config
+- target `pkg-config`
 - cross-compilation
 - target triples
 - sysroots
 - staging directories
 - toolchain files
+- toolchain version pinning
+- SDK sysroots
+- generated SDKs
 - kernel module builds
 - Kbuild
 - Kconfig
@@ -313,17 +366,65 @@ Advanced:
 - U-Boot SPL and TPL
 - FIT images
 - dependency tracking
+- source fetching
+- source mirrors
+- dependency vendoring
+- Git submodules
+- patch management
+- quilt patch workflow
+- generated code dependencies
+- host tools in cross-builds
+- code generators
 - reproducible builds
+- hermetic builds
+- deterministic archives
+- timestamp control
+- build path reproducibility
+- offline builds
+- build containers
+- build environment isolation
+- ccache
+- sstate cache
+- download caches
+- artifact caches
+- build performance profiling
+- incremental build correctness
 - CI build checks
+- static analysis integration
+- compiler warnings policy
+- unit test integration
+- cross-test strategy
+- emulator-based tests
+- sanitizer integration
+- coverage integration
+- image size regression checks
+- release artifact generation
+- build provenance
+- release manifests
+- SBOM generation
+- license manifest generation
+- source archive generation
+- debug symbol packages
+- binary package feeds
+- package signing
+- artifact promotion
+- artifact retention
 - Yocto recipes
 - Yocto layers
 - Yocto images
 - BitBake tasks
+- BitBake task signatures
+- BitBake fetchers
+- Yocto SDK generation
 - OpenEmbedded metadata
 - TI Arago layers
 - TI oe-layersetup
 - TI Processor SDK image targets
 - Buildroot packages
+- Buildroot external trees
+- Buildroot rootfs overlays
+- Buildroot post-build scripts
+- Buildroot post-image scripts
 - PTXdist
 - OpenWrt build system
 - vendor BSP build flows
@@ -332,6 +433,64 @@ Advanced:
 - SWUpdate
 - Mender
 - OSTree
+
+## Embedded Productization
+
+- embedded DevOps role
+- embedded release engineering
+- product versioning
+- artifact naming
+- release manifests
+- build provenance
+- reproducible product builds
+- source manifests
+- SBOM and license artifacts
+- debug symbol handling
+- SDK release artifacts
+- factory image vs OTA image
+- hardware-in-the-loop testing
+- board farms
+- serial console automation
+- relay-controlled power cycling
+- flashing automation
+- network boot testing
+- smoke tests on hardware
+- peripheral tests
+- factory provisioning
+- factory flashing stations
+- golden images
+- serial number provisioning
+- MAC address programming
+- certificate and key provisioning
+- calibration data
+- production test logs
+- device identity
+- OTA update systems
+- RAUC
+- SWUpdate
+- Mender
+- OSTree
+- A/B partitioning
+- rollback logic
+- signed update bundles
+- interrupted update recovery
+- secure boot and chain of trust
+- ROM boot trust anchor
+- SPL and U-Boot signing
+- FIT image signing
+- root filesystem integrity
+- kernel module signing
+- key management
+- production diagnostics
+- persistent logs
+- watchdogs
+- boot counters
+- health checks
+- update status reporting
+- remote log retrieval
+- read-only root filesystem strategy
+- filesystem corruption prevention
+- brownout and power-loss behavior
 
 ## Patterns
 

@@ -26,6 +26,11 @@ This roadmap explains how Makefiles, CMake, and related build tools fit together
 - Toolchains and target triples
 - Sysroots
 - `pkg-config`
+- CMake package discovery
+- Install rules and staging
+- Patch management
+- Build caching
+- Build environment isolation
 - Kernel module builds
 - System build frameworks
 - Buildroot
@@ -173,6 +178,57 @@ pkg-config --cflags --libs libgpiod
 
 In embedded builds, make sure `pkg-config` reads target `.pc` files from the target sysroot, not host library metadata from the workstation.
 
+### Dependency Discovery And Install Rules
+
+Embedded Linux builds need predictable dependency discovery and installation behavior.
+
+Learn:
+
+- `pkg-config` search paths and sysroot behavior
+- CMake `find_package`
+- CMake imported and exported targets
+- install prefixes
+- `DESTDIR`
+- staging directories
+- runtime library paths and dynamic linker paths
+- generated SDK sysroots
+
+The goal is to avoid building against host headers or libraries while still producing installable target artifacts.
+
+### Source, Patch, And Cache Management
+
+Complete systems rarely build only first-party code. Learn how sources are fetched, patched, cached, mirrored, and rebuilt.
+
+Important topics:
+
+- source mirrors
+- vendored tarballs
+- Git submodules and their risks
+- patch series
+- quilt-style patch flows
+- Yocto `.bbappend` patching
+- Buildroot package patches
+- `ccache`
+- Yocto shared state cache
+- download caches
+- offline and repeatable builds
+
+### Build Quality Gates
+
+Build systems often own quality checks, not just compilation.
+
+Useful integrations:
+
+- compiler warnings as policy
+- static analysis
+- unit tests
+- integration tests
+- code coverage
+- sanitizers for host-side or emulated tests
+- image size checks
+- ABI compatibility checks
+- license and SBOM checks
+
 ### Kernel Module Builds
 
 Out-of-tree kernel modules use the kernel build system:
@@ -212,6 +268,7 @@ Base summary:
 - Root filesystem image tools: `cpio`, `mkfs.ext4`, `mksquashfs`, `mkfs.ubifs`, `ubinize`, and WIC-style partition image generation.
 - Update systems: RAUC, SWUpdate, Mender, and OSTree-style update flows.
 - Containerized build environments: Docker or Podman used to stabilize host build environments and CI builds.
+- Bazel-like hermetic build concepts: useful to understand even when the production system uses Yocto or Buildroot.
 
 Treat Yocto/OpenEmbedded and TI Processor SDK as detailed follow-on topics:
 
@@ -260,13 +317,15 @@ A practical embedded Linux learning sequence:
 6. Add one real target dependency, such as `libgpiod`, using `pkg-config`.
 7. Rewrite the same project in CMake.
 8. Add a CMake toolchain file and sysroot configuration.
-9. Build the CMake project with Ninja.
-10. Build a simple out-of-tree kernel module.
-11. Add the userspace app to Buildroot as a package.
-12. Write a Yocto recipe for the same app.
-13. Build the app into a Yocto image from a custom layer.
-14. Reproduce a TI Processor SDK image for one supported EVM.
-15. Add the same app to the TI SDK build through a custom layer.
+9. Add install rules and verify staged installation.
+10. Build the CMake project with Ninja.
+11. Add static analysis or unit tests to the build.
+12. Build a simple out-of-tree kernel module.
+13. Add the userspace app to Buildroot as a package.
+14. Write a Yocto recipe for the same app.
+15. Build the app into a Yocto image from a custom layer.
+16. Reproduce a TI Processor SDK image for one supported EVM.
+17. Add the same app to the TI SDK build through a custom layer.
 
 This progression keeps the project small while adding the constraints that embedded Linux work actually has.
 
@@ -279,6 +338,11 @@ This progression keeps the project small while adding the constraints that embed
 - Ignoring sysroot configuration until dependency discovery breaks.
 - Writing install rules that install into the host filesystem instead of a staging directory or root filesystem.
 - Building a kernel module against headers that do not match the target kernel.
+- Letting CMake or `pkg-config` find host dependencies during a target build.
+- Treating Git submodules or floating source URLs as reproducible dependency management.
+- Ignoring generated files, code generators, and host tools in the dependency graph.
+- Rebuilding everything because caches, mirrors, or task dependencies are not understood.
+- Shipping binaries without matching debug symbols or build provenance.
 - Mixing vendor BSP releases, layers, toolchains, and documentation from different versions.
 - Treating system image generation as only a filesystem copy operation.
 
@@ -293,6 +357,11 @@ This progression keeps the project small while adding the constraints that embed
 - Confirm the target root filesystem contains the required shared libraries.
 - For kernel modules, confirm `ARCH`, `CROSS_COMPILE`, and the kernel build directory match the target kernel.
 - Rebuild from a clean tree when changing toolchains or sysroots.
+- Inspect CMake cache entries when dependency discovery looks wrong.
+- Check `DESTDIR`, install prefix, and staging paths before packaging.
+- Check whether generated code or host tools need to be rebuilt.
+- Confirm cache hits and misses when diagnosing slow builds.
+- Preserve debug symbols and build IDs for released binaries.
 
 ## Learning Path
 
@@ -313,6 +382,9 @@ This progression keeps the project small while adding the constraints that embed
 5. CMake toolchain files
 6. Ninja as a generated backend
 7. Install rules and staging directories
+8. CMake package discovery
+9. Source patching and dependency vendoring
+10. Build caching with `ccache` and framework-specific caches
 
 ### Advanced
 
@@ -322,8 +394,12 @@ This progression keeps the project small while adding the constraints that embed
 4. TI Processor SDK source builds and image customization
 5. Root filesystem and partition image generation
 6. Update artifact generation
-7. Reproducible builds
+7. Reproducible and hermetic build concepts
 8. CI checks for cross-builds
+9. Static analysis, coverage, and sanitizer integration
+10. ABI compatibility and symbol management
+11. Binary package feeds and SDK generation
+12. Build performance, caching, and mirrors
 
 ### System Build Framework Survey
 
@@ -336,6 +412,7 @@ Learn the purpose of these even if they are not the main focus:
 5. Root filesystem image tools
 6. RAUC, SWUpdate, Mender, and OSTree-style update systems
 7. Containerized build environments
+8. Bazel-like hermetic build systems and remote cache concepts
 
 ## Related Topics
 
@@ -351,6 +428,7 @@ Learn the purpose of these even if they are not the main focus:
 
 - GNU Make manual
 - CMake documentation
+- Ninja manual
 - Linux kernel documentation for external modules
 - Buildroot manual
 - Yocto Project documentation

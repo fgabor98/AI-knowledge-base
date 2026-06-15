@@ -19,10 +19,19 @@ This section covers the tools and workflows that turn source code into native bi
 - CMake and generated build backends
 - Ninja and Meson
 - `pkg-config` and target dependency discovery
+- CMake package discovery and exported targets
+- dependency vendoring and source fetch policy
 - cross-compilation, toolchains, and sysroots
+- toolchain version pinning and build environment isolation
 - kernel module build integration
 - Buildroot packages, Yocto/OpenEmbedded recipes, and TI Processor SDK builds
+- build caching, mirrors, and shared state
+- patch management for vendor and upstream sources
+- binary package feeds and SDK generation
+- ABI compatibility, symbol visibility, and linker behavior
+- static analysis, test, coverage, and sanitizer integration
 - reproducible builds and CI checks
+- release artifacts and build provenance
 
 ## Learning Path
 
@@ -35,6 +44,8 @@ Start with the embedded Linux roadmap:
 5. [TI Processor SDK Roadmap](ti-processor-sdk-roadmap.md)
 
 Then expand individual topic pages from the [Topic Map](../topic-map.md).
+
+For product release pipelines, hardware CI, update bundles, factory flashing, and release traceability, see [Embedded Productization](../embedded-productization/index.md).
 
 ## Page Rules
 

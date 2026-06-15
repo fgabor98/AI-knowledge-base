@@ -10,6 +10,8 @@ last_reviewed: null
 
 Embedded Linux topics focused on boot flow, board bring-up, root filesystems, build systems, deployment, and field diagnostics.
 
+For product-level release, test, update, provisioning, and diagnostics workflows, see [Embedded Productization](../embedded-productization/index.md).
+
 For build-system learning paths, start with:
 
 1. [Build Systems for Embedded Linux](../build-systems/embedded-linux-roadmap.md)

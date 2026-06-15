@@ -83,6 +83,8 @@ nav:
       - linux-kernel/index.md
   - Embedded Linux:
       - embedded-linux/index.md
+  - Embedded Productization:
+      - embedded-productization/index.md
   - Debugging:
       - debugging/index.md
   - Networking:
