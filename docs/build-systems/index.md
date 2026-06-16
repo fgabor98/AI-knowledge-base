@@ -35,7 +35,15 @@ This section covers the tools and workflows that turn source code into native bi
 
 ## Learning Path
 
-Start with the embedded Linux roadmap:
+Beginner pages:
+
+1. [Direct Compiler Invocation](direct-compiler-invocation.md)
+2. [Object Files and Linking](object-files-and-linking.md)
+3. [Make Basics](make-basics.md)
+4. [Make Variables and Pattern Rules](make-variables-and-pattern-rules.md)
+5. [Native Linux Userspace Builds](native-linux-userspace-builds.md)
+
+Roadmaps:
 
 1. [Build Systems for Embedded Linux](embedded-linux-roadmap.md)
 2. [Linux Kernel Build System Roadmap](linux-kernel-build-roadmap.md)

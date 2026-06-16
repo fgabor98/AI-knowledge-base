@@ -91,6 +91,12 @@ nav:
       - networking/index.md
   - Build Systems:
       - Overview: build-systems/index.md
+      - Beginner:
+          - Direct Compiler Invocation: build-systems/direct-compiler-invocation.md
+          - Object Files And Linking: build-systems/object-files-and-linking.md
+          - Make Basics: build-systems/make-basics.md
+          - Make Variables And Pattern Rules: build-systems/make-variables-and-pattern-rules.md
+          - Native Linux Userspace Builds: build-systems/native-linux-userspace-builds.md
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
       - Linux Kernel Build System Roadmap: build-systems/linux-kernel-build-roadmap.md
       - U-Boot Build System Roadmap: build-systems/u-boot-build-roadmap.md
