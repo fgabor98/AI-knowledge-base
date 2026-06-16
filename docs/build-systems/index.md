@@ -43,6 +43,15 @@ Beginner pages:
 4. [Make Variables and Pattern Rules](make-variables-and-pattern-rules.md)
 5. [Native Linux Userspace Builds](native-linux-userspace-builds.md)
 
+Intermediate pages:
+
+1. [Cross-Compilation](cross-compilation.md)
+2. [Target Triples and Sysroots](target-triples-and-sysroots.md)
+3. [Target pkg-config](target-pkg-config.md)
+4. [CMake Basics](cmake-basics.md)
+5. [CMake Toolchain Files](cmake-toolchain-files.md)
+6. [Ninja as a Generated Backend](ninja-generated-backend.md)
+
 Roadmaps:
 
 1. [Build Systems for Embedded Linux](embedded-linux-roadmap.md)

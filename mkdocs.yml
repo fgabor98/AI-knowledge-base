@@ -97,6 +97,13 @@ nav:
           - Make Basics: build-systems/make-basics.md
           - Make Variables And Pattern Rules: build-systems/make-variables-and-pattern-rules.md
           - Native Linux Userspace Builds: build-systems/native-linux-userspace-builds.md
+      - Intermediate:
+          - Cross-Compilation: build-systems/cross-compilation.md
+          - Target Triples And Sysroots: build-systems/target-triples-and-sysroots.md
+          - Target pkg-config: build-systems/target-pkg-config.md
+          - CMake Basics: build-systems/cmake-basics.md
+          - CMake Toolchain Files: build-systems/cmake-toolchain-files.md
+          - Ninja As A Generated Backend: build-systems/ninja-generated-backend.md
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
       - Linux Kernel Build System Roadmap: build-systems/linux-kernel-build-roadmap.md
       - U-Boot Build System Roadmap: build-systems/u-boot-build-roadmap.md
