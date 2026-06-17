@@ -111,7 +111,13 @@ nav:
           - Build Quality Gates: build-systems/build-quality-gates.md
       - Advanced:
           - Overview: build-systems/advanced/index.md
-          - BSP Build Integration: build-systems/advanced/bsp-build-integration.md
+          - BSP Build Integration:
+              - Overview: build-systems/advanced/bsp-build-integration.md
+              - Artifact Flow And Provenance: build-systems/advanced/bsp-integration/artifact-flow-and-provenance.md
+              - Configuration And Patch Ownership: build-systems/advanced/bsp-integration/configuration-and-patch-ownership.md
+              - Boot Debugging And Runtime Validation: build-systems/advanced/bsp-integration/boot-debugging-and-runtime-validation.md
+              - Image Layout And Deployment: build-systems/advanced/bsp-integration/image-layout-and-deployment.md
+              - BSP Release Reproducibility: build-systems/advanced/bsp-integration/release-reproducibility.md
           - Linux Kernel Build System:
               - Overview: build-systems/advanced/linux-kernel/index.md
           - U-Boot Build System:
