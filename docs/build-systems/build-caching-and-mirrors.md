@@ -176,8 +176,8 @@ Offline builds require more than a compiler cache. They need all source download
 ## Related Topics
 
 - [Source Fetching and Patch Management](source-fetching-and-patch-management.md)
-- [Yocto and OpenEmbedded Roadmap](yocto-openembedded-roadmap.md)
-- [TI Processor SDK Roadmap](ti-processor-sdk-roadmap.md)
+- [Yocto and OpenEmbedded](advanced/yocto-openembedded/index.md)
+- [TI Processor SDK Linux](advanced/ti-processor-sdk/index.md)
 - [Build Systems for Embedded Linux](embedded-linux-roadmap.md)
 
 ## References

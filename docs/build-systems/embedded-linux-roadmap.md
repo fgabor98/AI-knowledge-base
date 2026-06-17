@@ -272,8 +272,8 @@ Base summary:
 
 Treat Yocto/OpenEmbedded and TI Processor SDK as detailed follow-on topics:
 
-- [Yocto and OpenEmbedded Roadmap](yocto-openembedded-roadmap.md)
-- [TI Processor SDK Roadmap](ti-processor-sdk-roadmap.md)
+- [Yocto and OpenEmbedded](advanced/yocto-openembedded/index.md)
+- [TI Processor SDK Linux](advanced/ti-processor-sdk/index.md)
 
 ## Minimal Example
 
@@ -417,8 +417,8 @@ Learn the purpose of these even if they are not the main focus:
 ## Related Topics
 
 - [Build Systems](index.md)
-- [Yocto and OpenEmbedded Roadmap](yocto-openembedded-roadmap.md)
-- [TI Processor SDK Roadmap](ti-processor-sdk-roadmap.md)
+- [Yocto and OpenEmbedded](advanced/yocto-openembedded/index.md)
+- [TI Processor SDK Linux](advanced/ti-processor-sdk/index.md)
 - [Embedded Linux](../embedded-linux/index.md)
 - [Linux Kernel Programming](../linux-kernel/index.md)
 - [C Programming](../c/index.md)

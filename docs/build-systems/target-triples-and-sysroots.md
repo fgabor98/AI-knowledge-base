@@ -275,7 +275,7 @@ Do not assume every target sysroot uses only `usr/lib`.
 - [Cross-Compilation](cross-compilation.md)
 - [Target pkg-config](target-pkg-config.md)
 - [CMake Toolchain Files](cmake-toolchain-files.md)
-- [TI Processor SDK Roadmap](ti-processor-sdk-roadmap.md)
+- [TI Processor SDK Linux](advanced/ti-processor-sdk/index.md)
 
 ## References
 

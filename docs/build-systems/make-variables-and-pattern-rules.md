@@ -381,7 +381,7 @@ Your Makefile should respect those values instead of hiding hard-coded compilers
 
 - [Make Basics](make-basics.md)
 - [Native Linux Userspace Builds](native-linux-userspace-builds.md)
-- [Linux Kernel Build System Roadmap](linux-kernel-build-roadmap.md)
+- [Linux Kernel Build System](advanced/linux-kernel/index.md)
 - [Build Systems for Embedded Linux](embedded-linux-roadmap.md)
 
 ## References

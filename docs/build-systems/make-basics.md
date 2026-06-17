@@ -273,7 +273,7 @@ Beginners often create one Makefile per directory too early. For small projects,
 - [Direct Compiler Invocation](direct-compiler-invocation.md)
 - [Object Files and Linking](object-files-and-linking.md)
 - [Make Variables and Pattern Rules](make-variables-and-pattern-rules.md)
-- [Linux Kernel Build System Roadmap](linux-kernel-build-roadmap.md)
+- [Linux Kernel Build System](advanced/linux-kernel/index.md)
 
 ## References
 

@@ -1,0 +1,96 @@
+---
+status: draft
+reviewed: false
+domain: build-systems
+difficulty: advanced
+reviewer: null
+last_reviewed: null
+---
+
+# Advanced Build Systems
+
+## What Problem Does This Solve?
+
+Advanced embedded Linux build work is no longer only about compiling one program. It is about understanding how bootloader, kernel, device tree, root filesystem, images, SDKs, and vendor BSP metadata fit together.
+
+This section is the roadmap layer for the build systems most important to complete embedded Linux systems:
+
+- Linux kernel build system
+- U-Boot build system
+- Yocto and OpenEmbedded
+- TI Processor SDK Linux
+- BSP build integration across those layers
+
+## Core Concepts
+
+- Kbuild
+- Kconfig
+- kernel images
+- kernel modules
+- U-Boot defconfigs
+- SPL and TPL
+- FIT images
+- BitBake
+- OpenEmbedded metadata
+- Yocto layers
+- Yocto recipes
+- TI Arago layers
+- TI Processor SDK images
+- deploy artifacts
+- BSP patch and configuration ownership
+
+## Mental Model
+
+Think in build layers:
+
+```text
+source and patches
+-> component build systems
+-> BSP metadata
+-> boot artifacts
+-> root filesystem
+-> image layout
+-> deployable product artifacts
+```
+
+The component build systems still matter. Yocto, Buildroot, and TI Processor SDK wrap kernel, U-Boot, application, and image builds. If you do not understand what they wrap, system-level build failures feel opaque.
+
+## Learning Path
+
+Recommended order:
+
+1. [BSP Build Integration](bsp-build-integration.md)
+2. [Linux Kernel Build System](linux-kernel/index.md)
+3. [U-Boot Build System](u-boot/index.md)
+4. [Yocto and OpenEmbedded](yocto-openembedded/index.md)
+5. [TI Processor SDK Linux](ti-processor-sdk/index.md)
+
+This order starts with the full artifact flow, then drills down into the two major low-level component builds, then moves into distribution-level metadata and TI-specific BSP workflows.
+
+## Section Goals
+
+After this section, you should be able to:
+
+- identify which layer owns a failed build
+- read kernel and U-Boot build logs with useful context
+- understand how defconfigs, fragments, patches, and device trees enter a product build
+- explain what BitBake tasks are wrapping
+- add applications, kernel changes, U-Boot changes, and image changes in the right place
+- reproduce a vendor BSP image from pinned metadata
+- trace boot artifacts from source to deployed image
+- debug host-vs-target dependency mistakes in system builds
+
+## Related Topics
+
+- [Build Systems](../index.md)
+- [Build Systems for Embedded Linux](../embedded-linux-roadmap.md)
+- [Embedded Linux](../../embedded-linux/index.md)
+- [Embedded Productization](../../embedded-productization/index.md)
+
+## References
+
+- Linux kernel documentation
+- U-Boot documentation
+- Yocto Project documentation
+- OpenEmbedded documentation
+- TI Processor SDK Linux documentation

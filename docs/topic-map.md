@@ -160,7 +160,7 @@ Advanced:
 
 - kernel source tree layout
 - building the kernel
-- Linux kernel build system roadmap
+- Linux kernel build system
 - Kbuild
 - Kconfig
 - defconfig
@@ -210,7 +210,7 @@ Advanced:
 - SPL
 - U-Boot
 - SoC boot flow
-- U-Boot build system roadmap
+- U-Boot build system
 - U-Boot board defconfigs
 - U-Boot SPL and TPL
 - U-Boot FIT images
@@ -226,14 +226,14 @@ Advanced:
 - systemd basics
 - BusyBox systems
 - Yocto basics
-- Yocto and OpenEmbedded detailed roadmap
+- Yocto and OpenEmbedded
 - BitBake
 - Yocto layers
 - Yocto recipes
 - Yocto images
 - Yocto machine configuration
 - Yocto distro configuration
-- TI Processor SDK detailed roadmap
+- TI Processor SDK Linux
 - TI Arago layers
 - TI oe-layersetup
 - TI Processor SDK image targets
@@ -250,6 +250,36 @@ Advanced:
 - PTXdist basics
 - OpenWrt build system basics
 - vendor BSP build flows
+- advanced build systems roadmap
+- BSP build integration
+- Linux kernel advanced build roadmap
+- U-Boot advanced build roadmap
+- Yocto/OpenEmbedded advanced build roadmap
+- TI Processor SDK Linux advanced build roadmap
+- kernel source tree and outputs
+- kernel Kconfig and defconfig workflow
+- Kbuild object selection
+- kernel external module builds
+- kernel device tree build targets
+- U-Boot source tree and outputs
+- U-Boot board defconfigs
+- U-Boot generated config
+- U-Boot SPL/TPL build flow
+- U-Boot FIT image workflow
+- Yocto build directory and configuration
+- Yocto task workdirs
+- Yocto images and packagegroups
+- Yocto machine and distro configuration
+- Yocto kernel and bootloader integration
+- Yocto devtool workflow
+- TI Processor SDK release model
+- TI Processor SDK installed layout
+- TI Arago layer setup
+- TI deploy-ti artifacts
+- TI SDK kernel customization
+- TI SDK U-Boot customization
+- TI SDK device tree customization
+- TI SDK EVM to product board workflow
 - root filesystem image tools
 - update artifact systems
 - cross-compilation
@@ -315,10 +345,10 @@ Advanced:
 ## Build Systems
 
 - build systems for embedded Linux roadmap
-- Linux kernel build system roadmap
-- U-Boot build system roadmap
-- Yocto and OpenEmbedded detailed roadmap
-- TI Processor SDK detailed roadmap
+- Linux kernel build system
+- U-Boot build system
+- Yocto and OpenEmbedded
+- TI Processor SDK Linux
 - direct compiler invocation
 - object files and linking
 - preprocessing, compilation, assembly, and linking pipeline

@@ -109,11 +109,18 @@ nav:
           - Source Fetching And Patch Management: build-systems/source-fetching-and-patch-management.md
           - Build Caching And Mirrors: build-systems/build-caching-and-mirrors.md
           - Build Quality Gates: build-systems/build-quality-gates.md
+      - Advanced:
+          - Overview: build-systems/advanced/index.md
+          - BSP Build Integration: build-systems/advanced/bsp-build-integration.md
+          - Linux Kernel Build System:
+              - Overview: build-systems/advanced/linux-kernel/index.md
+          - U-Boot Build System:
+              - Overview: build-systems/advanced/u-boot/index.md
+          - Yocto And OpenEmbedded:
+              - Overview: build-systems/advanced/yocto-openembedded/index.md
+          - TI Processor SDK Linux:
+              - Overview: build-systems/advanced/ti-processor-sdk/index.md
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
-      - Linux Kernel Build System Roadmap: build-systems/linux-kernel-build-roadmap.md
-      - U-Boot Build System Roadmap: build-systems/u-boot-build-roadmap.md
-      - Yocto And OpenEmbedded Roadmap: build-systems/yocto-openembedded-roadmap.md
-      - TI Processor SDK Roadmap: build-systems/ti-processor-sdk-roadmap.md
   - Patterns:
       - patterns/index.md
   - Templates:

@@ -57,13 +57,18 @@ Intermediate pages:
 10. [Build Caching and Mirrors](build-caching-and-mirrors.md)
 11. [Build Quality Gates](build-quality-gates.md)
 
-Roadmaps:
+Advanced roadmaps:
+
+1. [Advanced Build Systems](advanced/index.md)
+2. [BSP Build Integration](advanced/bsp-build-integration.md)
+3. [Linux Kernel Build System](advanced/linux-kernel/index.md)
+4. [U-Boot Build System](advanced/u-boot/index.md)
+5. [Yocto and OpenEmbedded](advanced/yocto-openembedded/index.md)
+6. [TI Processor SDK Linux](advanced/ti-processor-sdk/index.md)
+
+Overall roadmap:
 
 1. [Build Systems for Embedded Linux](embedded-linux-roadmap.md)
-2. [Linux Kernel Build System Roadmap](linux-kernel-build-roadmap.md)
-3. [U-Boot Build System Roadmap](u-boot-build-roadmap.md)
-4. [Yocto and OpenEmbedded Roadmap](yocto-openembedded-roadmap.md)
-5. [TI Processor SDK Roadmap](ti-processor-sdk-roadmap.md)
 
 Then expand individual topic pages from the [Topic Map](../topic-map.md).
 
