@@ -51,6 +51,11 @@ Intermediate pages:
 4. [CMake Basics](cmake-basics.md)
 5. [CMake Toolchain Files](cmake-toolchain-files.md)
 6. [Ninja as a Generated Backend](ninja-generated-backend.md)
+7. [Install Rules and Staging](install-rules-and-staging.md)
+8. [CMake Package Discovery](cmake-package-discovery.md)
+9. [Source Fetching and Patch Management](source-fetching-and-patch-management.md)
+10. [Build Caching and Mirrors](build-caching-and-mirrors.md)
+11. [Build Quality Gates](build-quality-gates.md)
 
 Roadmaps:
 

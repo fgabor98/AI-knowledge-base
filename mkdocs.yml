@@ -104,6 +104,11 @@ nav:
           - CMake Basics: build-systems/cmake-basics.md
           - CMake Toolchain Files: build-systems/cmake-toolchain-files.md
           - Ninja As A Generated Backend: build-systems/ninja-generated-backend.md
+          - Install Rules And Staging: build-systems/install-rules-and-staging.md
+          - CMake Package Discovery: build-systems/cmake-package-discovery.md
+          - Source Fetching And Patch Management: build-systems/source-fetching-and-patch-management.md
+          - Build Caching And Mirrors: build-systems/build-caching-and-mirrors.md
+          - Build Quality Gates: build-systems/build-quality-gates.md
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
       - Linux Kernel Build System Roadmap: build-systems/linux-kernel-build-roadmap.md
       - U-Boot Build System Roadmap: build-systems/u-boot-build-roadmap.md
