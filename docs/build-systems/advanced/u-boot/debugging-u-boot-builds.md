@@ -72,6 +72,46 @@ Useful when checking:
 | new bootcmd ignored | environment | persistent env, `env default -a`, env storage config |
 | image signature failure | verified boot | keys, hashes, FIT signatures, modified artifacts |
 
+## Expansion: Decision Tree
+
+Use the earliest visible symptom.
+
+```text
+No serial output
+-> check power, boot mode, first-stage artifact, secure boot rejection, UART mux
+
+SPL output only
+-> check DRAM, SPL boot media support, next-stage filename/offset, SPL size
+
+U-Boot prompt appears
+-> check environment, bootcmd, boot targets, loaded files, FIT config
+
+Linux starts then fails
+-> check bootargs, DTB handoff, initramfs, rootfs, kernel artifacts
+
+Old version appears
+-> check boot media priority, eMMC boot partitions, SPI flash, saved environment
+```
+
+Do not move down the tree until the earlier layer is proven.
+
+## Expansion: Minimum Debug Bundle
+
+Collect:
+
+- full serial log from reset
+- defconfig
+- final `.config`
+- artifact checksums
+- deploy directory listing
+- `printenv`
+- `version`
+- boot media description
+- board revision
+- SDK/U-Boot source commit
+
+This bundle makes bootloader issues much faster to reproduce.
+
 ## Wrong Artifact Debugging
 
 Check generated artifacts:
@@ -229,6 +269,8 @@ Stage-specific serial output is especially important because the failure may hap
 - [SPL, TPL, and U-Boot Proper](spl-tpl-and-u-boot-proper.md)
 - [Device Tree in U-Boot](device-tree-in-u-boot.md)
 - [Cross-Building and Flashing](cross-building-and-flashing.md)
+- [Environment and Boot Flow](environment-and-boot-flow.md)
+- [Release Artifacts and Provenance](release-artifacts-and-provenance.md)
 - [Boot Debugging and Runtime Validation](../bsp-integration/boot-debugging-and-runtime-validation.md)
 
 ## References

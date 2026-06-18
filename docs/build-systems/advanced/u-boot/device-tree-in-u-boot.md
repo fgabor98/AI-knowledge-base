@@ -165,6 +165,42 @@ A FIT image can contain multiple DTBs and configurations. U-Boot selects one bas
 
 If Linux boots with the wrong board description, inspect FIT configurations and U-Boot environment.
 
+## Expansion: SPL DTB Minimization
+
+SPL may use a smaller DTB than U-Boot proper. This saves space, but it can remove nodes required for early boot.
+
+Keep SPL-required nodes for:
+
+- serial console
+- boot storage
+- pinctrl
+- clocks
+- resets
+- regulators
+- PMIC or system controller access
+
+When minimizing, validate SPL boot after each change. A DTB that is valid for U-Boot proper may still be insufficient for SPL.
+
+## Expansion: DTB Handoff Audit
+
+Always distinguish:
+
+```text
+DTB used by U-Boot internally
+DTB passed to Linux
+DTB observed by Linux at runtime
+```
+
+Audit path:
+
+1. Check `CONFIG_DEFAULT_DEVICE_TREE`.
+2. Inspect generated `u-boot.dtb`.
+3. Inspect boot command or FIT config.
+4. Confirm loaded Linux DTB address.
+5. Check Linux `/proc/device-tree`.
+
+This catches the common case where U-Boot was fixed, but Linux still receives an old or different DTB.
+
 ## Common Mistakes
 
 - Editing Linux DTS when U-Boot uses a separate DTS.
@@ -191,6 +227,8 @@ If Linux boots with the wrong board description, inspect FIT configurations and 
 - [Kconfig and Generated Config](kconfig-and-generated-config.md)
 - [FIT Images and Boot Artifacts](fit-images-and-boot-artifacts.md)
 - [SPL, TPL, and U-Boot Proper](spl-tpl-and-u-boot-proper.md)
+- [Driver Model and Pre-Relocation](driver-model-and-pre-relocation.md)
+- [Environment and Boot Flow](environment-and-boot-flow.md)
 - [Linux Kernel Device Tree Builds](../linux-kernel/device-tree-builds.md)
 
 ## References

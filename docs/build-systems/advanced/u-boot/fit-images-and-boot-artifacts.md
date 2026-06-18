@@ -161,6 +161,42 @@ ramdisk_addr_r
 
 The build may produce the correct FIT while the board boots another file because environment variables point elsewhere.
 
+## Expansion: `bootm`, `booti`, And `bootz`
+
+Common Linux boot commands:
+
+- `bootm` boots legacy images and FIT images.
+- `booti` boots raw ARM64 `Image` files.
+- `bootz` boots ARM `zImage` files.
+
+FIT boot usually uses `bootm`:
+
+```text
+bootm ${loadaddr}#conf-custom-board
+```
+
+Standalone ARM64 image boot commonly uses `booti`:
+
+```text
+booti ${kernel_addr_r} ${ramdisk_addr_r}:${filesize} ${fdt_addr_r}
+```
+
+Wrong command or wrong argument order can make a correct artifact fail.
+
+## Expansion: Signing And Configuration Selection
+
+Signed FIT boot is not just about signing image data. The selected configuration must also be trusted, because configuration chooses which kernel, DTB, and ramdisk are combined.
+
+When changing FIT contents:
+
+- update ITS source
+- regenerate FIT
+- sign with the correct key
+- inspect the signed FIT
+- boot the intended configuration explicitly during validation
+
+For production signing policy, see [Secure Boot and Signing](secure-boot-and-signing.md).
+
 ## Board-Specific Boot Artifacts
 
 Not every artifact is a Linux FIT. Some outputs are bootloader-stage packages. For TI platforms, common artifact names may include:
@@ -200,6 +236,8 @@ Know which artifacts are consumed by boot ROM, firmware, SPL, U-Boot proper, and
 - [Device Tree in U-Boot](device-tree-in-u-boot.md)
 - [Cross-Building and Flashing](cross-building-and-flashing.md)
 - [Debugging U-Boot Builds](debugging-u-boot-builds.md)
+- [Environment and Boot Flow](environment-and-boot-flow.md)
+- [Secure Boot and Signing](secure-boot-and-signing.md)
 - [Kernel Release Artifacts](../linux-kernel/kernel-release-artifacts.md)
 
 ## References

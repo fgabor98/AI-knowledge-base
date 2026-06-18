@@ -136,6 +136,33 @@ Many boards provide recovery paths:
 
 Before changing bootloader storage, know how to recover from a bad flash.
 
+## Expansion: Readback Verification
+
+When possible, verify what was written.
+
+For filesystem-based boot partitions:
+
+```sh
+sha256sum build/u-boot.img
+sha256sum /media/boot/u-boot.img
+```
+
+For raw flash, use board/vendor-supported readback procedures. The important practice is to compare the flashed bytes or at least validate the serial version from reset.
+
+If the serial banner does not change after flashing, assume deployment is wrong until proven otherwise.
+
+## Expansion: eMMC Boot Partition Trap
+
+eMMC devices may boot from boot0 or boot1 while the Linux rootfs uses the user area. Updating files in `/boot` may not update the bootloader stage at all.
+
+Check:
+
+- eMMC boot partition enablement
+- hardware boot partition selection
+- whether SPL lives in boot0/boot1
+- whether U-Boot proper is loaded from FAT, raw offset, or another partition
+- whether Linux update tools touch the right area
+
 ## Version Verification
 
 Set a visible build identity where appropriate:
@@ -214,6 +241,8 @@ Practical checks:
 - [Source Tree and Outputs](source-tree-and-outputs.md)
 - [SPL, TPL, and U-Boot Proper](spl-tpl-and-u-boot-proper.md)
 - [FIT Images and Boot Artifacts](fit-images-and-boot-artifacts.md)
+- [Environment and Boot Flow](environment-and-boot-flow.md)
+- [Release Artifacts and Provenance](release-artifacts-and-provenance.md)
 - [Image Layout and Deployment](../bsp-integration/image-layout-and-deployment.md)
 
 ## References

@@ -57,6 +57,13 @@ The "right output file" is board-specific. Never assume `u-boot.bin` is the arti
 6. [FIT Images and Boot Artifacts](fit-images-and-boot-artifacts.md)
 7. [Cross-Building and Flashing](cross-building-and-flashing.md)
 8. [Debugging U-Boot Builds](debugging-u-boot-builds.md)
+9. [Environment and Boot Flow](environment-and-boot-flow.md)
+10. [Release Artifacts and Provenance](release-artifacts-and-provenance.md)
+11. [Secure Boot and Signing](secure-boot-and-signing.md)
+12. [Vendor U-Boot Patch Management](vendor-u-boot-patch-management.md)
+13. [Board Porting and Bring-Up](board-porting-and-bring-up.md)
+14. [Driver Model and Pre-Relocation](driver-model-and-pre-relocation.md)
+15. [Reproducible U-Boot Builds](reproducible-u-boot-builds.md)
 
 ## Detailed Roadmap
 
@@ -193,6 +200,108 @@ Practice:
 - debug a board booting an older U-Boot
 - debug a missing driver command
 
+### 9. Environment And Boot Flow
+
+Learn:
+
+- default vs saved environment
+- `bootcmd`, `boot_targets`, and distro boot
+- `boot.scr`, `extlinux.conf`, FIT selection, and bootargs
+- environment storage and reset policy
+
+Practice:
+
+- inspect environment on target
+- trace one complete boot path from reset to Linux
+- prove which file and DTB U-Boot loads
+
+### 10. Release Artifacts And Provenance
+
+Learn:
+
+- SPL/TPL/U-Boot artifact bundles
+- defconfig and final `.config` archival
+- firmware, signing, checksums, and serial logs
+- boot media layout as release data
+
+Practice:
+
+- build a release manifest
+- verify deployed artifacts against checksums
+- archive a serial log from reset
+
+### 11. Secure Boot And Signing
+
+Learn:
+
+- SoC ROM authentication
+- U-Boot verified boot
+- FIT signatures
+- key ownership
+- GP/HS-style device distinctions
+- debug vs production signing policy
+
+Practice:
+
+- inspect a signed FIT
+- identify which artifact changes require resigning
+- separate build inputs from signing inputs
+
+### 12. Vendor U-Boot Patch Management
+
+Learn:
+
+- upstream vs vendor SDK U-Boot
+- board ports, DTS patches, environment policy, and SPL changes
+- rebasing across SDK releases
+
+Practice:
+
+- classify U-Boot patches by ownership
+- separate temporary bring-up hacks from product patches
+
+### 13. Board Porting And Bring-Up
+
+Learn:
+
+- starting from an EVM
+- custom board defconfig and DTS
+- DRAM, PMIC, pinmux, serial, MMC, SPI, Ethernet
+- U-Boot vs Linux responsibility split
+
+Practice:
+
+- create a board-porting checklist
+- bring up serial, storage, and network in a staged order
+
+### 14. Driver Model And Pre-Relocation
+
+Learn:
+
+- bind/probe lifecycle
+- `dm tree`
+- pre-relocation devices
+- SPL driver model
+- clocks, pinctrl, regulators, and reset dependencies
+
+Practice:
+
+- debug a built-but-unprobed driver
+- identify which devices must bind before relocation
+
+### 15. Reproducible U-Boot Builds
+
+Learn:
+
+- source, defconfig, toolchain, SDK, and environment provenance
+- timestamp/version metadata
+- generated artifacts and signing determinism
+
+Practice:
+
+- compare two U-Boot builds
+- generate artifact checksums and manifest data
+
 ## Common Mistakes
 
 - Flashing the wrong artifact.
@@ -203,12 +312,15 @@ Practice:
 - Mixing U-Boot artifacts from one build with kernel/DTB artifacts from another.
 - Updating the boot partition but leaving an older bootloader in eMMC boot0, SPI NOR, or another earlier boot source.
 - Debugging Linux boot arguments without checking whether U-Boot environment overrides the expected boot script.
+- Rebuilding U-Boot defaults while a saved persistent environment still overrides them.
+- Signing or flashing one stage while leaving other boot-chain stages from a different release.
 
 ## Related Topics
 
 - [BSP Build Integration](../bsp-build-integration.md)
 - [Embedded Linux](../../../embedded-linux/index.md)
 - [Linux Kernel Build System](../linux-kernel/index.md)
+- [TI Processor SDK Linux](../ti-processor-sdk/index.md)
 
 ## References
 

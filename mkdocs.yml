@@ -143,6 +143,13 @@ nav:
               - FIT Images And Boot Artifacts: build-systems/advanced/u-boot/fit-images-and-boot-artifacts.md
               - Cross-Building And Flashing: build-systems/advanced/u-boot/cross-building-and-flashing.md
               - Debugging U-Boot Builds: build-systems/advanced/u-boot/debugging-u-boot-builds.md
+              - Environment And Boot Flow: build-systems/advanced/u-boot/environment-and-boot-flow.md
+              - Release Artifacts And Provenance: build-systems/advanced/u-boot/release-artifacts-and-provenance.md
+              - Secure Boot And Signing: build-systems/advanced/u-boot/secure-boot-and-signing.md
+              - Vendor U-Boot Patch Management: build-systems/advanced/u-boot/vendor-u-boot-patch-management.md
+              - Board Porting And Bring-Up: build-systems/advanced/u-boot/board-porting-and-bring-up.md
+              - Driver Model And Pre-Relocation: build-systems/advanced/u-boot/driver-model-and-pre-relocation.md
+              - Reproducible U-Boot Builds: build-systems/advanced/u-boot/reproducible-u-boot-builds.md
           - Yocto And OpenEmbedded:
               - Overview: build-systems/advanced/yocto-openembedded/index.md
           - TI Processor SDK Linux:

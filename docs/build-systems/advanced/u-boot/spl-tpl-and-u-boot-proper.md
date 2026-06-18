@@ -178,6 +178,45 @@ Practical rules:
 - check secure vs non-secure device documentation
 - verify serial logs for each stage
 
+## Expansion: SPL Size And Map Analysis
+
+When SPL grows too large, the fix should be deliberate. Do not randomly disable features without understanding what SPL must do.
+
+Inspect:
+
+- build error size limit
+- SPL map file
+- enabled `CONFIG_SPL_*` symbols
+- SPL DTB size
+- debug logging options
+- filesystem loaders
+- crypto/signing support
+- unused commands or drivers
+
+Typical pressure sources:
+
+- enabling too many storage drivers
+- enabling network in SPL
+- large DTB
+- debug logs
+- verified boot support
+- filesystem support instead of raw loading
+
+For custom boards, compare SPL size and config against the vendor EVM before deciding what changed.
+
+## Expansion: DRAM Bring-Up Boundary
+
+DRAM is often the point where board-specific hardware diverges from the EVM. If SPL starts but U-Boot proper never appears, suspect:
+
+- DDR topology mismatch
+- wrong timing/training data
+- PMIC voltage issue
+- reset sequencing issue
+- clock configuration issue
+- board layout difference
+
+Treat DRAM changes as board-porting work, not ordinary config changes. Keep them isolated, reviewed, and validated with full serial logs.
+
 ## Debugging Stage Boundaries
 
 Ask where the failure occurs:
@@ -218,6 +257,8 @@ U-Boot banner appears
 - [Source Tree and Outputs](source-tree-and-outputs.md)
 - [Kconfig and Generated Config](kconfig-and-generated-config.md)
 - [Cross-Building and Flashing](cross-building-and-flashing.md)
+- [Board Porting and Bring-Up](board-porting-and-bring-up.md)
+- [Driver Model and Pre-Relocation](driver-model-and-pre-relocation.md)
 - [Boot Debugging and Runtime Validation](../bsp-integration/boot-debugging-and-runtime-validation.md)
 
 ## References
