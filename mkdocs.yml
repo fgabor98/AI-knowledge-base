@@ -127,6 +127,12 @@ nav:
               - Device Tree Builds: build-systems/advanced/linux-kernel/device-tree-builds.md
               - Cross-Building And Installing: build-systems/advanced/linux-kernel/cross-building-and-installing.md
               - Debugging Kernel Builds: build-systems/advanced/linux-kernel/debugging-kernel-builds.md
+              - Configuration Fragments And Auditing: build-systems/advanced/linux-kernel/configuration-fragments-and-auditing.md
+              - Vendor Kernel Patch Management: build-systems/advanced/linux-kernel/vendor-kernel-patch-management.md
+              - Kernel Release Artifacts: build-systems/advanced/linux-kernel/kernel-release-artifacts.md
+              - Device Tree Binding Validation: build-systems/advanced/linux-kernel/device-tree-binding-validation.md
+              - Initramfs And Built-In Root Filesystem: build-systems/advanced/linux-kernel/initramfs-and-built-in-rootfs.md
+              - Reproducible Kernel Builds: build-systems/advanced/linux-kernel/reproducible-kernel-builds.md
           - U-Boot Build System:
               - Overview: build-systems/advanced/u-boot/index.md
           - Yocto And OpenEmbedded:

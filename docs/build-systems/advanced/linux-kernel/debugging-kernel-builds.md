@@ -234,6 +234,28 @@ aarch64-linux-gnu-gcc --version
 make O=build ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- V=1
 ```
 
+## Expansion: Failure-Mode Matrix
+
+Use this matrix to avoid chasing the wrong layer.
+
+| Symptom | Likely Layer | First Checks |
+| --- | --- | --- |
+| source file exists but object is missing | Kconfig/Kbuild | final `.config`, `obj-*` rule, `CONFIG_*` value |
+| config fragment requests option but final `.config` lacks it | Kconfig dependencies | `scripts/kconfig/merge_config.sh` output, dependencies, symbol rename |
+| module build succeeds but target rejects module | module compatibility | `uname -r`, `modinfo vermagic`, `Module.symvers`, architecture |
+| board boots with old behavior after DTS change | deployment | generated DTB checksum, U-Boot load path, `/proc/device-tree` |
+| DTB compiles but driver does not probe | binding/runtime | `dtbs_check`, compatible string, clocks, resets, pinctrl, regulators |
+| rootfs cannot mount | configuration/initramfs | storage driver built-in vs module, initramfs contents, kernel command line |
+| two builds from same source differ | reproducibility | timestamps, build user/host, compiler version, dirty source tree |
+| crash log cannot be decoded | release artifact retention | matching `vmlinux`, `System.map`, `.config`, build ID |
+
+For deeper treatments, see:
+
+- [Configuration Fragments and Auditing](configuration-fragments-and-auditing.md)
+- [Device Tree Binding Validation](device-tree-binding-validation.md)
+- [Kernel Release Artifacts](kernel-release-artifacts.md)
+- [Reproducible Kernel Builds](reproducible-kernel-builds.md)
+
 ## Common Mistakes
 
 - Debugging deployment as if it were compilation.
@@ -257,12 +279,15 @@ make O=build ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- V=1
 - Check module/kernel release match.
 - Check deployed artifacts on target.
 - Preserve logs from the first failure, not only later failures.
+- Classify whether the failure is build, configuration, deployment, runtime, or release provenance.
 
 ## Related Topics
 
 - [Kconfig and Defconfig](kconfig-and-defconfig.md)
 - [Kbuild Objects and Directories](kbuild-objects-and-directories.md)
 - [Modules and External Modules](modules-and-external-modules.md)
+- [Configuration Fragments and Auditing](configuration-fragments-and-auditing.md)
+- [Kernel Release Artifacts](kernel-release-artifacts.md)
 - [Boot Debugging and Runtime Validation](../bsp-integration/boot-debugging-and-runtime-validation.md)
 
 ## References

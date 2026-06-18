@@ -207,6 +207,38 @@ TI Processor SDK:
 - kernel artifacts appear under SDK-specific deploy locations
 - keep `MACHINE`, image target, kernel provider, and deploy artifacts aligned
 
+## Expansion: Installation As Artifact Assembly
+
+Kernel installation is not just copying one file. A usable embedded Linux kernel release is an assembled set:
+
+```text
+kernel image
++ selected DTB or FIT image
++ matching modules under /lib/modules/<kernelrelease>/
++ optional initramfs
++ debug artifacts retained outside target rootfs
+```
+
+Use staging directories to make this explicit:
+
+```text
+deploy/
+  boot/
+    Image
+    board.dtb
+  rootfs/
+    lib/modules/<kernelrelease>/
+  debug/
+    vmlinux
+    System.map
+    .config
+    Module.symvers
+```
+
+This layout makes it harder to accidentally test a new kernel with old modules or a new DTB with an old image.
+
+For production release bundles, see [Kernel Release Artifacts](kernel-release-artifacts.md). For early userspace and initramfs flows, see [Initramfs and Built-In Root Filesystem](initramfs-and-built-in-rootfs.md).
+
 ## Common Mistakes
 
 - Building kernel but forgetting DTBs.
@@ -229,12 +261,16 @@ TI Processor SDK:
 - Check deployed boot partition checksums.
 - Check rootfs module directory.
 - Boot and validate runtime version.
+- Confirm optional initramfs is the one referenced by the bootloader.
+- Preserve debug artifacts from the same build.
 
 ## Related Topics
 
 - [Kernel Source Tree and Outputs](source-tree-and-outputs.md)
 - [Modules and External Modules](modules-and-external-modules.md)
 - [Device Tree Builds](device-tree-builds.md)
+- [Kernel Release Artifacts](kernel-release-artifacts.md)
+- [Initramfs and Built-In Root Filesystem](initramfs-and-built-in-rootfs.md)
 - [Image Layout and Deployment](../bsp-integration/image-layout-and-deployment.md)
 
 ## References

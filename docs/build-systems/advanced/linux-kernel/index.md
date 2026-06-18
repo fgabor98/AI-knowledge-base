@@ -58,6 +58,12 @@ The kernel build is configuration-driven. Source files exist in the tree, but th
 5. [Device Tree Builds](device-tree-builds.md)
 6. [Cross-Building and Installing the Kernel](cross-building-and-installing.md)
 7. [Debugging Kernel Builds](debugging-kernel-builds.md)
+8. [Configuration Fragments and Auditing](configuration-fragments-and-auditing.md)
+9. [Vendor Kernel Patch Management](vendor-kernel-patch-management.md)
+10. [Kernel Release Artifacts](kernel-release-artifacts.md)
+11. [Device Tree Binding Validation](device-tree-binding-validation.md)
+12. [Initramfs and Built-In Root Filesystem](initramfs-and-built-in-rootfs.md)
+13. [Reproducible Kernel Builds](reproducible-kernel-builds.md)
 
 ## Detailed Roadmap
 
@@ -194,6 +200,105 @@ Practice:
 - debug a failed external module build
 - debug mismatched modules on target
 
+### 8. Configuration Fragments And Auditing
+
+Learn:
+
+- `merge_config.sh`
+- fragment ordering
+- final `.config` auditing
+- unmet dependencies
+- Yocto kernel fragments
+- product configuration ownership
+
+Practice:
+
+- merge several fragments
+- detect a silently dropped option
+- compare requested config with final config
+- split board, product, debug, and feature fragments
+
+### 9. Vendor Kernel Patch Management
+
+Learn:
+
+- upstream kernel vs vendor kernel vs product kernel
+- patch stack ownership
+- DTS, config, and driver patch separation
+- SDK upgrade rebasing
+- downstream patch review discipline
+
+Practice:
+
+- classify patches by ownership
+- rebase a small board patch stack
+- identify changes that belong in Yocto metadata instead of kernel source
+
+### 10. Kernel Release Artifacts
+
+Learn:
+
+- release artifact manifest
+- `vmlinux`, `System.map`, `.config`, `Module.symvers`
+- image, DTB, module, and initramfs matching
+- release provenance
+- crash/debug artifact retention
+
+Practice:
+
+- build a release bundle
+- verify kernel/DTB/module consistency
+- produce an artifact manifest for a board build
+
+### 11. Device Tree Binding Validation
+
+Learn:
+
+- YAML bindings
+- `dtbs_check`
+- `dt_binding_check`
+- binding warnings vs runtime probe failures
+- vendor binding maintenance
+
+Practice:
+
+- validate one board DTB
+- interpret schema warnings
+- fix a common node/property mismatch
+
+### 12. Initramfs And Built-In Root Filesystem
+
+Learn:
+
+- built-in initramfs
+- external initramfs
+- early userspace
+- boot-critical module loading
+- rootfs handoff
+
+Practice:
+
+- build a minimal initramfs
+- load modules before mounting rootfs
+- debug early userspace failures
+
+### 13. Reproducible Kernel Builds
+
+Learn:
+
+- deterministic metadata
+- `KBUILD_BUILD_TIMESTAMP`
+- `KBUILD_BUILD_USER`
+- `KBUILD_BUILD_HOST`
+- clean output trees
+- compiler and host tool effects
+
+Practice:
+
+- compare two kernel builds
+- remove avoidable timestamp/user/host differences
+- capture reproducibility inputs in CI
+
 ## Common Mistakes
 
 - Editing `.config` without preserving defconfig or fragments.
@@ -202,6 +307,8 @@ Practice:
 - Mixing kernel image, DTB, and modules from different builds.
 - Building external modules against the wrong kernel build directory.
 - Assuming device tree source changes affect the board without checking the deployed DTB.
+- Releasing kernel artifacts without archiving debug and provenance files.
+- Treating a vendor kernel patch stack as if it were one indivisible change.
 
 ## Related Topics
 

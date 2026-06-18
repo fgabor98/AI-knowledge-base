@@ -177,6 +177,40 @@ Debug:
 - inspect boot scripts
 - inspect runtime `/proc/device-tree`
 
+## Expansion: Binding Validation And Runtime Verification
+
+Device tree syntax validity is not the same as binding correctness. A DTS can compile into a DTB while still using the wrong property name, missing a required clock, using an invalid compatible string, or describing a hardware relationship the driver does not understand.
+
+Use three levels of checking:
+
+```text
+DTS compiles
+-> DTB passes binding/schema checks
+-> runtime driver probe behaves correctly
+```
+
+Build-only checks catch syntax and include problems:
+
+```sh
+make O=build ARCH=arm64 dtbs
+```
+
+Binding checks catch many semantic problems:
+
+```sh
+make O=build ARCH=arm64 dtbs_check
+```
+
+Runtime checks confirm what the booted kernel actually received:
+
+```sh
+find /proc/device-tree -maxdepth 3 -name compatible -print
+dmesg | grep -i 'of:'
+dmesg | grep -i 'probe'
+```
+
+For detailed schema workflows, see [Device Tree Binding Validation](device-tree-binding-validation.md).
+
 ## Deployment Patterns
 
 Standalone boot partition:
@@ -224,12 +258,14 @@ Always identify the actual deployment path.
 - Check kernel config for the driver.
 - Check dmesg for probe messages.
 - Check binding requirements.
+- Run binding validation when changing nodes, compatibles, clocks, resets, interrupts, pinctrl, regulators, or buses.
 
 ## Related Topics
 
 - [Kernel Source Tree and Outputs](source-tree-and-outputs.md)
 - [Cross-Building and Installing](cross-building-and-installing.md)
 - [Boot Debugging and Runtime Validation](../bsp-integration/boot-debugging-and-runtime-validation.md)
+- [Device Tree Binding Validation](device-tree-binding-validation.md)
 - [Configuration and Patch Ownership](../bsp-integration/configuration-and-patch-ownership.md)
 
 ## References

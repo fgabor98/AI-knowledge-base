@@ -232,6 +232,43 @@ modprobe -v my_driver
 
 If the rootfs storage driver is a module but no initramfs loads it, the kernel cannot mount rootfs. Build boot-critical drivers into the kernel.
 
+## Expansion: Module Compatibility Diagnostics
+
+A module is compatible with a kernel only when its build inputs match the running kernel closely enough. The most common embedded failure is mixing a new rootfs module package with an old boot partition kernel, or mixing an old rootfs with a new kernel image.
+
+Check the running kernel:
+
+```sh
+uname -r
+cat /proc/version
+```
+
+Check the module:
+
+```sh
+modinfo my_driver.ko
+modinfo my_driver.ko | grep vermagic
+```
+
+Check the build tree:
+
+```sh
+make O=build ARCH=arm64 kernelrelease
+grep '^CONFIG_MODVERSIONS' build/.config
+test -f build/Module.symvers
+```
+
+Typical interpretations:
+
+- `vermagic` differs from `uname -r`: the module was built against a different kernel release.
+- `Unknown symbol`: the dependency module is missing, a symbol is not exported, or `Module.symvers` did not match.
+- `Invalid module format`: kernel release, compiler metadata, module versioning, or architecture mismatch.
+- `modprobe` cannot find the module: install path or `depmod` database is wrong.
+
+In Yocto-style systems, also verify that the image includes the module package and that the kernel provider used by the module recipe is the same provider used by `virtual/kernel`.
+
+For release discipline around matching modules with kernel images and DTBs, see [Kernel Release Artifacts](kernel-release-artifacts.md).
+
 ## Yocto / Buildroot / TI SDK Integration
 
 Yocto:
@@ -271,12 +308,14 @@ TI Processor SDK:
 - Run or verify `depmod`.
 - Check `dmesg`.
 - Confirm module package is included in image.
+- Confirm kernel image, rootfs modules, and `Module.symvers` came from the same build.
 
 ## Related Topics
 
 - [Kbuild Objects and Directories](kbuild-objects-and-directories.md)
 - [Cross-Building and Installing](cross-building-and-installing.md)
 - [Debugging Kernel Builds](debugging-kernel-builds.md)
+- [Kernel Release Artifacts](kernel-release-artifacts.md)
 - [BSP Artifact Flow and Provenance](../bsp-integration/artifact-flow-and-provenance.md)
 
 ## References

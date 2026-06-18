@@ -210,6 +210,45 @@ When upgrading BSP releases:
 - verify final `.config`
 - avoid blindly copying old full `.config` to a new kernel
 
+## Expansion: Configuration Auditing In Real BSPs
+
+In product BSP work, the requested configuration is not enough. The only configuration that matters is the final `.config` produced after the base defconfig, fragments, dependencies, defaults, and `olddefconfig` resolution have all run.
+
+Treat kernel configuration as a two-part process:
+
+```text
+requested configuration
+-> Kconfig dependency resolution
+-> final .config
+```
+
+A fragment can request:
+
+```text
+CONFIG_TI_PRUETH=m
+```
+
+but the final value may still be missing if required dependencies are not enabled, if the symbol name changed between kernel versions, or if a later fragment overrides it.
+
+For serious work, always audit:
+
+- the fragment that requested the option
+- the final `.config`
+- Kconfig dependencies
+- fragment order
+- build logs from config merge
+- whether the option is `y`, `m`, or unset
+
+Useful checks:
+
+```sh
+grep '^CONFIG_TI_PRUETH' build/.config
+scripts/config --file build/.config --state CONFIG_TI_PRUETH
+make O=build ARCH=arm64 olddefconfig
+```
+
+For deeper fragment workflows, see [Configuration Fragments and Auditing](configuration-fragments-and-auditing.md).
+
 ## Yocto / Buildroot / TI SDK Integration
 
 Yocto:
@@ -248,12 +287,14 @@ TI Processor SDK:
 - Check selected kernel provider and output tree.
 - Check whether the driver object is selected in Kbuild.
 - For boot-critical drivers, check whether module vs built-in is correct.
+- Audit requested fragments against the final `.config`.
 
 ## Related Topics
 
 - [Kernel Source Tree and Outputs](source-tree-and-outputs.md)
 - [Kbuild Objects and Directories](kbuild-objects-and-directories.md)
 - [Cross-Building and Installing](cross-building-and-installing.md)
+- [Configuration Fragments and Auditing](configuration-fragments-and-auditing.md)
 - [Configuration and Patch Ownership](../bsp-integration/configuration-and-patch-ownership.md)
 
 ## References
