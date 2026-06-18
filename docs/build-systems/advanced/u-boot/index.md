@@ -47,18 +47,16 @@ board defconfig
 
 The "right output file" is board-specific. Never assume `u-boot.bin` is the artifact to flash without checking the board documentation.
 
-## Roadmap Pages
+## Learning Materials
 
-Planned pages:
-
-1. `source-tree-and-outputs.md`
-2. `board-defconfigs.md`
-3. `kconfig-and-generated-config.md`
-4. `spl-tpl-and-u-boot-proper.md`
-5. `device-tree-in-u-boot.md`
-6. `fit-images-and-boot-artifacts.md`
-7. `cross-building-and-flashing.md`
-8. `debugging-u-boot-builds.md`
+1. [Source Tree and Outputs](source-tree-and-outputs.md)
+2. [Board Defconfigs](board-defconfigs.md)
+3. [Kconfig and Generated Config](kconfig-and-generated-config.md)
+4. [SPL, TPL, and U-Boot Proper](spl-tpl-and-u-boot-proper.md)
+5. [Device Tree in U-Boot](device-tree-in-u-boot.md)
+6. [FIT Images and Boot Artifacts](fit-images-and-boot-artifacts.md)
+7. [Cross-Building and Flashing](cross-building-and-flashing.md)
+8. [Debugging U-Boot Builds](debugging-u-boot-builds.md)
 
 ## Detailed Roadmap
 
@@ -203,11 +201,14 @@ Practice:
 - Forgetting SPL has different constraints from U-Boot proper.
 - Editing generated config instead of defconfig/Kconfig source.
 - Mixing U-Boot artifacts from one build with kernel/DTB artifacts from another.
+- Updating the boot partition but leaving an older bootloader in eMMC boot0, SPI NOR, or another earlier boot source.
+- Debugging Linux boot arguments without checking whether U-Boot environment overrides the expected boot script.
 
 ## Related Topics
 
 - [BSP Build Integration](../bsp-build-integration.md)
 - [Embedded Linux](../../../embedded-linux/index.md)
+- [Linux Kernel Build System](../linux-kernel/index.md)
 
 ## References
 

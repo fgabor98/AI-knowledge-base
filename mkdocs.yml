@@ -135,6 +135,14 @@ nav:
               - Reproducible Kernel Builds: build-systems/advanced/linux-kernel/reproducible-kernel-builds.md
           - U-Boot Build System:
               - Overview: build-systems/advanced/u-boot/index.md
+              - Source Tree And Outputs: build-systems/advanced/u-boot/source-tree-and-outputs.md
+              - Board Defconfigs: build-systems/advanced/u-boot/board-defconfigs.md
+              - Kconfig And Generated Config: build-systems/advanced/u-boot/kconfig-and-generated-config.md
+              - SPL, TPL, And U-Boot Proper: build-systems/advanced/u-boot/spl-tpl-and-u-boot-proper.md
+              - Device Tree In U-Boot: build-systems/advanced/u-boot/device-tree-in-u-boot.md
+              - FIT Images And Boot Artifacts: build-systems/advanced/u-boot/fit-images-and-boot-artifacts.md
+              - Cross-Building And Flashing: build-systems/advanced/u-boot/cross-building-and-flashing.md
+              - Debugging U-Boot Builds: build-systems/advanced/u-boot/debugging-u-boot-builds.md
           - Yocto And OpenEmbedded:
               - Overview: build-systems/advanced/yocto-openembedded/index.md
           - TI Processor SDK Linux:
