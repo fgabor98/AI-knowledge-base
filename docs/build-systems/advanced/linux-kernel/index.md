@@ -49,17 +49,15 @@ architecture + defconfig/fragments
 
 The kernel build is configuration-driven. Source files exist in the tree, but they are built only when selected by Kconfig and Kbuild.
 
-## Roadmap Pages
+## Learning Materials
 
-Planned pages:
-
-1. `source-tree-and-outputs.md`
-2. `kconfig-and-defconfig.md`
-3. `kbuild-objects-and-directories.md`
-4. `modules-and-external-modules.md`
-5. `device-tree-builds.md`
-6. `cross-building-and-installing.md`
-7. `debugging-kernel-builds.md`
+1. [Kernel Source Tree and Outputs](source-tree-and-outputs.md)
+2. [Kconfig and Defconfig](kconfig-and-defconfig.md)
+3. [Kbuild Objects and Directories](kbuild-objects-and-directories.md)
+4. [Modules and External Modules](modules-and-external-modules.md)
+5. [Device Tree Builds](device-tree-builds.md)
+6. [Cross-Building and Installing the Kernel](cross-building-and-installing.md)
+7. [Debugging Kernel Builds](debugging-kernel-builds.md)
 
 ## Detailed Roadmap
 
