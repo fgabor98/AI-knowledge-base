@@ -51,19 +51,20 @@ The kernel build is configuration-driven. Source files exist in the tree, but th
 
 ## Learning Materials
 
-1. [Kernel Source Tree and Outputs](source-tree-and-outputs.md)
-2. [Kconfig and Defconfig](kconfig-and-defconfig.md)
-3. [Kbuild Objects and Directories](kbuild-objects-and-directories.md)
-4. [Modules and External Modules](modules-and-external-modules.md)
-5. [Device Tree Builds](device-tree-builds.md)
-6. [Cross-Building and Installing the Kernel](cross-building-and-installing.md)
-7. [Debugging Kernel Builds](debugging-kernel-builds.md)
-8. [Configuration Fragments and Auditing](configuration-fragments-and-auditing.md)
-9. [Vendor Kernel Patch Management](vendor-kernel-patch-management.md)
-10. [Kernel Release Artifacts](kernel-release-artifacts.md)
-11. [Device Tree Binding Validation](device-tree-binding-validation.md)
-12. [Initramfs and Built-In Root Filesystem](initramfs-and-built-in-rootfs.md)
-13. [Reproducible Kernel Builds](reproducible-kernel-builds.md)
+1. [Kernel Documentation Reading Guide](documentation-reading-guide.md)
+2. [Kernel Source Tree and Outputs](source-tree-and-outputs.md)
+3. [Kconfig and Defconfig](kconfig-and-defconfig.md)
+4. [Kbuild Objects and Directories](kbuild-objects-and-directories.md)
+5. [Modules and External Modules](modules-and-external-modules.md)
+6. [Device Tree Builds](device-tree-builds.md)
+7. [Cross-Building and Installing the Kernel](cross-building-and-installing.md)
+8. [Debugging Kernel Builds](debugging-kernel-builds.md)
+9. [Configuration Fragments and Auditing](configuration-fragments-and-auditing.md)
+10. [Vendor Kernel Patch Management](vendor-kernel-patch-management.md)
+11. [Kernel Release Artifacts](kernel-release-artifacts.md)
+12. [Device Tree Binding Validation](device-tree-binding-validation.md)
+13. [Initramfs and Built-In Root Filesystem](initramfs-and-built-in-rootfs.md)
+14. [Reproducible Kernel Builds](reproducible-kernel-builds.md)
 
 ## Detailed Roadmap
 

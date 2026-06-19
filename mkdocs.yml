@@ -120,6 +120,7 @@ nav:
               - BSP Release Reproducibility: build-systems/advanced/bsp-integration/release-reproducibility.md
           - Linux Kernel Build System:
               - Overview: build-systems/advanced/linux-kernel/index.md
+              - Documentation Reading Guide: build-systems/advanced/linux-kernel/documentation-reading-guide.md
               - Source Tree And Outputs: build-systems/advanced/linux-kernel/source-tree-and-outputs.md
               - Kconfig And Defconfig: build-systems/advanced/linux-kernel/kconfig-and-defconfig.md
               - Kbuild Objects And Directories: build-systems/advanced/linux-kernel/kbuild-objects-and-directories.md
@@ -135,6 +136,7 @@ nav:
               - Reproducible Kernel Builds: build-systems/advanced/linux-kernel/reproducible-kernel-builds.md
           - U-Boot Build System:
               - Overview: build-systems/advanced/u-boot/index.md
+              - Documentation Reading Guide: build-systems/advanced/u-boot/documentation-reading-guide.md
               - Source Tree And Outputs: build-systems/advanced/u-boot/source-tree-and-outputs.md
               - Board Defconfigs: build-systems/advanced/u-boot/board-defconfigs.md
               - Kconfig And Generated Config: build-systems/advanced/u-boot/kconfig-and-generated-config.md

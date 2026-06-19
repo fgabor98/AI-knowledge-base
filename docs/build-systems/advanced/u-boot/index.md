@@ -49,21 +49,22 @@ The "right output file" is board-specific. Never assume `u-boot.bin` is the arti
 
 ## Learning Materials
 
-1. [Source Tree and Outputs](source-tree-and-outputs.md)
-2. [Board Defconfigs](board-defconfigs.md)
-3. [Kconfig and Generated Config](kconfig-and-generated-config.md)
-4. [SPL, TPL, and U-Boot Proper](spl-tpl-and-u-boot-proper.md)
-5. [Device Tree in U-Boot](device-tree-in-u-boot.md)
-6. [FIT Images and Boot Artifacts](fit-images-and-boot-artifacts.md)
-7. [Cross-Building and Flashing](cross-building-and-flashing.md)
-8. [Debugging U-Boot Builds](debugging-u-boot-builds.md)
-9. [Environment and Boot Flow](environment-and-boot-flow.md)
-10. [Release Artifacts and Provenance](release-artifacts-and-provenance.md)
-11. [Secure Boot and Signing](secure-boot-and-signing.md)
-12. [Vendor U-Boot Patch Management](vendor-u-boot-patch-management.md)
-13. [Board Porting and Bring-Up](board-porting-and-bring-up.md)
-14. [Driver Model and Pre-Relocation](driver-model-and-pre-relocation.md)
-15. [Reproducible U-Boot Builds](reproducible-u-boot-builds.md)
+1. [U-Boot Documentation Reading Guide](documentation-reading-guide.md)
+2. [Source Tree and Outputs](source-tree-and-outputs.md)
+3. [Board Defconfigs](board-defconfigs.md)
+4. [Kconfig and Generated Config](kconfig-and-generated-config.md)
+5. [SPL, TPL, and U-Boot Proper](spl-tpl-and-u-boot-proper.md)
+6. [Device Tree in U-Boot](device-tree-in-u-boot.md)
+7. [FIT Images and Boot Artifacts](fit-images-and-boot-artifacts.md)
+8. [Cross-Building and Flashing](cross-building-and-flashing.md)
+9. [Debugging U-Boot Builds](debugging-u-boot-builds.md)
+10. [Environment and Boot Flow](environment-and-boot-flow.md)
+11. [Release Artifacts and Provenance](release-artifacts-and-provenance.md)
+12. [Secure Boot and Signing](secure-boot-and-signing.md)
+13. [Vendor U-Boot Patch Management](vendor-u-boot-patch-management.md)
+14. [Board Porting and Bring-Up](board-porting-and-bring-up.md)
+15. [Driver Model and Pre-Relocation](driver-model-and-pre-relocation.md)
+16. [Reproducible U-Boot Builds](reproducible-u-boot-builds.md)
 
 ## Detailed Roadmap
 
