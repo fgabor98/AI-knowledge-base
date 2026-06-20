@@ -242,6 +242,27 @@ bitbake -e virtual/kernel | grep -E '^(PN|PV|SRCREV)='
 bitbake -e virtual/bootloader | grep -E '^(PN|PV|SRCREV)='
 ```
 
+## Worked Example: Shared SoC, Two Products
+
+```text
+conf/machine/product-a.conf
+conf/machine/product-b.conf
+conf/machine/include/company-soc.inc
+```
+
+Shared include owns SoC/tune/provider defaults. Each machine owns DTB, U-Boot config, and board features. A common distro owns systemd/security/package policy. Separate images own application composition.
+
+This avoids copying one complete machine file for every carrier-board variant.
+
+## Worked Example: Verify Provider Scope
+
+```sh
+MACHINE=product-a bitbake -e virtual/kernel | grep -E '^(PN|PV|SRCREV)='
+MACHINE=product-b bitbake -e virtual/kernel | grep -E '^(PN|PV|SRCREV)='
+```
+
+Prefer separate initialized build directories for routine work; the command illustrates that provider selection must be checked in each machine context.
+
 ## Common Mistakes
 
 - Putting application package lists in machine config.

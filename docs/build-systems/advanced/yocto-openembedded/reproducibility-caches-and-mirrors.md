@@ -273,6 +273,28 @@ Record:
 
 Vendor download URLs and branches can change; internal source mirroring is valuable for long-lived products.
 
+## Worked Example: Offline Rebuild Gate
+
+```text
+Job A: populate approved downloads/source mirror
+Job B: clean workspace, public network blocked
+Job B: build product-image from pinned layer manifest
+Job B: publish missing-source report if fetch tries outside mirror
+```
+
+Passing proves source availability under the configured policy. Run separate artifact comparison for reproducibility.
+
+## Worked Example: Cache Is Fast But Release Is Wrong
+
+If a build restores sstate successfully but board boots old kernel:
+
+1. Confirm kernel deploy checksum.
+2. Confirm WIC boot partition checksum.
+3. Confirm flashed media checksum/serial identity.
+4. Only then investigate kernel task signatures.
+
+Sstate correctness cannot fix flashing the wrong artifact.
+
 ## Common Mistakes
 
 - Treating sstate as source archival.

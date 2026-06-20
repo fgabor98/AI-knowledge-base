@@ -321,6 +321,37 @@ Then distinguish:
 - deploy directory
 - rootfs module package output
 
+## Worked Example: Diagnose A Missing Generated Header
+
+Compile fails with:
+
+```text
+fatal error: product-version.h: No such file or directory
+```
+
+Trace:
+
+1. Inspect `run.do_compile` for include paths.
+2. Find which task should generate the header.
+3. Confirm generation task runs before `do_compile`.
+4. Confirm header is placed in `${B}` or expected include directory.
+5. Add a real task dependency/order, not a sleep or repeated compile.
+
+Example:
+
+```bitbake
+addtask generate_version after do_configure before do_compile
+```
+
+## Worked Example: Compare Install And Package Output
+
+```sh
+bitbake example -c install -f
+bitbake -e example | grep -E '^(D|WORKDIR)='
+```
+
+Compare `${D}` with `${WORKDIR}/packages-split/`. A file in `${D}` but absent from all split packages is a packaging ownership problem, not a compile problem.
+
 ## Common Mistakes
 
 - Editing `${S}` and losing the change after clean/unpack.

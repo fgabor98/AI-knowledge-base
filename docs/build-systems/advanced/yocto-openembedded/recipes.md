@@ -320,6 +320,38 @@ bitbake -c compile example-app
 bitbake -c install example-app
 ```
 
+## Worked Example: CMake Application With pkg-config
+
+```bitbake
+SUMMARY = "Product telemetry client"
+LICENSE = "MIT"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=<checksum>"
+
+SRC_URI = "git://example.invalid/telemetry.git;branch=main;protocol=https"
+SRCREV = "<fixed-commit>"
+S = "${WORKDIR}/git"
+
+DEPENDS = "libcurl"
+
+inherit cmake pkgconfig
+
+EXTRA_OECMAKE = "-DENABLE_TESTS=OFF"
+```
+
+The recipe does not manually pass target include/library paths. The CMake and pkg-config classes prepare the cross environment and recipe sysroot.
+
+## Worked Example: Install A Volatile Default
+
+If a file must be regenerated or writable at runtime, do not overwrite persistent user configuration on every package upgrade. Install a factory default under `${datadir}` and let a first-boot/service policy copy it deliberately.
+
+```bitbake
+do_install:append() {
+    install -d ${D}${datadir}/product/defaults
+    install -m 0644 ${WORKDIR}/agent.conf \
+        ${D}${datadir}/product/defaults/agent.conf
+}
+```
+
 ## Common Mistakes
 
 - Calling host tools instead of BitBake-provided tools.

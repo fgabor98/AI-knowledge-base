@@ -220,6 +220,27 @@ or a separate upstream clone. Devtool is useful but not mandatory.
 
 Whatever workflow you choose, the final result must live in maintained source or metadata, not `tmp/work`.
 
+## Worked Example: Fix And Export A Recipe Patch
+
+```sh
+devtool modify example
+cd <devtool-source-tree>
+git checkout -b fix-product-build
+# Edit source and test.
+git add <files>
+git commit -m "Fix cross build for product target"
+devtool build example
+devtool finish example ../meta-product
+devtool reset example
+bitbake example
+```
+
+Review generated append/patch, then confirm `devtool status` is empty and the layer-only build succeeds.
+
+## Worked Example: Rapid Target Test Without Polluting Evidence
+
+Use `devtool deploy-target` for iteration, record that target is modified, then reflash a clean image before release validation. Capture both development and clean-image test results separately.
+
 ## Common Mistakes
 
 - Forgetting an active workspace override.

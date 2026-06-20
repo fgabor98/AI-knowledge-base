@@ -287,6 +287,38 @@ Prefer minimal scope:
 5. Use `cleansstate` when task output must be rebuilt.
 6. Use `cleanall` only when downloads themselves must be removed.
 
+## Worked Example: Nothing Provides A Package
+
+Rootfs reports:
+
+```text
+nothing provides product-agent-cli
+```
+
+Check:
+
+```sh
+bitbake-layers show-recipes product-agent
+bitbake -e product-agent | grep '^PACKAGES='
+```
+
+If package is actually named `product-agent-tools`, fix image/package-group package name. Do not rename the recipe blindly.
+
+## Worked Example: Host Header Contamination
+
+Compile log contains `/usr/include/...` before recipe sysroot paths.
+
+Investigate upstream build commands and class/toolchain integration. Fix the build system to honor supplied compiler/sysroot; do not add the host package as an undocumented build prerequisite.
+
+## Worked Example: Why Did A Recipe Build?
+
+```sh
+bitbake -g product-image
+grep product-recipe pn-depends.dot
+```
+
+Use graph output to identify the dependency chain, then correct the owning package group/dependency rather than masking the recipe.
+
 ## Common Mistakes
 
 - Deleting all caches before reading logs.

@@ -61,6 +61,14 @@ BitBake executes tasks based on metadata. The main skill is learning where metad
 10. [Devtool and Recipe Development](devtool-and-recipe-development.md)
 11. [Debugging BitBake Builds](debugging-bitbake-builds.md)
 12. [Reproducibility, Caches, and Mirrors](reproducibility-caches-and-mirrors.md)
+13. [BitBake Metadata, Overrides, and Python](bitbake-metadata-overrides-and-python.md)
+14. [Packaging, QA, and Package Feeds](packaging-qa-and-feeds.md)
+15. [WIC and Partition Layouts](wic-and-partition-layouts.md)
+16. [Kernel Recipe Internals](kernel-recipe-internals.md)
+17. [Multiconfig and Firmware Builds](multiconfig-and-firmware-builds.md)
+18. [Licensing, CVE, and SBOM Workflows](licensing-cve-and-sbom.md)
+19. [CI, Hash Equivalence, and Shared State](ci-hash-equivalence-and-sstate.md)
+20. [End-to-End Product Layer Lab](end-to-end-product-layer-lab.md)
 
 ## Detailed Roadmap
 
@@ -282,6 +290,125 @@ Practice:
 - configure shared `DL_DIR`
 - configure shared `SSTATE_DIR`
 - produce release source and license artifacts
+
+### 13. BitBake Metadata, Overrides, And Python
+
+Learn:
+
+- variable expansion timing and assignment operators
+- overrides and package/machine scoping
+- variable flags
+- inline and task Python
+- anonymous Python and metadata inspection
+
+Practice:
+
+- trace a variable through multiple layers
+- implement machine-specific metadata without copying recipes
+- add a deterministic Python task
+
+### 14. Packaging, QA, And Package Feeds
+
+Learn:
+
+- package splitting
+- `FILES`, `PACKAGES`, dependencies, and alternatives
+- QA checks
+- package backends and feeds
+
+Practice:
+
+- split an application into runtime/tools/config packages
+- diagnose an installed-vs-shipped error
+- publish and consume a development package feed
+
+### 15. WIC And Partition Layouts
+
+Learn:
+
+- kickstart files
+- source plugins
+- raw bootloader regions
+- partition sizing and alignment
+- custom layouts and verification
+
+Practice:
+
+- create a boot/rootfs/data image
+- inspect partition offsets
+- verify boot artifacts inside a WIC image
+
+### 16. Kernel Recipe Internals
+
+Learn:
+
+- kernel classes and tasks
+- configuration metadata
+- source/shared workdirs
+- module packaging
+- DTB and deploy flow
+
+Practice:
+
+- audit final kernel config
+- trace one module into the image
+- trace one DTB into deploy and WIC output
+
+### 17. Multiconfig And Firmware Builds
+
+Learn:
+
+- multiple BitBake configurations
+- cross-config dependencies
+- auxiliary-core firmware
+- artifact handoff
+
+Practice:
+
+- model a Linux image depending on a firmware build
+- avoid copying firmware manually between build trees
+
+### 18. Licensing, CVE, And SBOM Workflows
+
+Learn:
+
+- license checks and manifests
+- source compliance output
+- CVE scanning
+- SPDX/SBOM generation
+- policy exceptions
+
+Practice:
+
+- inspect image license output
+- review a CVE report
+- archive an SBOM with a release
+
+### 19. CI, Hash Equivalence, And Shared State
+
+Learn:
+
+- clean CI builds
+- shared downloads/sstate
+- hash equivalence
+- cache trust and publishing
+- artifact promotion
+
+Practice:
+
+- design a two-stage build/validation pipeline
+- publish manifests and checksums
+- diagnose unexpected cache misses
+
+### 20. End-To-End Product Layer Lab
+
+Practice:
+
+- create a product layer
+- add an application and service
+- create package groups and image
+- add machine, kernel, U-Boot, and WIC metadata
+- build, inspect, deploy, validate, and release the system
 
 ## Common Mistakes
 

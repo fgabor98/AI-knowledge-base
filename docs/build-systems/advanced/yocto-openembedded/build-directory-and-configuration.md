@@ -314,6 +314,38 @@ Recommended:
 
 Do not copy deploy artifacts between machine directories manually.
 
+## Worked Example: Reproducible Developer Build Directories
+
+Shared site configuration:
+
+```bitbake
+DL_DIR = "/srv/yocto/downloads"
+SSTATE_DIR = "/srv/yocto/sstate"
+```
+
+Create isolated contexts:
+
+```sh
+source oe-init-build-env build-product-debug
+# Set MACHINE/DISTRO through the project's supported configuration mechanism.
+
+source oe-init-build-env build-product-release
+```
+
+Both builds reuse sources and valid task output, but their `TMPDIR`, local configuration, and deploy trees remain isolated.
+
+## Worked Example: Configuration Audit Script Inputs
+
+Capture release context:
+
+```sh
+bitbake-layers show-layers > active-layers.txt
+bitbake -e | grep -E '^(MACHINE|DISTRO|TMPDIR|DL_DIR|SSTATE_DIR)=' \
+    > build-configuration.txt
+```
+
+Archive these files with the build manifest; do not use them as substitutes for pinned layer revisions.
+
 ## Common Mistakes
 
 - Keeping product behavior only in `local.conf`.

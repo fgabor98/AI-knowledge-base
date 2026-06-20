@@ -210,6 +210,27 @@ If an application compiles with the SDK but fails on target:
 
 Compare SDK manifest, image manifest, library versions, and target architecture.
 
+## Worked Example: SDK CMake Build Audit
+
+After sourcing SDK:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --verbose
+file build/product-app
+readelf -l build/product-app | grep interpreter
+```
+
+Inspect verbose commands for SDK compiler and sysroot. Confirm output architecture and dynamic loader match target.
+
+## Worked Example: Prove Runtime Compatibility
+
+```sh
+pkg-config --modversion libexample
+```
+
+Record SDK library version, then compare target package/image manifest. A successful link against SDK does not prove target rootfs contains the same ABI.
+
 ## Common Mistakes
 
 - Using an SDK for the wrong machine or release.

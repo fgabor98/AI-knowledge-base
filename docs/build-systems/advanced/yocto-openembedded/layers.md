@@ -269,6 +269,33 @@ Avoid editing TI layers directly. Carry product changes in your own layer.
 8. Build and boot product image.
 9. Review product patches for upstream/vendor integration.
 
+## Worked Example: Product Layer Ownership
+
+```text
+meta-vendor-bsp/
+  conf/machine/vendor-evm.conf
+  recipes-kernel/linux/linux-vendor.bb
+
+meta-company-distro/
+  conf/distro/company.conf
+
+meta-product/
+  conf/machine/product-board.conf
+  recipes-kernel/linux/linux-vendor_%.bbappend
+  recipes-core/images/product-image.bb
+```
+
+The product layer extends the vendor provider rather than copying it. During an SDK upgrade, vendor metadata can move while the product append exposes exactly which patches need rebasing.
+
+## Worked Example: Find Why An Append Does Not Apply
+
+```sh
+bitbake-layers show-recipes linux-vendor
+bitbake-layers show-appends | grep linux-vendor
+```
+
+Then compare selected recipe filename/version with append filename. Check active layer and `BBFILES` before changing priority.
+
 ## Common Mistakes
 
 - Editing vendor layers directly.

@@ -166,6 +166,14 @@ nav:
               - Devtool And Recipe Development: build-systems/advanced/yocto-openembedded/devtool-and-recipe-development.md
               - Debugging BitBake Builds: build-systems/advanced/yocto-openembedded/debugging-bitbake-builds.md
               - Reproducibility, Caches, And Mirrors: build-systems/advanced/yocto-openembedded/reproducibility-caches-and-mirrors.md
+              - BitBake Metadata, Overrides, And Python: build-systems/advanced/yocto-openembedded/bitbake-metadata-overrides-and-python.md
+              - Packaging, QA, And Package Feeds: build-systems/advanced/yocto-openembedded/packaging-qa-and-feeds.md
+              - WIC And Partition Layouts: build-systems/advanced/yocto-openembedded/wic-and-partition-layouts.md
+              - Kernel Recipe Internals: build-systems/advanced/yocto-openembedded/kernel-recipe-internals.md
+              - Multiconfig And Firmware Builds: build-systems/advanced/yocto-openembedded/multiconfig-and-firmware-builds.md
+              - Licensing, CVE, And SBOM Workflows: build-systems/advanced/yocto-openembedded/licensing-cve-and-sbom.md
+              - CI, Hash Equivalence, And Shared State: build-systems/advanced/yocto-openembedded/ci-hash-equivalence-and-sstate.md
+              - End-To-End Product Layer Lab: build-systems/advanced/yocto-openembedded/end-to-end-product-layer-lab.md
           - TI Processor SDK Linux:
               - Overview: build-systems/advanced/ti-processor-sdk/index.md
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md

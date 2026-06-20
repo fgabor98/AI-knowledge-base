@@ -270,6 +270,34 @@ bitbake -e <image> | grep '^WORKDIR='
 
 Inspect image manifest and, where practical, mount or extract the generated image.
 
+## Worked Example: Base, Debug, And Factory Composition
+
+```bitbake
+# packagegroup-product-base.bb
+RDEPENDS:${PN} = "product-agent iproute2"
+
+# packagegroup-product-debug.bb
+RDEPENDS:${PN} = "strace tcpdump gdbserver"
+
+# product-image.bb
+IMAGE_INSTALL:append = " packagegroup-product-base"
+
+# product-image-debug.bb
+require product-image.bb
+IMAGE_INSTALL:append = " packagegroup-product-debug"
+```
+
+Factory provisioning should use a separately named image/package group so production policy does not accidentally inherit manufacturing tools.
+
+## Worked Example: Explain A Transitive Package
+
+If `libfoo` appears in the image but is not listed directly:
+
+1. Find its package in image manifest.
+2. Query package/runtime dependency data with release-supported tools.
+3. Identify which selected package depends on it.
+4. Change the owning feature/package only if the dependency is genuinely optional.
+
 ## Common Mistakes
 
 - Adding recipe names when a differently named output package is required.

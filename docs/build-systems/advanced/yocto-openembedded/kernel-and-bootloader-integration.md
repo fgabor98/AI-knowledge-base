@@ -268,6 +268,30 @@ For TI systems, align:
 
 Do not mix artifacts from different SDK builds even when filenames match.
 
+## Worked Example: Trace A Kernel DTB Into WIC
+
+```sh
+bitbake -e virtual/kernel | grep '^KERNEL_DEVICETREE='
+bitbake virtual/kernel
+find tmp/deploy/images/${MACHINE} -name '*product*.dtb' -type f
+bitbake product-image
+wic ls tmp/deploy/images/${MACHINE}/product-image-*.wic:1
+```
+
+Then compare the boot partition DTB checksum with deploy output and runtime `/proc/device-tree/model`.
+
+## Worked Example: U-Boot Patch Does Not Affect Board
+
+Check in order:
+
+1. `bitbake-layers show-appends` confirms append.
+2. `virtual/bootloader` provider is expected recipe.
+3. Patch appears in patched `${S}`.
+4. New SPL/U-Boot artifacts appear in deploy.
+5. WIC/media includes those artifacts.
+6. Serial banner proves board runs them.
+7. Saved environment does not override new default boot flow.
+
 ## Common Mistakes
 
 - Patching a recipe that is not the selected provider.

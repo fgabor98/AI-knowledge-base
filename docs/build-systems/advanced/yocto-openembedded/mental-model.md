@@ -716,6 +716,34 @@ OE-Core
 
 The product layer should own product-specific policy and changes. Generated files under `tmp/` should own nothing.
 
+## Additional Worked Example: Trace One File Into An Image
+
+Suppose `/usr/bin/product-agent` must appear in `product-image`.
+
+Trace it in this order:
+
+```text
+source file
+-> product-agent recipe do_compile
+-> do_install places ${D}${bindir}/product-agent
+-> FILES:${PN} assigns it to product-agent package
+-> packagegroup-product-base RDEPENDS on product-agent
+-> product-image installs package group
+-> do_rootfs installs product-agent
+-> WIC/image task includes rootfs
+```
+
+Commands:
+
+```sh
+bitbake product-agent
+bitbake -e product-agent | grep -E '^(D|PACKAGES|FILES:product-agent)='
+bitbake product-image
+grep product-agent tmp/deploy/images/${MACHINE}/*.manifest
+```
+
+This same tracing method works for libraries, services, firmware, modules, and configuration files.
+
 ## Common Misconceptions
 
 ### "A Recipe Is A Makefile"
