@@ -47,22 +47,20 @@ layers and configuration
 
 BitBake executes tasks based on metadata. The main skill is learning where metadata belongs and how to inspect the final expanded state.
 
-## Roadmap Pages
+## Learning Materials
 
-Planned pages:
-
-1. `mental-model.md`
-2. `build-directory-and-configuration.md`
-3. `layers.md`
-4. `recipes.md`
-5. `tasks-and-workdirs.md`
-6. `images-and-packagegroups.md`
-7. `machine-and-distro-configuration.md`
-8. `kernel-and-bootloader-integration.md`
-9. `sdk-generation.md`
-10. `devtool-and-recipe-development.md`
-11. `debugging-bitbake-builds.md`
-12. `reproducibility-caches-and-mirrors.md`
+1. [Yocto, OpenEmbedded, and BitBake Mental Model](mental-model.md)
+2. [Build Directory and Configuration](build-directory-and-configuration.md)
+3. [Layers](layers.md)
+4. [Recipes](recipes.md)
+5. [Tasks and Workdirs](tasks-and-workdirs.md)
+6. [Images and Package Groups](images-and-packagegroups.md)
+7. [Machine and Distro Configuration](machine-and-distro-configuration.md)
+8. [Kernel and Bootloader Integration](kernel-and-bootloader-integration.md)
+9. [SDK Generation](sdk-generation.md)
+10. [Devtool and Recipe Development](devtool-and-recipe-development.md)
+11. [Debugging BitBake Builds](debugging-bitbake-builds.md)
+12. [Reproducibility, Caches, and Mirrors](reproducibility-caches-and-mirrors.md)
 
 ## Detailed Roadmap
 

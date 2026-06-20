@@ -154,6 +154,18 @@ nav:
               - Reproducible U-Boot Builds: build-systems/advanced/u-boot/reproducible-u-boot-builds.md
           - Yocto And OpenEmbedded:
               - Overview: build-systems/advanced/yocto-openembedded/index.md
+              - Mental Model And BitBake Execution: build-systems/advanced/yocto-openembedded/mental-model.md
+              - Build Directory And Configuration: build-systems/advanced/yocto-openembedded/build-directory-and-configuration.md
+              - Layers: build-systems/advanced/yocto-openembedded/layers.md
+              - Recipes: build-systems/advanced/yocto-openembedded/recipes.md
+              - Tasks And Workdirs: build-systems/advanced/yocto-openembedded/tasks-and-workdirs.md
+              - Images And Package Groups: build-systems/advanced/yocto-openembedded/images-and-packagegroups.md
+              - Machine And Distro Configuration: build-systems/advanced/yocto-openembedded/machine-and-distro-configuration.md
+              - Kernel And Bootloader Integration: build-systems/advanced/yocto-openembedded/kernel-and-bootloader-integration.md
+              - SDK Generation: build-systems/advanced/yocto-openembedded/sdk-generation.md
+              - Devtool And Recipe Development: build-systems/advanced/yocto-openembedded/devtool-and-recipe-development.md
+              - Debugging BitBake Builds: build-systems/advanced/yocto-openembedded/debugging-bitbake-builds.md
+              - Reproducibility, Caches, And Mirrors: build-systems/advanced/yocto-openembedded/reproducibility-caches-and-mirrors.md
           - TI Processor SDK Linux:
               - Overview: build-systems/advanced/ti-processor-sdk/index.md
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
