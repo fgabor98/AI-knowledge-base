@@ -39,6 +39,21 @@ recipe metadata
 -> task output feeds later tasks or sstate
 ```
 
+```mermaid
+flowchart LR
+    F[do_fetch] --> U[do_unpack]
+    U --> P[do_patch]
+    P --> C[do_configure]
+    C --> B[do_compile]
+    B --> I[do_install]
+    I --> PK[do_package]
+
+    DEP[Dependency do_populate_sysroot] --> C
+    SIG[Task signature] --> HIT{Matching sstate?}
+    HIT -->|yes| RESTORE[Restore task output]
+    HIT -->|no| C
+```
+
 ## Typical Task Lifecycle
 
 ```text
@@ -95,6 +110,28 @@ The path commonly includes:
 - epoch/version/revision information
 
 Do not memorize paths; query them.
+
+```mermaid
+flowchart TD
+    W[Recipe WORKDIR]
+    S[Source tree S]
+    B[Build tree B]
+    D[Install staging D]
+    T[temp task logs and run scripts]
+    RS[recipe-sysroot target dependencies]
+    RN[recipe-sysroot-native host tools]
+    PS[packages-split output packages]
+
+    W --> S
+    W --> B
+    W --> D
+    W --> T
+    W --> RS
+    W --> RN
+    W --> PS
+    B --> D
+    D --> PS
+```
 
 ## Important Workdir Areas
 

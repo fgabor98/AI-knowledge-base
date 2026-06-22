@@ -39,6 +39,23 @@ pin metadata/source manifest
 -> signing/promotion to release store
 ```
 
+```mermaid
+flowchart LR
+    LOCK[Pinned source and layer manifest]
+    CHECK[Parse and metadata checks]
+    BUILD[Clean image build]
+    QA[QA, CVE, license, and SBOM]
+    CAND[Immutable candidate artifacts]
+    HW[Hardware boot and runtime tests]
+    SIGN[Controlled signing]
+    REL[Release promotion]
+
+    LOCK --> CHECK --> BUILD --> QA --> CAND --> HW --> SIGN --> REL
+    HW -->|failed| BUILD
+```
+
+The failed-test arrow means a new corrected build must create a new candidate; tested artifacts are never modified in place.
+
 ## Clean Workspace, Shared Caches
 
 Use fresh/isolated `TMPDIR` for release jobs while sharing:

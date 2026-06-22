@@ -40,6 +40,30 @@ classify failure
 
 ## Failure-Mode Matrix
 
+```mermaid
+flowchart TD
+    START[Build or runtime symptom]
+    PARSE{Did metadata parse?}
+    PROVIDE{Were providers resolved?}
+    TASK{Which task failed?}
+    ROOTFS{Did rootfs and image complete?}
+    RUN{Does target run new artifacts?}
+
+    START --> PARSE
+    PARSE -->|no| PERR[Fix syntax, includes, layers, and overrides]
+    PARSE -->|yes| PROVIDE
+    PROVIDE -->|no| PRERR[Inspect recipes, compatibility, and preferences]
+    PROVIDE -->|yes| TASK
+    TASK -->|fetch or patch| SRC[Inspect URL, revision, checksum, and patch context]
+    TASK -->|configure or compile| COMP[Inspect task log, sysroot, and command]
+    TASK -->|install or package| PKG[Inspect D, FILES, packages-split, and QA]
+    TASK -->|none| ROOTFS
+    ROOTFS -->|no| IMG[Inspect package resolution, postinstall, and WIC]
+    ROOTFS -->|yes| RUN
+    RUN -->|no| DEPLOY[Compare deploy, WIC, flashed media, and runtime identity]
+    RUN -->|yes| DONE[Validated build]
+```
+
 | Symptom | Layer | First Checks |
 | --- | --- | --- |
 | metadata syntax error | parsing | file/line, override syntax, include path |

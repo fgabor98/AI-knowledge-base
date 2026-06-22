@@ -27,6 +27,12 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+extra_javascript:
+  - javascripts/mermaid.min.js
+  - javascripts/mermaid.js
+extra_css:
+  - stylesheets/layout.css
+  - stylesheets/mermaid.css
 nav:
   - Home: index.md
   - Topic Map: topic-map.md

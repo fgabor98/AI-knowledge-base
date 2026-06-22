@@ -43,6 +43,27 @@ machine/provider policy
 -> board boot chain
 ```
 
+```mermaid
+flowchart LR
+    M[Machine and provider policy]
+    KP[Kernel recipe, patches, config]
+    UP[U-Boot recipe, patches, defconfig]
+    FW[Firmware recipes]
+    KD[Kernel image, DTBs, modules]
+    UD[SPL and U-Boot artifacts]
+    DEP[Machine deploy directory]
+    WIC[WIC or boot media image]
+    BOARD[Running board]
+
+    M --> KP
+    M --> UP
+    M --> FW
+    KP --> KD --> DEP
+    UP --> UD --> DEP
+    FW --> DEP
+    DEP --> WIC --> BOARD
+```
+
 ## Identify Providers First
 
 ```sh

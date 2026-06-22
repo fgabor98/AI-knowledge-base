@@ -41,6 +41,25 @@ explicit cross-config dependency
 
 Multiconfig prevents hidden manual copying between unrelated build trees.
 
+```mermaid
+flowchart LR
+    subgraph L[Linux configuration]
+        LI[Product Linux image]
+        FP[Firmware package recipe]
+    end
+
+    subgraph M[MCU multiconfig]
+        FS[Firmware source]
+        FB[Firmware build]
+        FD[Firmware deploy task]
+        FS --> FB --> FD
+    end
+
+    FD -->|explicit mcdepends| FP
+    FP --> LI
+    LI --> RF[Rootfs lib/firmware]
+```
+
 ## Configuration Files
 
 Conceptual build configuration:

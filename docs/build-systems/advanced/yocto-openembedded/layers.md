@@ -40,6 +40,25 @@ OE-Core
 
 Layers are not executed in sequence. BitBake parses all active metadata and resolves the final result through priorities, overrides, providers, and append application.
 
+```mermaid
+flowchart TB
+    OE[OE-Core baseline]
+    COM[Community layers]
+    BSP[Vendor BSP layer]
+    DISTRO[Company distro layer]
+    PROD[Product layer]
+    FINAL[Final parsed product metadata]
+
+    OE --> FINAL
+    COM --> FINAL
+    BSP --> FINAL
+    DISTRO --> FINAL
+    PROD --> FINAL
+
+    BSP -. hardware policy .-> PROD
+    DISTRO -. OS policy .-> PROD
+```
+
 ## Typical Layer Layout
 
 ```text

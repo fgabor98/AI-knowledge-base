@@ -39,6 +39,21 @@ source inputs + metadata revisions + configuration + toolchain policy
 
 Caching improves speed. Reproducibility proves identity. They are related but not the same.
 
+```mermaid
+flowchart LR
+    IN[Task metadata and dependencies]
+    HASH[Calculate task signature]
+    LOOK{Matching trusted sstate?}
+    RESTORE[Restore reusable output]
+    RUN[Execute task]
+    PUBLISH[Publish new sstate object]
+    OUT[Task output]
+
+    IN --> HASH --> LOOK
+    LOOK -->|yes| RESTORE --> OUT
+    LOOK -->|no| RUN --> PUBLISH --> OUT
+```
+
 ## Downloads Cache
 
 `DL_DIR` stores fetched source archives and repository mirrors.

@@ -37,6 +37,28 @@ deploy artifacts + rootfs + .wks layout
 -> flash to SD/eMMC
 ```
 
+```mermaid
+flowchart LR
+    DEP[Deploy artifacts]
+    ROOT[Root filesystem]
+    WKS[WKS partition policy]
+    WIC[WIC image creator]
+    DISK[Partitioned disk image]
+
+    DEP --> WIC
+    ROOT --> WIC
+    WKS --> WIC
+    WIC --> DISK
+```
+
+```mermaid
+flowchart LR
+    ROM[Raw ROM and SPL region] --> BOOT[Boot partition]
+    BOOT --> A[Rootfs A]
+    A --> B[Rootfs B]
+    B --> DATA[Persistent data]
+```
+
 ## Minimal Layout Example
 
 ```text

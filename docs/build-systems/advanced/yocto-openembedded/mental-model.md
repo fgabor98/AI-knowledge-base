@@ -38,6 +38,22 @@ This page establishes the mental model needed before studying individual recipes
 
 ## The Four Names You Must Separate
 
+```mermaid
+flowchart TD
+    YP[Yocto Project ecosystem]
+    BB[BitBake task executor]
+    OE[OpenEmbedded Core metadata]
+    P[Poky reference integration]
+    T[Documentation, testing, and tools]
+
+    YP --> BB
+    YP --> OE
+    YP --> P
+    YP --> T
+    P --> BB
+    P --> OE
+```
+
 ### Yocto Project
 
 The Yocto Project is the broader project and ecosystem for creating custom Linux distributions. It includes documentation, reference metadata, tools, testing infrastructure, release processes, and conventions.
@@ -94,6 +110,26 @@ metadata and configuration
 ```
 
 The build is driven by final expanded metadata, not by the text of one recipe in isolation.
+
+```mermaid
+flowchart LR
+    C[Configuration files]
+    R[Recipes]
+    A[Recipe appends]
+    CL[Classes and includes]
+    O[Active overrides]
+    P[Parse and expand]
+    F[Final metadata datastore]
+    G[Provider and task graph]
+
+    C --> P
+    R --> P
+    A --> P
+    CL --> P
+    O --> P
+    P --> F
+    F --> G
+```
 
 ## Metadata Inputs
 
@@ -240,6 +276,23 @@ Therefore:
 recipe name != package name != image name
 ```
 
+```mermaid
+flowchart LR
+    R[example recipe]
+    P1[example runtime package]
+    P2[example-tools package]
+    P3[example-dev package]
+    I[product image recipe]
+    RF[Root filesystem]
+
+    R --> P1
+    R --> P2
+    R --> P3
+    P1 --> I
+    P2 -. optional .-> I
+    I --> RF
+```
+
 ## Providers
 
 A dependency can request a capability rather than one exact recipe.
@@ -267,6 +320,20 @@ Useful inspection:
 bitbake-layers show-recipes virtual/kernel
 bitbake-layers show-recipes virtual/bootloader
 bitbake -e virtual/kernel
+```
+
+```mermaid
+flowchart LR
+    VK[virtual/kernel]
+    K1[linux-yocto]
+    K2[linux-vendor]
+    M[Machine and distro policy]
+    S[Selected linux-vendor provider]
+
+    K1 -->|provides| VK
+    K2 -->|provides| VK
+    M -->|preference and compatibility| VK
+    VK --> S
 ```
 
 ## Task Model
@@ -522,6 +589,19 @@ provider selection
 -> component-specific build system
 -> deploy kernel/U-Boot/DTB/module artifacts
 -> image or WIC integration
+```
+
+```mermaid
+flowchart LR
+    SRC[Source and patches]
+    B[Configure and compile]
+    D[Install staging D]
+    PKG[Binary packages]
+    ROOT[Root filesystem]
+    IMG[Filesystem image]
+    WIC[Partitioned WIC image]
+
+    SRC --> B --> D --> PKG --> ROOT --> IMG --> WIC
 ```
 
 Yocto orchestrates the Linux kernel and U-Boot build systems; it does not replace their internal Kbuild/Kconfig behavior.
