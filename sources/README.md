@@ -12,3 +12,7 @@ Prefer primary sources:
 - vendor documentation for board-specific material
 
 Avoid treating AI-generated text as a source.
+
+## Current Source Lists
+
+- [Bash primary sources](bash-primary-sources.md)

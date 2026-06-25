@@ -48,29 +48,89 @@ This file owns the taxonomy. Add and reorganize topics here before expanding the
 
 ## Bash Programming
 
+Beginner:
+
+- when to use Bash
+- shell background and interpretation model
+- interactive shell usage
+- startup files and login vs non-login shells
+- history, Readline, and prompt basics
+- aliases vs functions vs scripts
+- terminal job control basics
 - shell execution model
+- command lookup
+- shell builtins
+- `type`, `command`, `builtin`, `hash`, and `enable`
+- shell variables vs environment variables
 - quoting
-- variables
-- arrays
+- variables and expansion
 - parameter expansion
-- command substitution
+- basic command substitution
 - arithmetic expansion
+- arrays
+- word splitting and `IFS`
+- filename expansion and globbing
+- shell options with `shopt`
+- `nullglob`, `failglob`, `globstar`, `extglob`, and `dotglob`
 - exit codes
 - conditionals
+- `case`
 - loops
+- loop control
 - functions
+- robust script structure
+- Bash vs POSIX shell
+
+Intermediate:
+
 - pipes
 - redirection
-- subshells
-- traps
-- signals
-- getopt and getopts
-- robust scripting patterns
-- shellcheck
-- logging from scripts
-- temporary files
+- file descriptors
+- here documents and here strings
 - process substitution
-- portable POSIX shell vs Bash
+- command and process substitution patterns
+- subshells
+- reading lines safely
+- `read` builtin options and status behavior
+- NUL-delimited filename handling
+- standard Unix tools from Bash
+- `find`, `xargs`, `grep`, `sed`, `awk`, `sort`, `cut`, `tee`
+- traps and cleanup
+- signals
+- retries and timeouts
+- temporary files
+- safe filesystem operations
+- locking patterns
+- shellcheck-driven cleanup
+- logging from scripts
+- argument parsing with `getopts`
+- manual long-option parsing
+- usage messages
+- stdout vs stderr logging
+
+Advanced:
+
+- `errexit`, `ERR` traps, and `errtrace`
+- advanced file descriptor handling
+- `exec` redirection and descriptor lifetime
+- `BASH_XTRACEFD`
+- signals, process groups, and child processes
+- background jobs and `wait`
+- bounded parallelism
+- advanced parameter expansion
+- indirect expansion and namerefs
+- associative arrays
+- `eval`, injection risks, and shell security
+- advanced debugging and tracing
+- `PS4`, `BASH_SOURCE`, `LINENO`, and `FUNCNAME`
+- `trap DEBUG`
+- programmable completion
+- Bash testing
+- Bats test structure
+- portability matrix across Bash versions and userlands
+- GNU vs BSD/macOS vs BusyBox command differences
+- Bash performance boundaries
+- ShellCheck configuration and targeted suppressions
 
 ## Python Programming
 
