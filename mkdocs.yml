@@ -107,12 +107,17 @@ nav:
           - Cross-Compilation: build-systems/cross-compilation.md
           - Target Triples And Sysroots: build-systems/target-triples-and-sysroots.md
           - Target pkg-config: build-systems/target-pkg-config.md
+          - Shared Libraries, ABI, And Runtime Linking: build-systems/shared-libraries-abi-and-runtime-linking.md
           - CMake Basics: build-systems/cmake-basics.md
           - CMake Toolchain Files: build-systems/cmake-toolchain-files.md
           - Ninja As A Generated Backend: build-systems/ninja-generated-backend.md
           - Install Rules And Staging: build-systems/install-rules-and-staging.md
           - CMake Package Discovery: build-systems/cmake-package-discovery.md
+          - Autotools And Meson For Embedded Cross-Builds: build-systems/autotools-and-meson-for-embedded-cross-builds.md
+          - Filesystem Image Basics: build-systems/filesystem-image-basics.md
+          - Build Artifact Debugging: build-systems/build-artifact-debugging.md
           - Source Fetching And Patch Management: build-systems/source-fetching-and-patch-management.md
+          - Patch Management For Embedded Builds: build-systems/patch-management-for-embedded-builds.md
           - Build Caching And Mirrors: build-systems/build-caching-and-mirrors.md
           - Build Quality Gates: build-systems/build-quality-gates.md
       - Advanced:
@@ -198,6 +203,16 @@ nav:
               - Debugging TI SDK Builds And Boots: build-systems/advanced/ti-processor-sdk/debugging-ti-sdk-builds-and-boots.md
               - Release Engineering And SDK Upgrades: build-systems/advanced/ti-processor-sdk/release-engineering-and-sdk-upgrades.md
               - End-To-End Product Layer Lab: build-systems/advanced/ti-processor-sdk/end-to-end-product-layer-lab.md
+          - Buildroot: build-systems/advanced/buildroot.md
+          - Device Tree Build And Validation: build-systems/advanced/device-tree-build-and-validation.md
+          - Board Porting Build Workflow: build-systems/advanced/board-porting-build-workflow.md
+          - Boot Image Composition, FIT, And Signing: build-systems/advanced/boot-image-composition-fit-and-signing.md
+          - Cross-Compilation Toolchains In Depth: build-systems/advanced/cross-compilation-toolchains-in-depth.md
+          - Package Management And Rootfs Composition: build-systems/advanced/package-management-and-rootfs-composition.md
+          - Initramfs, Recovery, And Manufacturing Images: build-systems/advanced/initramfs-recovery-and-manufacturing-images.md
+          - OTA And Update System Build Integration: build-systems/advanced/ota-update-system-build-integration.md
+          - Reproducible Embedded Linux Releases: build-systems/advanced/reproducible-embedded-linux-releases.md
+          - Build CI For Embedded Linux: build-systems/advanced/build-ci-for-embedded-linux.md
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
   - Patterns:
       - patterns/index.md
