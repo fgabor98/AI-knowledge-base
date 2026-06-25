@@ -104,6 +104,11 @@ Start with the product lifecycle:
 - signed update bundles
 - rollback rules
 - interrupted update recovery
+- runtime recovery workflow
+- rescue shell policy
+- compatibility metadata
+- update status reporting
+- bootloader/user-space update contract
 
 ### Security And Chain Of Trust
 
@@ -115,6 +120,14 @@ Start with the product lifecycle:
 - kernel module signing
 - key management
 - secure manufacturing implications
+- filesystem permissions
+- Linux capabilities
+- users and groups
+- SSH hardening
+- secrets handling
+- TPM overview
+- TEE overview
+- attack surface reduction
 
 ### Diagnostics And Reliability
 
@@ -128,6 +141,24 @@ Start with the product lifecycle:
 - read-only root filesystems
 - filesystem corruption prevention
 - brownout and power-loss behavior
+- version reporting on device
+- support bundle generation
+- remote diagnostics
+- field health checks
+- artifact provenance on device
+
+### Manufacturing And Board Test
+
+- factory flashing workflow
+- hardware test images
+- MAC address provisioning
+- serial number provisioning
+- EEPROM programming
+- certificate provisioning
+- calibration data
+- production test logs
+- fixture-driven tests
+- separation of manufacturing and production images
 
 ## Related Topics
 

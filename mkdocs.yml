@@ -89,6 +89,8 @@ nav:
       - linux-kernel/index.md
   - Embedded Linux:
       - embedded-linux/index.md
+  - Device Tree:
+      - device-tree/index.md
   - Embedded Productization:
       - embedded-productization/index.md
   - Debugging:

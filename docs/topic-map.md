@@ -202,6 +202,31 @@ Advanced:
 - ftrace
 - dynamic debug
 - kernel oops analysis
+- Linux device driver fundamentals
+- built-in drivers vs loadable modules
+- device tree driver matching
+- `of_match_table`
+- resource lookup
+- `devm_*` managed allocation
+- GPIO consumer API
+- IRQ handling
+- I2C client drivers
+- SPI device drivers
+- regmap
+- debug configs vs production configs
+- kernel hardening options
+- module signing
+- namespaces and cgroups overview
+- LSM overview
+- runtime PM
+- suspend and resume
+- wake sources
+- cpuidle and cpufreq
+- power domains
+- remoteproc framework
+- RPMsg
+- PRU integration overview
+- R5 and M4 firmware lifecycle
 
 ## Embedded Linux
 
@@ -300,6 +325,132 @@ Advanced:
 - verified boot
 - field diagnostics
 - production logging
+- boot media selection
+- boot scripts
+- `extlinux.conf`
+- FIT image handoff
+- initramfs
+- rootfs mount
+- init and systemd startup
+- serial log failure classification
+- vendor EVM baseline
+- source-built board baseline
+- custom board delta list
+- minimal rootfs boot
+- peripheral bring-up
+- strace
+- ltrace
+- gdbserver
+- core dumps
+- boot hangs
+- kernel panics
+- watchdog resets
+- systemd unit files
+- service dependencies
+- systemd targets
+- restart policies
+- journald
+- tmpfiles
+- systemd timers
+- read-only rootfs integration
+- raw NAND
+- NOR/QSPI/OSPI
+- ext4
+- squashfs
+- overlayfs
+- UUID and PARTUUID
+- power-loss behavior
+- rescue shell
+- recovery boot path
+- provisioning runtime flow
+- GPIO
+- I2C
+- SPI
+- UART
+- CAN
+- USB
+- PCIe
+- logic analyzer workflow
+
+## Device Tree
+
+- what Device Tree solves
+- DTS
+- DTSI
+- DTB
+- overlays
+- source include structure
+- labels
+- phandles
+- node names
+- unit addresses
+- properties
+- `reg`
+- `ranges`
+- `#address-cells`
+- `#size-cells`
+- `interrupt-parent`
+- `interrupts`
+- `dma-ranges`
+- simple-bus
+- `compatible`
+- fallback compatible strings
+- `of_match_table`
+- platform devices
+- binding-driven driver expectations
+- optional vs required properties
+- pinmux
+- pin configuration
+- GPIO controllers
+- GPIO consumers
+- active-high vs active-low
+- interrupt controllers
+- interrupt trigger types
+- reset GPIOs
+- clock providers
+- clock consumers
+- reset controllers
+- fixed regulators
+- PMIC regulators
+- regulator constraints
+- power domains
+- wake sources
+- UART nodes
+- I2C nodes
+- SPI nodes
+- CAN nodes
+- USB nodes
+- PCIe nodes
+- MMC/SD/eMMC nodes
+- Ethernet MAC nodes
+- Ethernet PHY nodes
+- MDIO
+- fixed-link
+- `/memory`
+- `/chosen`
+- reserved memory
+- CMA
+- firmware nodes
+- remoteproc
+- RPMsg
+- PRU
+- R5/M4 cores
+- U-Boot control DTB
+- SPL DTB
+- Linux DTB
+- U-Boot-specific properties
+- pre-relocation properties
+- FIT image DTB selection
+- YAML bindings
+- `dt-bindings`
+- `dtc` warnings
+- `dtbs_check`
+- schema errors
+- `/proc/device-tree`
+- `/sys/firmware/devicetree/base`
+- decoded DTBs with `dtc`
+- runtime DTB identity checks
+- board porting DT workflow
 
 ## Debugging
 
@@ -341,6 +492,30 @@ Advanced:
 - firewall basics
 - tcpdump and packet inspection
 - embedded network bring-up
+- MAC vs PHY
+- MDIO
+- PHY addresses
+- link negotiation
+- RGMII/RMII interface modes
+- PHY reset GPIOs
+- PHY interrupt lines
+- fixed-link
+- device tree networking nodes
+- U-Boot Ethernet vs Linux Ethernet
+- static IP
+- routes
+- systemd-networkd
+- NetworkManager tradeoffs
+- interface naming
+- ethtool
+- ARP checks
+- link-state checks
+- VLANs
+- bridges
+- nftables overview
+- NTP
+- PTP overview
+- service discovery overview
 
 ## Build Systems
 
@@ -521,6 +696,28 @@ Advanced:
 - read-only root filesystem strategy
 - filesystem corruption prevention
 - brownout and power-loss behavior
+- runtime recovery workflow
+- rescue shell policy
+- compatibility metadata
+- bootloader/user-space update contract
+- filesystem permissions
+- Linux capabilities
+- users and groups
+- SSH hardening
+- secrets handling
+- TPM overview
+- TEE overview
+- attack surface reduction
+- version reporting on device
+- support bundle generation
+- remote diagnostics
+- field health checks
+- artifact provenance on device
+- manufacturing and board test
+- hardware test images
+- EEPROM programming
+- fixture-driven tests
+- separation of manufacturing and production images
 
 ## Patterns
 
