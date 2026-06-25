@@ -182,6 +182,22 @@ nav:
               - End-To-End Product Layer Lab: build-systems/advanced/yocto-openembedded/end-to-end-product-layer-lab.md
           - TI Processor SDK Linux:
               - Overview: build-systems/advanced/ti-processor-sdk/index.md
+              - SDK Overview And Release Model: build-systems/advanced/ti-processor-sdk/sdk-overview-and-release-model.md
+              - Processor SDK Build System Vs TI Yocto Layers: build-systems/advanced/ti-processor-sdk/sdk-build-system-vs-ti-yocto-layers.md
+              - Installed SDK And Source Layout: build-systems/advanced/ti-processor-sdk/installed-sdk-and-source-layout.md
+              - Build Environment Setup: build-systems/advanced/ti-processor-sdk/build-environment-setup.md
+              - TI Yocto And Arago Build Flow: build-systems/advanced/ti-processor-sdk/ti-yocto-arago-build-flow.md
+              - Machines, Distros, And Image Targets: build-systems/advanced/ti-processor-sdk/machines-distros-and-image-targets.md
+              - Boot Artifact Pipeline: build-systems/advanced/ti-processor-sdk/boot-artifact-pipeline.md
+              - Kernel Integration: build-systems/advanced/ti-processor-sdk/kernel-integration.md
+              - U-Boot Integration: build-systems/advanced/ti-processor-sdk/u-boot-integration.md
+              - Firmware And Heterogeneous Cores: build-systems/advanced/ti-processor-sdk/firmware-and-heterogeneous-cores.md
+              - Custom Sitara Board Bring-Up: build-systems/advanced/ti-processor-sdk/custom-sitara-board-bring-up.md
+              - SDK Customization For Products: build-systems/advanced/ti-processor-sdk/sdk-customization-for-products.md
+              - Deployment And Flashing: build-systems/advanced/ti-processor-sdk/deployment-and-flashing.md
+              - Debugging TI SDK Builds And Boots: build-systems/advanced/ti-processor-sdk/debugging-ti-sdk-builds-and-boots.md
+              - Release Engineering And SDK Upgrades: build-systems/advanced/ti-processor-sdk/release-engineering-and-sdk-upgrades.md
+              - End-To-End Product Layer Lab: build-systems/advanced/ti-processor-sdk/end-to-end-product-layer-lab.md
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
   - Patterns:
       - patterns/index.md

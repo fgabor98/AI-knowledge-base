@@ -11,306 +11,137 @@ last_reviewed: null
 
 ## What Problem Does This Solve?
 
-TI Processor SDK Linux is a vendor BSP and distribution build workflow for TI processors. It combines TI documentation, prebuilt images, SDK installers, Arago/OpenEmbedded layers, TI kernel and U-Boot trees, firmware, image targets, and EVM deployment workflows.
+TI Processor SDK Linux is TI's integrated Linux BSP and distribution delivery for Sitara and other TI processors. It combines release documentation, prebuilt binaries, Yocto/OpenEmbedded metadata, Arago distribution policy, TI-maintained Linux and U-Boot trees, firmware packages, image targets, SDK installers, and board deployment workflows.
 
-This section is the detailed roadmap for learning TI Processor SDK Linux as a build and product integration environment.
+For a product engineer, the SDK is not only a set of downloads. It is the release boundary that defines which kernel, U-Boot, firmware, machine configuration, image recipe, toolchain, and documentation are expected to work together.
+
+## SDK Build System Vs TI Yocto Layers
+
+This distinction matters.
+
+The **TI Processor SDK build system** is the complete vendor workflow around a specific SDK release. It includes documentation, installer layout, release notes, prebuilt images, validated EVM targets, setup scripts, pinned layer revisions, TI image targets, deployment artifacts, and instructions for flashing and validation. When you follow the Processor SDK instructions, you are using TI's release-integrated path.
+
+The **TI Yocto layers** are the OpenEmbedded metadata components inside that workflow, such as TI BSP layers, Arago distribution layers, recipes, classes, machine files, image recipes, and `.bbappend` files. They can be inspected, extended, and sometimes reused outside the full Processor SDK installer flow, but they do not by themselves define the entire SDK experience.
+
+Use the **Processor SDK workflow** when:
+
+- you need to reproduce a TI-supported EVM image
+- you want the least ambiguous baseline for a board bring-up
+- you are following TI documentation, release notes, and known issues
+- you need prebuilt artifacts, validation scripts, or SDK installer contents
+- you want a supportable reference when asking TI or comparing against an EVM
+
+Use the **TI Yocto layers directly** when:
+
+- you already understand the release baseline and want to integrate TI BSP metadata into a larger Yocto product tree
+- you need to maintain your own product distro, product images, CI, mirrors, and release manifests
+- you want to treat TI metadata as vendor input rather than the top-level build environment
+- you are migrating patches between SDK releases and need to reason at the layer/recipe level
+
+The practical rule is: start from the Processor SDK to establish a known-good baseline, then move product ownership into your own Yocto layer while keeping TI layers as vendor inputs.
 
 ## Core Concepts
 
-- TI Processor SDK Linux release
-- EVM
-- Arago layers
+- SDK release
+- EVM baseline
+- Arago distribution
+- TI BSP layers
 - `oe-layersetup`
 - `oe-layertool-setup.sh`
-- machine names
-- image targets
+- `MACHINE`
+- `DISTRO`
 - `tisdk-default-image`
-- `tisdk-base-image`
-- `deploy-ti`
-- TI kernel
-- TI U-Boot
-- device tree customization
-- RT Linux enablement
-- EVM to product board migration
+- boot firmware
+- `tiboot3.bin`
+- `tispl.bin`
+- `u-boot.img`
+- kernel image
+- DTBs
+- root filesystem
+- WIC images
+- PRU/R5/M4 firmware
+- custom machine
+- product layer
+- SDK upgrade
 
 ## Mental Model
 
-TI Processor SDK flow:
-
-```text
-TI SDK release documentation
--> oe-layersetup config
--> Arago/OE layers at pinned revisions
--> MACHINE and image target
--> BitBake build
--> deploy-ti artifacts
--> SD/eMMC/flash deployment
--> EVM or product board validation
+```mermaid
+flowchart TD
+    Docs[TI SDK documentation and release notes] --> Setup[oe-layersetup release config]
+    Setup --> Layers[Arago, OE, meta-ti, BSP, product layers]
+    Layers --> BitBake[BitBake task graph]
+    BitBake --> Boot[Boot artifacts]
+    BitBake --> Kernel[Kernel, DTBs, modules]
+    BitBake --> Rootfs[Root filesystem and packages]
+    BitBake --> Firmware[Remote core and device firmware]
+    Boot --> Image[WIC or deployable media image]
+    Kernel --> Image
+    Rootfs --> Image
+    Firmware --> Image
+    Image --> Board[EVM or product board validation]
 ```
 
-Treat the SDK release as the anchor. Documentation, layer revisions, machine names, image targets, kernel, U-Boot, firmware, and deployment instructions must match the selected SDK release.
-
-## Roadmap Pages
-
-Planned pages:
-
-1. `sdk-overview-and-release-model.md`
-2. `installed-sdk-layout.md`
-3. `yocto-arago-layer-setup.md`
-4. `machines-and-image-targets.md`
-5. `building-tisdk-images.md`
-6. `deploy-ti-and-artifacts.md`
-7. `kernel-customization.md`
-8. `u-boot-customization.md`
-9. `device-tree-customization.md`
-10. `adding-applications-and-services.md`
-11. `rt-linux-builds.md`
-12. `debugging-ti-sdk-builds.md`
-13. `evm-to-product-board-workflow.md`
-
-## Detailed Roadmap
-
-### 1. SDK Overview And Release Model
-
-Learn:
-
-- SDK release naming
-- processor family documentation
-- supported EVMs
-- prebuilt image vs source build
-- release notes
-- host requirements
-- known issues
-
-Practice:
-
-- pick one processor family
-- identify current SDK docs for that family
-- boot a prebuilt image before modifying source builds
-
-### 2. Installed SDK Layout
-
-Learn:
-
-- SDK installer output
-- example applications
-- filesystem images
-- toolchains and sysroots
-- documentation locations
-- scripts and setup helpers
-
-Practice:
-
-- inspect installed SDK directories
-- identify boot artifacts, rootfs, and toolchain pieces
-
-### 3. Yocto Arago Layer Setup
-
-Learn:
-
-- Arago Project
-- `oe-layersetup`
-- processor SDK config files
-- layer revisions
-- `oe-layertool-setup.sh`
-- build environment setup
-
-Practice:
-
-- clone `oe-layersetup`
-- initialize layers using a documented config
-- inspect active layers and revisions
-
-### 4. Machines And Image Targets
-
-Learn:
-
-- TI machine names
-- EVM vs custom board naming
-- `tisdk-default-image`
-- `tisdk-base-image`
-- image feature differences
-- RT build switches where supported
-
-Practice:
-
-- build the documented default image for one EVM
-- compare image targets
-- identify generated files
-
-### 5. Building TISDK Images
-
-Learn:
-
-- build command structure
-- `MACHINE`
-- image targets
-- `bitbake -k`
-- build logs
-- downloads and sstate
-
-Practice:
-
-- build one full image
-- rebuild one recipe
-- clean and rebuild a failed component
-
-### 6. deploy-ti And Artifacts
-
-Learn:
-
-- `deploy-ti` layout
-- kernel image
-- DTBs
-- U-Boot artifacts
-- WIC/SD card images
-- rootfs archives
-- firmware
-- manifests
-
-Practice:
-
-- map every deploy artifact to its purpose
-- flash or write the documented image
-- confirm runtime versions on the board
-
-### 7. Kernel Customization
-
-Learn:
-
-- TI kernel recipe/provider
-- kernel patches
-- config fragments
-- external modules where relevant
-- kernel deploy artifacts
-
-Practice:
-
-- add a kernel config fragment
-- apply a small patch through a layer
-- confirm final `.config`
-
-### 8. U-Boot Customization
-
-Learn:
-
-- TI U-Boot recipe/provider
-- board defconfig
-- environment policy
-- SPL/U-Boot artifacts
-- boot media assumptions
-
-Practice:
-
-- change a U-Boot config option
-- rebuild U-Boot only
-- confirm serial boot log shows the expected version
-
-### 9. Device Tree Customization
-
-Learn:
-
-- TI kernel DTS layout
-- board DTS/DTSI layering
-- pinmux
-- regulators/clocks
-- overlays where used
-- DTB deployment
-
-Practice:
-
-- patch a board DTS
-- rebuild DTBs
-- confirm deployed DTB matches runtime `/proc/device-tree`
-
-### 10. Adding Applications And Services
-
-Learn:
-
-- product layer
-- application recipe
-- systemd service recipe
-- package install into TI image
-- SDK app development vs image-integrated app
-
-Practice:
-
-- add a simple app recipe
-- add a service unit
-- include package in the image
-- verify service starts on EVM
-
-### 11. RT Linux Builds
-
-Learn:
-
-- release-specific RT support
-- documented RT enablement variables
-- machine support constraints
-- latency test artifacts
-
-Practice:
-
-- confirm selected machine supports RT
-- build the documented RT image
-- verify kernel version and preemption model on target
-
-### 12. Debugging TI SDK Builds
-
-Learn:
-
-- layer mismatch failures
-- fetch failures
-- patch failures
-- provider conflicts
-- image/rootfs failures
-- stale build dirs
-- wrong machine names
-
-Practice:
-
-- use BitBake logs
-- inspect final variables
-- confirm layer revisions
-- isolate a failed recipe before rebuilding the full image
-
-### 13. EVM To Product Board Workflow
-
-Learn:
-
-- starting from the nearest EVM
-- custom machine config
-- custom DTS
-- boot media changes
-- product image content
-- manufacturing and update implications
-
-Practice:
-
-- document EVM baseline
-- list product board differences
-- move changes into a product layer
-- produce a reproducible product image
-
-## Common Mistakes
-
-- Mixing SDK documentation and layer revisions from different releases.
-- Guessing `MACHINE` instead of using the documented one.
-- Treating `deploy-ti` artifacts as interchangeable across builds.
-- Editing generated output under `tmp/work`.
-- Making product changes directly in vendor layers without a maintenance plan.
-- Assuming RT support exists for every board.
-- Debugging TI-specific failures as generic Yocto failures without checking TI metadata.
+The SDK release anchors the whole graph. Mixing documentation from one SDK with layers from another SDK is a common way to lose time.
+
+## Learning Materials
+
+1. [SDK Overview and Release Model](sdk-overview-and-release-model.md)
+2. [Processor SDK Build System vs TI Yocto Layers](sdk-build-system-vs-ti-yocto-layers.md)
+3. [Installed SDK and Source Layout](installed-sdk-and-source-layout.md)
+4. [Build Environment Setup](build-environment-setup.md)
+5. [TI Yocto and Arago Build Flow](ti-yocto-arago-build-flow.md)
+6. [Machines, Distros, and Image Targets](machines-distros-and-image-targets.md)
+7. [Boot Artifact Pipeline](boot-artifact-pipeline.md)
+8. [Kernel Integration](kernel-integration.md)
+9. [U-Boot Integration](u-boot-integration.md)
+10. [Firmware and Heterogeneous Cores](firmware-and-heterogeneous-cores.md)
+11. [Custom Sitara Board Bring-Up](custom-sitara-board-bring-up.md)
+12. [SDK Customization for Products](sdk-customization-for-products.md)
+13. [Deployment and Flashing](deployment-and-flashing.md)
+14. [Debugging TI SDK Builds and Boots](debugging-ti-sdk-builds-and-boots.md)
+15. [Release Engineering and SDK Upgrades](release-engineering-and-sdk-upgrades.md)
+16. [End-to-End Product Layer Lab](end-to-end-product-layer-lab.md)
+
+## Recommended Study Order
+
+Start with the SDK release model and the SDK-vs-layer distinction before building anything. Then build a known-good EVM image. Only after that should you modify kernel, U-Boot, firmware, image contents, or machine files.
+
+Good order:
+
+1. Reproduce the documented EVM baseline.
+2. Map every generated boot and image artifact.
+3. Make one controlled kernel change.
+4. Make one controlled U-Boot change.
+5. Add one product application through a product layer.
+6. Create or adapt a custom machine only after the EVM baseline is understood.
+7. Put reproducibility, CI, and upgrade workflow around the result.
+
+## Completion Criteria
+
+You understand this section when you can:
+
+- explain which parts are Processor SDK workflow and which parts are Yocto metadata
+- build a TI-supported image from pinned release metadata
+- identify the artifact consumed by each boot stage
+- modify kernel config, DT, U-Boot config, image contents, and firmware packaging in the correct layer
+- move from an EVM baseline to a product board without editing generated files
+- debug build failures using BitBake task logs and boot failures using artifact provenance
+- upgrade from one SDK release to another with a written patch and configuration ownership plan
 
 ## Related Topics
 
 - [BSP Build Integration](../bsp-build-integration.md)
 - [Yocto and OpenEmbedded](../yocto-openembedded/index.md)
+- [Linux Kernel Build System](../linux-kernel/index.md)
+- [U-Boot Build System](../u-boot/index.md)
 - [Embedded Linux](../../../embedded-linux/index.md)
 
 ## References
 
 - TI Processor SDK Linux documentation
-- TI Arago Project documentation and repositories
+- TI Linux and U-Boot repositories
+- TI Arago Project metadata
 - Yocto Project documentation
-- TI E2E forum and release notes
+- OpenEmbedded documentation
+- TI E2E forum and SDK release notes
