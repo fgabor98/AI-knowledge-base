@@ -27,6 +27,12 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+extra_javascript:
+  - javascripts/mermaid.min.js
+  - javascripts/mermaid.js
+extra_css:
+  - stylesheets/layout.css
+  - stylesheets/mermaid.css
 nav:
   - Home: index.md
   - Topic Map: topic-map.md
@@ -83,12 +89,131 @@ nav:
       - linux-kernel/index.md
   - Embedded Linux:
       - embedded-linux/index.md
+  - Embedded Productization:
+      - embedded-productization/index.md
   - Debugging:
       - debugging/index.md
   - Networking:
       - networking/index.md
   - Build Systems:
-      - build-systems/index.md
+      - Overview: build-systems/index.md
+      - Beginner:
+          - Direct Compiler Invocation: build-systems/direct-compiler-invocation.md
+          - Object Files And Linking: build-systems/object-files-and-linking.md
+          - Make Basics: build-systems/make-basics.md
+          - Make Variables And Pattern Rules: build-systems/make-variables-and-pattern-rules.md
+          - Native Linux Userspace Builds: build-systems/native-linux-userspace-builds.md
+      - Intermediate:
+          - Cross-Compilation: build-systems/cross-compilation.md
+          - Target Triples And Sysroots: build-systems/target-triples-and-sysroots.md
+          - Target pkg-config: build-systems/target-pkg-config.md
+          - Shared Libraries, ABI, And Runtime Linking: build-systems/shared-libraries-abi-and-runtime-linking.md
+          - CMake Basics: build-systems/cmake-basics.md
+          - CMake Toolchain Files: build-systems/cmake-toolchain-files.md
+          - Ninja As A Generated Backend: build-systems/ninja-generated-backend.md
+          - Install Rules And Staging: build-systems/install-rules-and-staging.md
+          - CMake Package Discovery: build-systems/cmake-package-discovery.md
+          - Autotools And Meson For Embedded Cross-Builds: build-systems/autotools-and-meson-for-embedded-cross-builds.md
+          - Filesystem Image Basics: build-systems/filesystem-image-basics.md
+          - Build Artifact Debugging: build-systems/build-artifact-debugging.md
+          - Source Fetching And Patch Management: build-systems/source-fetching-and-patch-management.md
+          - Patch Management For Embedded Builds: build-systems/patch-management-for-embedded-builds.md
+          - Build Caching And Mirrors: build-systems/build-caching-and-mirrors.md
+          - Build Quality Gates: build-systems/build-quality-gates.md
+      - Advanced:
+          - Overview: build-systems/advanced/index.md
+          - BSP Build Integration:
+              - Overview: build-systems/advanced/bsp-build-integration.md
+              - Artifact Flow And Provenance: build-systems/advanced/bsp-integration/artifact-flow-and-provenance.md
+              - Configuration And Patch Ownership: build-systems/advanced/bsp-integration/configuration-and-patch-ownership.md
+              - Boot Debugging And Runtime Validation: build-systems/advanced/bsp-integration/boot-debugging-and-runtime-validation.md
+              - Image Layout And Deployment: build-systems/advanced/bsp-integration/image-layout-and-deployment.md
+              - BSP Release Reproducibility: build-systems/advanced/bsp-integration/release-reproducibility.md
+          - Linux Kernel Build System:
+              - Overview: build-systems/advanced/linux-kernel/index.md
+              - Documentation Reading Guide: build-systems/advanced/linux-kernel/documentation-reading-guide.md
+              - Source Tree And Outputs: build-systems/advanced/linux-kernel/source-tree-and-outputs.md
+              - Kconfig And Defconfig: build-systems/advanced/linux-kernel/kconfig-and-defconfig.md
+              - Kbuild Objects And Directories: build-systems/advanced/linux-kernel/kbuild-objects-and-directories.md
+              - Modules And External Modules: build-systems/advanced/linux-kernel/modules-and-external-modules.md
+              - Device Tree Builds: build-systems/advanced/linux-kernel/device-tree-builds.md
+              - Cross-Building And Installing: build-systems/advanced/linux-kernel/cross-building-and-installing.md
+              - Debugging Kernel Builds: build-systems/advanced/linux-kernel/debugging-kernel-builds.md
+              - Configuration Fragments And Auditing: build-systems/advanced/linux-kernel/configuration-fragments-and-auditing.md
+              - Vendor Kernel Patch Management: build-systems/advanced/linux-kernel/vendor-kernel-patch-management.md
+              - Kernel Release Artifacts: build-systems/advanced/linux-kernel/kernel-release-artifacts.md
+              - Device Tree Binding Validation: build-systems/advanced/linux-kernel/device-tree-binding-validation.md
+              - Initramfs And Built-In Root Filesystem: build-systems/advanced/linux-kernel/initramfs-and-built-in-rootfs.md
+              - Reproducible Kernel Builds: build-systems/advanced/linux-kernel/reproducible-kernel-builds.md
+          - U-Boot Build System:
+              - Overview: build-systems/advanced/u-boot/index.md
+              - Documentation Reading Guide: build-systems/advanced/u-boot/documentation-reading-guide.md
+              - Source Tree And Outputs: build-systems/advanced/u-boot/source-tree-and-outputs.md
+              - Board Defconfigs: build-systems/advanced/u-boot/board-defconfigs.md
+              - Kconfig And Generated Config: build-systems/advanced/u-boot/kconfig-and-generated-config.md
+              - SPL, TPL, And U-Boot Proper: build-systems/advanced/u-boot/spl-tpl-and-u-boot-proper.md
+              - Device Tree In U-Boot: build-systems/advanced/u-boot/device-tree-in-u-boot.md
+              - FIT Images And Boot Artifacts: build-systems/advanced/u-boot/fit-images-and-boot-artifacts.md
+              - Cross-Building And Flashing: build-systems/advanced/u-boot/cross-building-and-flashing.md
+              - Debugging U-Boot Builds: build-systems/advanced/u-boot/debugging-u-boot-builds.md
+              - Environment And Boot Flow: build-systems/advanced/u-boot/environment-and-boot-flow.md
+              - Release Artifacts And Provenance: build-systems/advanced/u-boot/release-artifacts-and-provenance.md
+              - Secure Boot And Signing: build-systems/advanced/u-boot/secure-boot-and-signing.md
+              - Vendor U-Boot Patch Management: build-systems/advanced/u-boot/vendor-u-boot-patch-management.md
+              - Board Porting And Bring-Up: build-systems/advanced/u-boot/board-porting-and-bring-up.md
+              - Driver Model And Pre-Relocation: build-systems/advanced/u-boot/driver-model-and-pre-relocation.md
+              - Reproducible U-Boot Builds: build-systems/advanced/u-boot/reproducible-u-boot-builds.md
+          - Yocto And OpenEmbedded:
+              - Overview: build-systems/advanced/yocto-openembedded/index.md
+              - Mental Model And BitBake Execution: build-systems/advanced/yocto-openembedded/mental-model.md
+              - Build Directory And Configuration: build-systems/advanced/yocto-openembedded/build-directory-and-configuration.md
+              - Layers: build-systems/advanced/yocto-openembedded/layers.md
+              - Recipes: build-systems/advanced/yocto-openembedded/recipes.md
+              - Tasks And Workdirs: build-systems/advanced/yocto-openembedded/tasks-and-workdirs.md
+              - Images And Package Groups: build-systems/advanced/yocto-openembedded/images-and-packagegroups.md
+              - Machine And Distro Configuration: build-systems/advanced/yocto-openembedded/machine-and-distro-configuration.md
+              - Kernel And Bootloader Integration: build-systems/advanced/yocto-openembedded/kernel-and-bootloader-integration.md
+              - SDK Generation: build-systems/advanced/yocto-openembedded/sdk-generation.md
+              - Devtool And Recipe Development: build-systems/advanced/yocto-openembedded/devtool-and-recipe-development.md
+              - Debugging BitBake Builds: build-systems/advanced/yocto-openembedded/debugging-bitbake-builds.md
+              - Reproducibility, Caches, And Mirrors: build-systems/advanced/yocto-openembedded/reproducibility-caches-and-mirrors.md
+              - BitBake Metadata, Overrides, And Python: build-systems/advanced/yocto-openembedded/bitbake-metadata-overrides-and-python.md
+              - Packaging, QA, And Package Feeds: build-systems/advanced/yocto-openembedded/packaging-qa-and-feeds.md
+              - WIC And Partition Layouts: build-systems/advanced/yocto-openembedded/wic-and-partition-layouts.md
+              - Kernel Recipe Internals: build-systems/advanced/yocto-openembedded/kernel-recipe-internals.md
+              - Multiconfig And Firmware Builds: build-systems/advanced/yocto-openembedded/multiconfig-and-firmware-builds.md
+              - Licensing, CVE, And SBOM Workflows: build-systems/advanced/yocto-openembedded/licensing-cve-and-sbom.md
+              - CI, Hash Equivalence, And Shared State: build-systems/advanced/yocto-openembedded/ci-hash-equivalence-and-sstate.md
+              - End-To-End Product Layer Lab: build-systems/advanced/yocto-openembedded/end-to-end-product-layer-lab.md
+          - TI Processor SDK Linux:
+              - Overview: build-systems/advanced/ti-processor-sdk/index.md
+              - SDK Overview And Release Model: build-systems/advanced/ti-processor-sdk/sdk-overview-and-release-model.md
+              - Processor SDK Build System Vs TI Yocto Layers: build-systems/advanced/ti-processor-sdk/sdk-build-system-vs-ti-yocto-layers.md
+              - Installed SDK And Source Layout: build-systems/advanced/ti-processor-sdk/installed-sdk-and-source-layout.md
+              - Build Environment Setup: build-systems/advanced/ti-processor-sdk/build-environment-setup.md
+              - TI Yocto And Arago Build Flow: build-systems/advanced/ti-processor-sdk/ti-yocto-arago-build-flow.md
+              - Machines, Distros, And Image Targets: build-systems/advanced/ti-processor-sdk/machines-distros-and-image-targets.md
+              - Boot Artifact Pipeline: build-systems/advanced/ti-processor-sdk/boot-artifact-pipeline.md
+              - Kernel Integration: build-systems/advanced/ti-processor-sdk/kernel-integration.md
+              - U-Boot Integration: build-systems/advanced/ti-processor-sdk/u-boot-integration.md
+              - Firmware And Heterogeneous Cores: build-systems/advanced/ti-processor-sdk/firmware-and-heterogeneous-cores.md
+              - Custom Sitara Board Bring-Up: build-systems/advanced/ti-processor-sdk/custom-sitara-board-bring-up.md
+              - SDK Customization For Products: build-systems/advanced/ti-processor-sdk/sdk-customization-for-products.md
+              - Deployment And Flashing: build-systems/advanced/ti-processor-sdk/deployment-and-flashing.md
+              - Debugging TI SDK Builds And Boots: build-systems/advanced/ti-processor-sdk/debugging-ti-sdk-builds-and-boots.md
+              - Release Engineering And SDK Upgrades: build-systems/advanced/ti-processor-sdk/release-engineering-and-sdk-upgrades.md
+              - End-To-End Product Layer Lab: build-systems/advanced/ti-processor-sdk/end-to-end-product-layer-lab.md
+          - Buildroot: build-systems/advanced/buildroot.md
+          - Device Tree Build And Validation: build-systems/advanced/device-tree-build-and-validation.md
+          - Board Porting Build Workflow: build-systems/advanced/board-porting-build-workflow.md
+          - Boot Image Composition, FIT, And Signing: build-systems/advanced/boot-image-composition-fit-and-signing.md
+          - Cross-Compilation Toolchains In Depth: build-systems/advanced/cross-compilation-toolchains-in-depth.md
+          - Package Management And Rootfs Composition: build-systems/advanced/package-management-and-rootfs-composition.md
+          - Initramfs, Recovery, And Manufacturing Images: build-systems/advanced/initramfs-recovery-and-manufacturing-images.md
+          - OTA And Update System Build Integration: build-systems/advanced/ota-update-system-build-integration.md
+          - Reproducible Embedded Linux Releases: build-systems/advanced/reproducible-embedded-linux-releases.md
+          - Build CI For Embedded Linux: build-systems/advanced/build-ci-for-embedded-linux.md
+      - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
   - Patterns:
       - patterns/index.md
   - Templates:

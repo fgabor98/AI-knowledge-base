@@ -1,0 +1,20 @@
+.mermaid-container {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  text-align: center;
+  width: min(100%, calc(100vw - 3rem));
+}
+
+.mermaid-container .mermaid {
+  margin: 0;
+}
+
+.mermaid-container svg {
+  display: block;
+  height: auto;
+  margin: 0 auto;
+  max-width: 100% !important;
+  width: 100% !important;
+}

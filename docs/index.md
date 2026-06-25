@@ -26,6 +26,7 @@ Start with the [Topic Map](topic-map.md), then create individual pages from the 
 - [Python Programming](python/index.md)
 - [Linux Kernel Programming](linux-kernel/index.md)
 - [Embedded Linux](embedded-linux/index.md)
+- [Embedded Productization](embedded-productization/index.md)
 - [Debugging](debugging/index.md)
 - [Networking](networking/index.md)
 - [Build Systems](build-systems/index.md)
