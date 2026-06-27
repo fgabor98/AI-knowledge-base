@@ -158,75 +158,145 @@ Advanced:
 
 ## Linux Kernel Programming
 
-- kernel source tree layout
-- building the kernel
-- Linux kernel build system
-- Kbuild
-- Kconfig
-- defconfig
-- menuconfig
-- out-of-tree builds with O=
-- kernel configuration
-- kernel image outputs
-- kernel modules
-- external modules with M=
-- module parameters
-- init and exit paths
-- character devices
-- device model
-- device tree
-- platform drivers
-- probe and remove lifecycle
-- sysfs
-- debugfs
-- procfs
-- GPIO subsystem
-- PWM subsystem
-- I2C
-- SPI
-- pinctrl
-- clocks
-- resets
-- regulators
-- interrupts
-- threaded IRQs
-- workqueues
-- timers
-- completions
-- wait queues
-- locking
-- atomic operations
-- memory allocation
-- DMA basics
-- kernel logging
-- ftrace
-- dynamic debug
-- kernel oops analysis
+- kernel source, build, and tailoring
+  - kernel source acquisition
+  - upstream kernel source
+  - vendor kernel source
+  - source provenance
+  - kernel configuration and tailoring
+  - kernel build and install overview
+  - external module build prerequisites
+  - kernel image, DTB, and module artifacts
 - Linux device driver fundamentals
-- built-in drivers vs loadable modules
-- device tree driver matching
-- `of_match_table`
-- resource lookup
-- `devm_*` managed allocation
-- GPIO consumer API
-- IRQ handling
-- I2C client drivers
-- SPI device drivers
-- regmap
-- debug configs vs production configs
-- kernel hardening options
-- module signing
-- namespaces and cgroups overview
-- LSM overview
-- runtime PM
-- suspend and resume
-- wake sources
-- cpuidle and cpufreq
-- power domains
-- remoteproc framework
-- RPMsg
-- PRU integration overview
-- R5 and M4 firmware lifecycle
+  - kernel module lifecycle
+  - built-in drivers vs loadable modules
+  - device tree hardware description
+  - device tree overlays
+  - driver binding, probe, and remove
+  - platform devices and platform drivers
+  - device tree matching from drivers
+  - `of_match_table`
+  - `compatible` strings
+  - resource lookup
+  - `devm_*` managed allocation
+  - character devices
+  - device classes, uevents, and udev
+  - sysfs attributes
+  - kobjects and sysfs groups
+  - pollable sysfs attributes
+  - module parameters
+  - driver logging with `dev_*`
+  - user-space hardware access vs kernel drivers
+- common driver interfaces
+  - GPIO consumer API
+  - GPIO controller drivers
+  - GPIO expanders
+  - legacy GPIO interfaces
+  - interrupt processing model
+  - interrupt domains
+  - interrupt controller drivers
+  - IRQ handling
+  - threaded interrupts
+  - I2C client drivers
+  - SPI device drivers
+  - UART and TTY integration
+  - CAN driver integration
+  - PWM driver overview
+  - regmap
+  - clocks
+  - resets
+  - regulators
+  - pinctrl
+  - DMA basics
+  - IIO subsystem
+  - IIO channels and sysfs
+  - IIO triggers and buffers
+  - input subsystem
+  - polled input devices
+  - IRQ-based input devices
+- kernel execution and concurrency
+  - interrupt context vs process context
+  - sleepable vs atomic code
+  - bottom halves
+  - softirqs
+  - tasklets
+  - locking
+  - atomic operations
+  - workqueues
+  - concurrency managed workqueues
+  - timers
+  - hrtimers
+  - kernel timekeeping
+  - time-related APIs
+  - wait queues
+  - completions
+  - lifetime and reference counting
+- kernel memory and I/O
+  - kernel memory allocation
+  - allocation flags
+  - `kmalloc`
+  - `vmalloc`
+  - virtual memory areas
+  - MMIO
+  - register accessors
+  - userspace copy helpers
+  - `ioctl` ABI basics
+  - DMA mapping basics
+  - single-buffer DMA
+  - scatter-gather DMA
+- kernel configuration and platform policy
+  - debug configs vs production configs
+  - built-in vs module policy
+  - kernel command line policy
+  - watchdog-related options
+  - module signing
+  - kernel hardening options
+  - namespaces and cgroups overview
+  - LSM overview
+  - initramfs-related options
+  - config review workflow
+- kernel debugging basics
+  - `dmesg`
+  - log levels
+  - dynamic debug
+  - ftrace
+  - tracepoints
+  - perf overview
+  - debugfs
+  - sysfs inspection
+  - KGDB basics
+  - oops, panic, and crash logs
+  - watchdog reset diagnosis
+  - probe failure debugging
+- power management
+  - runtime PM
+  - suspend and resume
+  - wake sources
+  - cpuidle and cpufreq
+  - power domains
+  - regulator constraints
+  - clock gating
+  - device tree power dependencies
+  - suspend and resume debugging
+- remoteproc, RPMsg, and heterogeneous SoCs
+  - remoteproc framework
+  - firmware loading
+  - reserved memory
+  - virtio and RPMsg
+  - PRU integration overview
+  - R5 and M4 firmware lifecycle
+  - remote core logs
+  - crash handling
+  - device tree nodes for remote cores
+- kernel build mechanics are tracked under Build Systems
+  - Linux kernel build system
+  - Kbuild
+  - Kconfig
+  - defconfig
+  - menuconfig
+  - out-of-tree builds with `O=`
+  - external modules with `M=`
+  - kernel image outputs
 
 ## Embedded Linux
 
