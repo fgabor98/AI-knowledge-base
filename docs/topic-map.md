@@ -158,6 +158,39 @@ Advanced:
 
 ## Linux Kernel Programming
 
+- kernel foundations for driver developers
+  - kernel mental model
+  - kernel space vs user space
+  - system calls
+  - processes and tasks
+  - interrupts
+  - drivers as hardware integration
+  - kernel C survival guide
+  - `container_of`
+  - intrusive lists
+  - embedded structs
+  - function pointers
+  - callbacks
+  - `ERR_PTR`
+  - `IS_ERR`
+  - `PTR_ERR`
+  - `goto` cleanup style
+  - reading kernel source
+  - source navigation with `rg` and `git grep`
+  - call-chain reading
+  - struct-first reading
+  - kernel development lab setup
+  - VM and QEMU labs
+  - spare board labs
+  - serial console
+  - recovery kernel
+  - driver development workflow
+  - debugging ladder
+  - failure taxonomy
+  - execution context primer
+  - device model primer
+  - small lab progression
+  - kernel documentation reading guide for beginners
 - kernel source, build, and tailoring
   - kernel source acquisition
   - upstream kernel source

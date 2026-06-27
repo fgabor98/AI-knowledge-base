@@ -14,16 +14,17 @@ For kernel build mechanics, start with the [Linux Kernel Build System](../build-
 
 ## Learning Materials
 
-1. [Kernel Source, Build, And Tailoring](source-build-and-tailoring/index.md)
-2. [Linux Device Driver Fundamentals](fundamentals/index.md)
-3. [Common Driver Interfaces](driver-interfaces/index.md)
-4. [Kernel Execution And Concurrency](execution-and-concurrency/index.md)
-5. [Kernel Memory And I/O](memory-and-io/index.md)
-6. [Kernel Configuration And Platform Policy](configuration-and-platform-policy/index.md)
-7. [Kernel Debugging Basics](debugging/index.md)
-8. [Power Management](power-management/index.md)
-9. [Remoteproc, RPMsg, And Heterogeneous SoCs](remoteproc-rpmsg/index.md)
-10. [Madieu Book Topic Coverage](book-coverage.md)
+1. [Kernel Foundations For Driver Developers](foundations/index.md)
+2. [Kernel Source, Build, And Tailoring](source-build-and-tailoring/index.md)
+3. [Linux Device Driver Fundamentals](fundamentals/index.md)
+4. [Common Driver Interfaces](driver-interfaces/index.md)
+5. [Kernel Execution And Concurrency](execution-and-concurrency/index.md)
+6. [Kernel Memory And I/O](memory-and-io/index.md)
+7. [Kernel Configuration And Platform Policy](configuration-and-platform-policy/index.md)
+8. [Kernel Debugging Basics](debugging/index.md)
+9. [Power Management](power-management/index.md)
+10. [Remoteproc, RPMsg, And Heterogeneous SoCs](remoteproc-rpmsg/index.md)
+11. [Madieu Book Topic Coverage](book-coverage.md)
 
 ## Chapter Boundaries
 
@@ -33,10 +34,12 @@ The build system chapter owns Kconfig, Kbuild, defconfigs, cross-builds, module 
 
 ## Suggested Study Order
 
-Start with driver fundamentals, then learn the hardware resource APIs used by real embedded drivers. After that, study execution context, memory, and debugging before moving into power management and heterogeneous SoC topics.
+Start with the foundations track if kernel development is still new. Then learn source/build basics and driver fundamentals before moving into hardware resource APIs, execution context, memory, and debugging.
 
 ```text
-module basics
+kernel mental model and lab workflow
+-> source, config, and external module build basics
+-> module basics
 -> device model and probe/remove
 -> device tree matching and resource lookup
 -> GPIO/I2C/SPI/IRQ/regmap/clocks/resets/regulators/pinctrl
@@ -46,6 +49,20 @@ module basics
 ```
 
 ## Roadmap Summary
+
+### Kernel Foundations For Driver Developers
+
+- kernel mental model
+- kernel C survival guide
+- reading kernel source
+- development lab setup
+- driver development workflow
+- debugging ladder
+- failure taxonomy
+- execution context primer
+- device model primer
+- small lab progression
+- kernel documentation reading guide for beginners
 
 ### Kernel Source, Build, And Tailoring
 

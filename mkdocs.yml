@@ -87,6 +87,19 @@ nav:
       - python/index.md
   - Linux Kernel:
       - Overview: linux-kernel/index.md
+      - Kernel Foundations For Driver Developers:
+          - Overview: linux-kernel/foundations/index.md
+          - Kernel Mental Model: linux-kernel/foundations/kernel-mental-model.md
+          - Kernel C Survival Guide: linux-kernel/foundations/kernel-c-survival-guide.md
+          - Reading Kernel Source: linux-kernel/foundations/reading-kernel-source.md
+          - Kernel Development Lab Setup: linux-kernel/foundations/kernel-development-lab-setup.md
+          - Driver Development Workflow: linux-kernel/foundations/driver-development-workflow.md
+          - Debugging Ladder: linux-kernel/foundations/debugging-ladder.md
+          - Failure Taxonomy: linux-kernel/foundations/failure-taxonomy.md
+          - Execution Context Primer: linux-kernel/foundations/execution-context-primer.md
+          - Device Model Primer: linux-kernel/foundations/device-model-primer.md
+          - Small Lab Progression: linux-kernel/foundations/small-lab-progression.md
+          - Kernel Documentation Reading Guide For Beginners: linux-kernel/foundations/kernel-documentation-reading-guide-for-beginners.md
       - Kernel Source, Build, And Tailoring:
           - Overview: linux-kernel/source-build-and-tailoring/index.md
           - Kernel Source Acquisition: linux-kernel/source-build-and-tailoring/kernel-source-acquisition.md
