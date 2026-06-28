@@ -175,6 +175,25 @@ Advanced:
   - `IS_ERR`
   - `PTR_ERR`
   - `goto` cleanup style
+  - kernel C is not userspace C
+  - no libc in kernel code
+  - kernel logging APIs
+  - kernel memory allocation APIs
+  - `__user` pointers
+  - userspace copy helpers
+  - `__iomem` pointers
+  - small kernel stack
+  - no floating point in normal kernel code
+  - UAPI vs internal kernel API
+  - reference ownership preview
+  - `kref`
+  - `refcount_t`
+  - RCU preview
+  - per-CPU variable preview
+  - kernel taint flags
+  - sparse
+  - smatch
+  - Coccinelle
   - reading kernel source
   - source navigation with `rg` and `git grep`
   - call-chain reading

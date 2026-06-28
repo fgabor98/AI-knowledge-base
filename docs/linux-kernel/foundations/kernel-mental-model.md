@@ -26,6 +26,7 @@ This page gives a beginner-level map for driver developers: where driver code si
 - subsystems
 - kernel objects
 - userspace ABI
+- UAPI vs internal kernel API
 - firmware description
 - device nodes
 - sysfs
@@ -287,6 +288,92 @@ Example: a sysfs attribute should normally be small, textual, and stable:
 ```
 
 Avoid exposing internal debug state as product ABI. Use debugfs for debug-only state and sysfs or subsystem ABI for stable state.
+
+## UAPI Vs Internal Kernel API
+
+The kernel has two very different kinds of interfaces:
+
+| Interface type | Consumer | Stability expectation |
+|---|---|---|
+| UAPI | userspace programs | must remain compatible |
+| internal kernel API | in-kernel code | can change between kernel versions |
+
+UAPI appears in places such as:
+
+- `include/uapi/`
+- ioctl command numbers and structs
+- sysfs ABI documented under `Documentation/ABI/`
+- netlink protocols
+- input event codes
+- IIO userspace attributes
+
+Internal kernel APIs appear in places such as:
+
+- `include/linux/`
+- driver subsystem helper functions
+- internal structs used only by the kernel
+- callbacks registered with subsystem cores
+
+Example mistake:
+
+```c
+struct demo_internal_state {
+        struct mutex lock;
+        void __iomem *base;
+        unsigned long flags;
+};
+```
+
+This must not be copied directly to userspace. It contains kernel pointers, lock state, and implementation details.
+
+Better userspace ABI struct:
+
+```c
+struct demo_status_uapi {
+        __u32 version;
+        __u32 flags;
+        __u64 counter;
+        __u32 reserved[4];
+};
+```
+
+Practical rules:
+
+- never expose raw kernel pointers to userspace
+- use fixed-width UAPI types such as `__u32` and `__u64`
+- include reserved fields for future extension when designing binary structs
+- document sysfs files and ioctl behavior
+- treat internal kernel helper APIs as version-specific
+
+## Reference Ownership Preview
+
+Kernel objects often remain alive because somebody holds a reference. This is deeper than normal C pointer validity: a pointer is safe only if the object lifetime is guaranteed for the current use.
+
+Common reference patterns:
+
+| Pattern | Purpose |
+|---|---|
+| `kref` | generic reference-counted object lifetime |
+| `refcount_t` | safer reference counters |
+| `get_device()` / `put_device()` | hold and release a `struct device` |
+| `try_module_get()` / `module_put()` | hold and release module ownership |
+| `get_file()` / `fput()` | hold and release open file references |
+
+Example:
+
+```c
+get_device(dev);
+/* dev is held across this operation */
+put_device(dev);
+```
+
+For most beginner drivers, the immediate practical rule is:
+
+- do not let async callbacks outlive the object they use
+- do not store pointers in userspace-visible state without a lifetime plan
+- do not free driver state until files, IRQs, work, timers, and subsystem users are stopped
+
+The detailed treatment belongs in [Reference Counting And Lifetime](../execution-and-concurrency/reference-counting-and-lifetime.md).
 
 ## Firmware Description
 

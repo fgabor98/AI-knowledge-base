@@ -28,9 +28,67 @@ This page teaches the patterns you need to recognize before reading or writing d
 - `goto` cleanup
 - bit flags
 - fixed-width integer types
+- kernel API replacements for libc habits
+- `__user` annotations
 - `__iomem` annotations
+- small kernel stack
+- no floating point in normal kernel code
 - `const` data tables
 - compile-time helpers
+
+## Kernel C Is Not Userspace C
+
+Kernel code is written in C, but it does not run in a normal hosted C runtime. A driver does not link against libc, does not use pthreads, and cannot assume that familiar userspace calls exist.
+
+Userspace habits:
+
+```c
+printf("value=%d\n", value);
+p = malloc(1024);
+free(p);
+sleep(1);
+pthread_mutex_lock(&lock);
+```
+
+Kernel equivalents depend on context and ownership:
+
+```c
+pr_info("value=%d\n", value);
+p = kmalloc(1024, GFP_KERNEL);
+kfree(p);
+msleep(1000);
+mutex_lock(&lock);
+```
+
+Device-scoped driver code should usually prefer `dev_*` logging:
+
+```c
+dev_info(dev, "value=%d\n", value);
+dev_err(dev, "operation failed: %d\n", ret);
+```
+
+The replacements are not one-for-one aliases. They carry kernel-specific rules:
+
+| Userspace habit | Kernel practice | Extra rule |
+|---|---|---|
+| `printf` | `pr_*`, `dev_*` | logs go to the kernel ring buffer |
+| `malloc` | `kmalloc`, `kzalloc`, `devm_kzalloc`, `vmalloc` | allocation flags and lifetime matter |
+| `free` | `kfree`, managed cleanup, subsystem unregister | release order matters |
+| `sleep` | `msleep`, `usleep_range`, wait queues, completions | only in sleepable context |
+| pthread mutex | `struct mutex`, spinlocks, completions | lock choice depends on context |
+| file I/O | VFS helpers, firmware APIs, subsystem APIs | normal userspace paths are not available |
+| direct userspace pointer access | `copy_to_user`, `copy_from_user` | userspace memory is untrusted and faultable |
+
+Kernel code also avoids parts of C that are valid in userspace but inappropriate in normal driver paths:
+
+- large stack objects
+- floating point
+- blocking operations in atomic context
+- direct access to userspace pointers
+- direct dereference of MMIO addresses
+- custom ABIs when an existing subsystem already fits
+
+The practical rule is: every familiar C operation must be reconsidered in terms of kernel context, ownership, address space, and ABI.
 
 ## Embedded Structs
 
@@ -444,6 +502,79 @@ Use fixed-width types for:
 
 Use plain `int` for normal return codes and small internal counters unless exact width matters.
 
+## User Pointers And `__user`
+
+Pointers from userspace are not normal kernel pointers. They may be invalid, unmapped, malicious, or fault while being accessed. Kernel code must not dereference them directly.
+
+Wrong:
+
+```c
+static ssize_t demo_write(struct file *file, const char __user *buf,
+                          size_t len, loff_t *ppos)
+{
+        char first;
+
+        first = buf[0];        /* wrong: direct userspace dereference */
+        return len;
+}
+```
+
+Correct:
+
+```c
+static ssize_t demo_write(struct file *file, const char __user *buf,
+                          size_t len, loff_t *ppos)
+{
+        char first;
+
+        if (!len)
+                return 0;
+
+        if (copy_from_user(&first, buf, 1))
+                return -EFAULT;
+
+        pr_info("first byte: %#x\n", first);
+        return 1;
+}
+```
+
+Copy data to userspace with `copy_to_user`:
+
+```c
+static ssize_t demo_read(struct file *file, char __user *buf,
+                         size_t len, loff_t *ppos)
+{
+        char value = 'A';
+
+        if (*ppos != 0)
+                return 0;
+
+        if (copy_to_user(buf, &value, 1))
+                return -EFAULT;
+
+        *ppos = 1;
+        return 1;
+}
+```
+
+Small scalar helpers exist too:
+
+```c
+if (get_user(value, user_ptr))
+        return -EFAULT;
+
+if (put_user(value, user_ptr))
+        return -EFAULT;
+```
+
+Important rules:
+
+- `__user` documents that a pointer lives in userspace address space.
+- `copy_from_user` returns the number of bytes not copied, not a negative errno.
+- A failed userspace copy normally becomes `-EFAULT`.
+- Do not trust lengths, struct contents, enum values, flags, or reserved fields from userspace.
+- Keep userspace ABI structs explicit and stable; do not expose internal kernel structs.
+
 ## `__iomem` Annotations
 
 MMIO pointers are not normal memory pointers. They are usually annotated:
@@ -466,6 +597,91 @@ u32 status = *(u32 *)(base + DEMO_STATUS);  /* wrong */
 ```
 
 The annotation helps static analysis tools such as sparse catch misuse.
+
+## Small Kernel Stack
+
+Kernel stacks are limited compared with typical userspace stacks. The exact size depends on architecture and configuration, but driver code should assume stack space is precious.
+
+Bad:
+
+```c
+static int demo_read_blob(struct demo_dev *demo)
+{
+        u8 buffer[8192];       /* bad: large stack object */
+
+        return demo_hw_read(demo, buffer, sizeof(buffer));
+}
+```
+
+Better:
+
+```c
+static int demo_read_blob(struct demo_dev *demo)
+{
+        u8 *buffer;
+        int ret;
+
+        buffer = kmalloc(8192, GFP_KERNEL);
+        if (!buffer)
+                return -ENOMEM;
+
+        ret = demo_hw_read(demo, buffer, 8192);
+        kfree(buffer);
+        return ret;
+}
+```
+
+For per-device buffers, allocate once during probe:
+
+```c
+demo->buffer = devm_kzalloc(dev, DEMO_BUF_SIZE, GFP_KERNEL);
+if (!demo->buffer)
+        return -ENOMEM;
+```
+
+Common stack-risk patterns:
+
+- large arrays
+- large structs passed by value
+- deeply nested call chains with several medium local buffers
+- recursive code, which is generally not appropriate in kernel paths
+
+Rule of thumb: keep local variables small; allocate larger buffers dynamically or attach them to per-device state.
+
+## No Floating Point In Normal Kernel Code
+
+Normal kernel code does not use floating point arithmetic. Floating-point register state belongs to userspace tasks, and using it in kernel paths is expensive and architecture-sensitive.
+
+Bad:
+
+```c
+double volts;
+
+volts = raw * 3.3 / 4096.0;    /* wrong for normal kernel code */
+```
+
+Use integer or fixed-point representation:
+
+```c
+u32 millivolts;
+
+millivolts = raw * 3300 / 4096;
+```
+
+Subsystems often define their own representation. For example, IIO can return integer plus micro units:
+
+```c
+*val = 0;
+*val2 = 805664;
+return IIO_VAL_INT_PLUS_MICRO;
+```
+
+Practical rules:
+
+- represent voltages in microvolts or millivolts
+- represent time in nanoseconds, microseconds, milliseconds, jiffies, or `ktime_t`
+- represent scale as integer plus fractional units when the subsystem expects it
+- avoid hidden floating point through helper libraries or compiler-generated code
 
 ## `const` Tables
 
@@ -529,6 +745,10 @@ This is the kind of reasoning needed throughout driver code.
 ## Common Mistakes
 
 - Checking error-pointer returns with `if (!ptr)`.
+- Calling userspace C library functions from kernel code.
+- Dereferencing `__user` pointers directly.
+- Placing large buffers on the kernel stack.
+- Using floating point in normal driver code.
 - Returning `0` after a failed helper call.
 - Freeing an object while it is still on a list.
 - Forgetting to initialize embedded locks or lists.
@@ -547,6 +767,9 @@ This is the kind of reasoning needed throughout driver code.
 - Is this list protected by a lock?
 - Is this table constant data or mutable state?
 - Does this helper return a pointer, integer status, or bytes processed?
+- Is this pointer a kernel pointer, userspace pointer, or MMIO pointer?
+- Is this local buffer small enough for kernel stack use?
+- Does this calculation require fixed-point representation instead of floating point?
 
 ## Related Topics
 
@@ -554,9 +777,11 @@ This is the kind of reasoning needed throughout driver code.
 - [Reference Counting And Lifetime](../execution-and-concurrency/reference-counting-and-lifetime.md)
 - [Resource Lookup And Managed Allocation](../fundamentals/resource-lookup-and-devm.md)
 - [MMIO And Register Access](../memory-and-io/mmio-and-register-access.md)
+- [Userspace Copy And ioctl ABI](../memory-and-io/userspace-copy-and-ioctl-abi.md)
 
 ## References
 
 - Linux Kernel API: <https://docs.kernel.org/core-api/kernel-api.html>
 - Linked Lists in Linux: <https://docs.kernel.org/core-api/list.html>
 - Linux kernel coding style: <https://docs.kernel.org/process/coding-style.html>
+- Sparse type checking: <https://docs.kernel.org/dev-tools/sparse.html>

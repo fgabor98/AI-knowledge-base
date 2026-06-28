@@ -26,6 +26,7 @@ Kernel debugging tools vary in cost, complexity, and runtime impact. Beginners o
 - KASAN
 - KGDB
 - crash dumps
+- kernel taint flags
 
 ## The Ladder
 
@@ -108,6 +109,30 @@ demo 48000000.demo: failed to get regulator: -517
 ```
 
 The log carries device identity.
+
+## Kernel Taint Flags
+
+When reading crash logs or bug reports, check whether the kernel is tainted. Taint flags record conditions that may affect supportability or debugging confidence, such as proprietary modules, forced module loading, warnings, or out-of-tree code.
+
+Check runtime taint:
+
+```bash
+cat /proc/sys/kernel/tainted
+```
+
+In logs, taint often appears near warnings or oops reports:
+
+```text
+CPU: 0 PID: 1234 Comm: test Tainted: G           O       6.6.0-custom #1
+```
+
+Practical use:
+
+- if an out-of-tree module is loaded, note it in the bug report
+- if a warning tainted the kernel earlier, preserve the first warning
+- if forced module loading was used, distrust later behavior until reproduced cleanly
+
+Taint does not automatically identify the bug, but it is important context for interpreting kernel evidence.
 
 ## Step 3: Module And Device State
 

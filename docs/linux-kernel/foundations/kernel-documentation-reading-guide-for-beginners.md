@@ -146,6 +146,8 @@ Start here when learning debugging and validation tools.
 Topics include:
 
 - sparse
+- smatch
+- Coccinelle
 - KASAN
 - KMSAN
 - UBSAN
@@ -165,6 +167,43 @@ Use it when:
 - a lock warning appears
 - a static-analysis warning appears
 - you want to add a small kernel test
+
+### Static Analysis Tools
+
+Static analysis is part of normal kernel development. These tools catch problems before runtime testing:
+
+| Tool | Typical use |
+|---|---|
+| sparse | address-space annotations such as `__user` and `__iomem`, endian annotations, type issues |
+| smatch | deeper static checks used by many kernel developers and CI setups |
+| Coccinelle | semantic patching and tree-wide API migrations |
+
+Examples:
+
+```bash
+make C=1 M=$PWD
+make C=2 M=$PWD
+```
+
+`C=1` and `C=2` enable sparse checking through the kernel build system when sparse is installed.
+
+Coccinelle semantic patches live under:
+
+```text
+scripts/coccinelle/
+```
+
+Example conceptual use:
+
+```bash
+make coccicheck MODE=report
+```
+
+Practical beginner rule:
+
+- run sparse when working with `__user` and `__iomem`
+- treat static-analysis warnings as design feedback, not just noise
+- use Coccinelle mostly for learning existing API migration patterns until you are comfortable with semantic patches
 
 ### Kernel Hacking Guides
 
@@ -273,7 +312,33 @@ Important distinction:
 
 - `Documentation/ABI/stable/`: interfaces intended to remain stable
 - `Documentation/ABI/testing/`: interfaces under development or less settled
- 
+
+## UAPI Headers
+
+Headers under `include/uapi/` define interfaces visible to userspace. They are different from internal headers under `include/linux/`.
+
+Examples:
+
+```bash
+rg "struct input_event" include/uapi
+rg "_IOW|_IOR|_IOWR" include/uapi
+```
+
+Use UAPI headers when designing or reading:
+
+- ioctl command numbers
+- structs copied between kernel and userspace
+- event formats
+- netlink constants
+- userspace-visible flags
+
+Rules:
+
+- use explicit UAPI integer types such as `__u32`, `__u64`, and `__s32`
+- avoid exposing kernel pointers, `long`-dependent layouts, or internal structs
+- preserve compatibility once userspace can depend on the interface
+- document the ABI in the right place when adding new userspace-visible behavior
+
 ## Headers Are Documentation Too
 
 Headers often contain the exact struct definitions and comments.
@@ -453,8 +518,10 @@ Docs: docs.kernel.org/driver-api/iio/
 - Did I read the relevant header?
 - Did I inspect at least one in-tree user of the API?
 - Did I check the userspace ABI documentation?
+- Did I distinguish UAPI from internal kernel API?
 - Did I check Device Tree bindings if firmware data is involved?
 - Did I note callback context and cleanup requirements?
+- Did I run the relevant static-analysis tool for the annotations I touched?
 
 ## Related Topics
 
@@ -472,3 +539,5 @@ Docs: docs.kernel.org/driver-api/iio/
 - Linux kernel process documentation: <https://docs.kernel.org/process/index.html>
 - Linux kernel trace documentation: <https://docs.kernel.org/trace/index.html>
 - Dynamic debug HOWTO: <https://docs.kernel.org/admin-guide/dynamic-debug-howto.html>
+- Sparse: <https://docs.kernel.org/dev-tools/sparse.html>
+- Coccinelle: <https://docs.kernel.org/dev-tools/coccinelle.html>

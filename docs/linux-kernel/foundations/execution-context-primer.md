@@ -30,6 +30,8 @@ If the answer is "no", the allowed APIs and locking choices are much narrower.
 - workqueue context
 - sleepable context
 - atomic context
+- RCU preview
+- per-CPU variable preview
 - blocking APIs
 - allocation flags
 - mutex
@@ -401,6 +403,56 @@ GPIO interrupt
 
 Choose threaded IRQ when the work is directly tied to that interrupt and should be serialized with interrupt masking. Choose workqueue when the work is broader deferred processing.
 
+## Advanced Concurrency Preview: RCU And Per-CPU Data
+
+Some kernel concurrency tools are important, but they are not beginner tools to reach for first.
+
+### RCU
+
+RCU means read-copy update. It is used for read-mostly data where readers must be very cheap and updates are more carefully staged.
+
+You may see patterns like:
+
+```c
+rcu_read_lock();
+p = rcu_dereference(global_ptr);
+if (p)
+        do_something_read_only(p);
+rcu_read_unlock();
+```
+
+Update-side code uses different rules and must wait for readers before freeing replaced data.
+
+Beginner rule:
+
+- recognize RCU when reading kernel internals
+- do not introduce RCU into a simple driver until mutexes, spinlocks, and lifetime rules are clearly insufficient
+- never free RCU-protected data with ordinary `kfree` immediately after publishing a replacement
+
+### Per-CPU Variables
+
+Per-CPU data gives each CPU its own instance of a variable. It is useful for counters or hot-path data where sharing one global variable would cause contention.
+
+You may see declarations like:
+
+```c
+static DEFINE_PER_CPU(unsigned long, demo_events);
+```
+
+Conceptual use:
+
+```c
+this_cpu_inc(demo_events);
+```
+
+Beginner rule:
+
+- per-CPU data is for hot paths and scalability
+- normal driver state should usually start with simple per-device fields plus appropriate locks
+- reading a global total from per-CPU counters requires summing all CPUs carefully
+
+These mechanisms are worth recognizing early, but they belong in advanced concurrency material once the basic context and locking model is stable.
+
 ## Common Mistakes
 
 - Calling I2C/SPI helpers in hard IRQ context.
@@ -410,6 +462,7 @@ Choose threaded IRQ when the work is directly tied to that interrupt and should 
 - Freeing driver state before workqueue callbacks finish.
 - Assuming `probe` is always atomic because it is kernel code.
 - Using spinlocks for long operations that should use a mutex.
+- Introducing RCU or per-CPU state before the simpler locking model is understood.
 
 ## Debugging Checklist
 

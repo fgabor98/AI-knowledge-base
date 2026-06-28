@@ -34,6 +34,7 @@ This page provides a beginner-friendly taxonomy for driver failures, including s
 - watchdog reset
 - race
 - lifetime bug
+- tainted kernel
 
 ## Decision Tree
 
@@ -459,6 +460,11 @@ First commands:
 - capture full serial log
 - preserve first fault
 - match symbols to exact build
+- check taint state
+
+```bash
+cat /proc/sys/kernel/tainted
+```
 
 Likely causes:
 
@@ -468,6 +474,7 @@ Likely causes:
 - invalid MMIO access
 - bad callback lifetime
 - locking bug
+- out-of-tree or forced modules affecting the evidence
 
 Next steps:
 
