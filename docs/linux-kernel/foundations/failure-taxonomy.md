@@ -558,7 +558,7 @@ Next steps:
 - [Device Model Primer](device-model-primer.md)
 - [Execution Context Primer](execution-context-primer.md)
 
-## References
+## Official References
 
 - Driver Model binding: <https://docs.kernel.org/driver-api/driver-model/binding.html>
 - Dynamic debug HOWTO: <https://docs.kernel.org/admin-guide/dynamic-debug-howto.html>

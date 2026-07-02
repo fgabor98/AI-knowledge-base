@@ -61,3 +61,12 @@ The purpose is not to reproduce the book's table of contents. It is to make sure
 - [Linux Kernel Programming](index.md)
 - [Linux Kernel Build System](../build-systems/advanced/linux-kernel/index.md)
 - [Device Tree](../device-tree/index.md)
+
+## Official References
+
+- [Driver API](https://docs.kernel.org/driver-api/index.html)
+- [Core API](https://docs.kernel.org/core-api/index.html)
+- [Device Tree bindings](https://docs.kernel.org/devicetree/bindings/)
+- [Building external modules](https://docs.kernel.org/kbuild/modules.html)
+- [DMA API HOWTO](https://docs.kernel.org/core-api/dma-api-howto.html)
+- [Linux generic IRQ handling](https://docs.kernel.org/core-api/genericirq.html)

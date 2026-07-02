@@ -482,7 +482,7 @@ These mechanisms are worth recognizing early, but they belong in advanced concur
 - [Threaded Interrupts](../driver-interfaces/threaded-interrupts.md)
 - [Workqueues](../execution-and-concurrency/workqueues.md)
 
-## References
+## Official References
 
 - Driver basics: <https://docs.kernel.org/driver-api/basics.html>
 - Workqueue documentation: <https://docs.kernel.org/core-api/workqueue.html>

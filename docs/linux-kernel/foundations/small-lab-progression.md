@@ -495,7 +495,7 @@ For each lab, record:
 - [SPI Device Drivers](../driver-interfaces/spi-device-drivers.md)
 - [Threaded Interrupts](../driver-interfaces/threaded-interrupts.md)
 
-## References
+## Official References
 
 - Building external modules: <https://docs.kernel.org/kbuild/modules.html>
 - Driver API: <https://docs.kernel.org/driver-api/index.html>

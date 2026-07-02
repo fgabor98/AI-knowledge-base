@@ -444,7 +444,7 @@ modinfo demo.ko | grep of:
 - [Failure Taxonomy](failure-taxonomy.md)
 - [Kernel Module Lifecycle](../fundamentals/kernel-module-lifecycle.md)
 
-## References
+## Official References
 
 - Linux kernel modules build documentation: <https://docs.kernel.org/kbuild/modules.html>
 - Dynamic debug HOWTO: <https://docs.kernel.org/admin-guide/dynamic-debug-howto.html>

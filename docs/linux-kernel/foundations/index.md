@@ -266,7 +266,7 @@ Avoid using your daily workstation kernel for first experiments unless you are o
 - [Device Tree](../../device-tree/index.md)
 - [Build Systems Linux Kernel Build System](../../build-systems/advanced/linux-kernel/index.md)
 
-## References
+## Official References
 
 - Linux kernel Driver API: <https://docs.kernel.org/driver-api/index.html>
 - Linux kernel Core API: <https://docs.kernel.org/core-api/index.html>

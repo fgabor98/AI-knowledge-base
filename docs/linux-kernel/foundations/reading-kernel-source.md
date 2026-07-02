@@ -459,7 +459,7 @@ If you can answer those, you can read most simple drivers.
 - [Kernel Documentation Reading Guide For Beginners](kernel-documentation-reading-guide-for-beginners.md)
 - [Device Model Primer](device-model-primer.md)
 
-## References
+## Official References
 
 - Linux kernel Driver API: <https://docs.kernel.org/driver-api/index.html>
 - Linux kernel Core API: <https://docs.kernel.org/core-api/index.html>

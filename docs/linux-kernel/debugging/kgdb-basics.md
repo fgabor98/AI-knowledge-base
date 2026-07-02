@@ -292,5 +292,5 @@ Document what happens if the kernel is stopped in KGDB longer than the watchdog 
 
 ## Official References
 
-- [KGDB](https://docs.kernel.org/dev-tools/kgdb.html)
+- [KGDB](https://www.kernel.org/doc/html/latest/dev-tools/kgdb.html)
 - [Kernel hacking guides](https://docs.kernel.org/kernel-hacking/index.html)

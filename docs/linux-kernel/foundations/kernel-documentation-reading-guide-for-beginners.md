@@ -530,7 +530,7 @@ Docs: docs.kernel.org/driver-api/iio/
 - [Kernel Debugging Basics](../debugging/index.md)
 - [Device Tree](../../device-tree/index.md)
 
-## References
+## Official References
 
 - Linux kernel Driver API: <https://docs.kernel.org/driver-api/index.html>
 - Linux kernel Core API: <https://docs.kernel.org/core-api/index.html>

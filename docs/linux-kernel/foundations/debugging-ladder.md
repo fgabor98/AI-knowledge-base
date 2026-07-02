@@ -456,7 +456,7 @@ Questions:
 - [Ftrace And Tracepoints](../debugging/ftrace-and-tracepoints.md)
 - [Perf Overview](../debugging/perf-overview.md)
 
-## References
+## Official References
 
 - Dynamic debug HOWTO: <https://docs.kernel.org/admin-guide/dynamic-debug-howto.html>
 - ftrace documentation: <https://docs.kernel.org/trace/ftrace.html>

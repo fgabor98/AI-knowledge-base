@@ -48,6 +48,81 @@ kernel mental model and lab workflow
 -> remoteproc, RPMsg, and multi-core SoC integration
 ```
 
+## Kernel Documentation Reading Path
+
+Use the official kernel documentation in a deliberate order. The docs are broad,
+and jumping straight into subsystem internals usually creates confusion.
+
+Beginner orientation:
+
+1. [Development process](https://docs.kernel.org/process/index.html)
+2. [Linux kernel coding style](https://docs.kernel.org/process/coding-style.html)
+3. [Driver API overview](https://docs.kernel.org/driver-api/index.html)
+4. [Driver Basics](https://docs.kernel.org/driver-api/basics.html)
+5. [Driver Model](https://docs.kernel.org/driver-api/driver-model/index.html)
+6. [Core API overview](https://docs.kernel.org/core-api/index.html)
+
+Driver development core:
+
+1. [Building external modules](https://docs.kernel.org/kbuild/modules.html)
+2. [Device drivers infrastructure](https://docs.kernel.org/driver-api/infrastructure.html)
+3. [Device Tree bindings](https://docs.kernel.org/devicetree/bindings/)
+4. [Firmware loading](https://docs.kernel.org/driver-api/firmware/request_firmware.html)
+5. [DMA API HOWTO](https://docs.kernel.org/core-api/dma-api-howto.html)
+6. [Linux generic IRQ handling](https://docs.kernel.org/core-api/genericirq.html)
+
+Concurrency and runtime behavior:
+
+1. [Unreliable Guide To Hacking The Linux Kernel](https://docs.kernel.org/kernel-hacking/hacking.html)
+2. [Unreliable Guide To Locking](https://docs.kernel.org/kernel-hacking/locking.html)
+3. [Workqueue](https://docs.kernel.org/core-api/workqueue.html)
+4. [Completions](https://docs.kernel.org/scheduler/completion.html)
+5. [Delay and sleep mechanisms](https://docs.kernel.org/timers/delay_sleep_functions.html)
+6. [Memory allocation guide](https://docs.kernel.org/core-api/memory-allocation.html)
+
+Subsystem and hardware interfaces:
+
+1. [GPIO descriptor consumer interface](https://docs.kernel.org/driver-api/gpio/consumer.html)
+2. [I2C and SMBus](https://docs.kernel.org/i2c/index.html)
+3. [SPI](https://docs.kernel.org/spi/index.html)
+4. [Regmap](https://docs.kernel.org/driver-api/regmap.html)
+5. [Common Clock Framework](https://docs.kernel.org/driver-api/clk.html)
+6. [Regulator API](https://docs.kernel.org/driver-api/regulator.html)
+7. [PINCTRL subsystem](https://docs.kernel.org/driver-api/pin-control.html)
+8. [Industrial I/O](https://docs.kernel.org/driver-api/iio/index.html)
+9. [Input subsystem](https://docs.kernel.org/input/index.html)
+
+Debugging and validation:
+
+1. [Bug hunting](https://docs.kernel.org/admin-guide/bug-hunting.html)
+2. [Dynamic debug HOWTO](https://docs.kernel.org/admin-guide/dynamic-debug-howto.html)
+3. [Linux tracing documentation](https://docs.kernel.org/trace/index.html)
+4. [ftrace](https://docs.kernel.org/trace/ftrace.html)
+5. [Debugging advice for Linux kernel developers](https://docs.kernel.org/process/debugging/index.html)
+6. [KASAN](https://docs.kernel.org/dev-tools/kasan.html)
+7. [Sparse](https://docs.kernel.org/dev-tools/sparse.html)
+8. [Coccinelle](https://docs.kernel.org/dev-tools/coccinelle.html)
+
+Platform, power, and heterogeneous systems:
+
+1. [CPU and device power management](https://docs.kernel.org/driver-api/pm/index.html)
+2. [Runtime PM](https://docs.kernel.org/power/runtime_pm.html)
+3. [System sleep states](https://docs.kernel.org/admin-guide/pm/sleep-states.html)
+4. [CPU idle time management](https://docs.kernel.org/admin-guide/pm/cpuidle.html)
+5. [CPU performance scaling](https://docs.kernel.org/admin-guide/pm/cpufreq.html)
+6. [Remote Processor Framework](https://docs.kernel.org/staging/remoteproc.html)
+7. [Remote Processor Messaging](https://docs.kernel.org/staging/rpmsg.html)
+
+For each topic, use this reading loop:
+
+```text
+official overview
+-> relevant header files
+-> two or three in-tree drivers
+-> implementation source only when behavior is unclear
+-> local lab or trace to confirm understanding
+```
+
 ## Roadmap Summary
 
 ### Kernel Foundations For Driver Developers
@@ -201,6 +276,17 @@ kernel mental model and lab workflow
 - remote core logs
 - crash handling
 - device tree nodes for remote cores
+
+## Official References
+
+- [Linux kernel documentation](https://docs.kernel.org/)
+- [Driver API](https://docs.kernel.org/driver-api/index.html)
+- [Core API](https://docs.kernel.org/core-api/index.html)
+- [Development process](https://docs.kernel.org/process/index.html)
+- [Development tools](https://docs.kernel.org/dev-tools/index.html)
+- [Kernel hacking guides](https://docs.kernel.org/kernel-hacking/index.html)
+- [Tracing](https://docs.kernel.org/trace/index.html)
+- [Administration guide](https://docs.kernel.org/admin-guide/index.html)
 
 ## Related Topics
 

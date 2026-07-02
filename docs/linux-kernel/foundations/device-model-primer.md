@@ -384,7 +384,7 @@ If `/dev/demo0` is missing:
 - [Device Classes, Uevents, And udev](../fundamentals/device-classes-uevents-and-udev.md)
 - [Device Tree Matching From Drivers](../fundamentals/device-tree-matching.md)
 
-## References
+## Official References
 
 - Linux Driver Model: <https://docs.kernel.org/driver-api/driver-model/index.html>
 - Driver binding: <https://docs.kernel.org/driver-api/driver-model/binding.html>

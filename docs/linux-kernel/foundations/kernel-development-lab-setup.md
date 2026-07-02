@@ -388,7 +388,7 @@ notes/
 - [Driver Development Workflow](driver-development-workflow.md)
 - [Dmesg And Log Levels](../debugging/dmesg-and-log-levels.md)
 
-## References
+## Official References
 
 - Linux kernel module documentation: <https://docs.kernel.org/kbuild/modules.html>
 - Linux kernel admin guide: <https://docs.kernel.org/admin-guide/index.html>

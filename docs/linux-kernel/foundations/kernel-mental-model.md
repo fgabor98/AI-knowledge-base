@@ -537,7 +537,7 @@ Typical failure split:
 - [Driver Development Workflow](driver-development-workflow.md)
 - [Linux Device Driver Fundamentals](../fundamentals/index.md)
 
-## References
+## Official References
 
 - Linux kernel Driver API: <https://docs.kernel.org/driver-api/index.html>
 - Driver Basics: <https://docs.kernel.org/driver-api/basics.html>
