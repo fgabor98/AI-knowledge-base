@@ -135,7 +135,7 @@ You are ready to move on when you can:
 
 ## Related Topics
 
-- [Debugging](../../debugging/index.md)
+- [Debugging And Diagnostics](../../debugging/index.md)
 - [Kernel Execution And Concurrency](../execution-and-concurrency/index.md)
 - [Debug Vs Production Configs](../configuration-and-platform-policy/debug-vs-production-configs.md)
 - [Failure Taxonomy](../foundations/failure-taxonomy.md)

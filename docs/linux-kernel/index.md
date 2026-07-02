@@ -292,6 +292,6 @@ official overview
 
 - [Device Tree](../device-tree/index.md)
 - [Embedded Linux](../embedded-linux/index.md)
-- [Debugging](../debugging/index.md)
+- [Debugging And Diagnostics](../debugging/index.md)
 - [Build Systems](../build-systems/index.md)
 - [Topic Map](../topic-map.md)

@@ -164,7 +164,7 @@ Start with the product lifecycle:
 
 - [Embedded Linux](../embedded-linux/index.md)
 - [Build Systems](../build-systems/index.md)
-- [Debugging](../debugging/index.md)
+- [Debugging And Diagnostics](../debugging/index.md)
 - [Linux Kernel Programming](../linux-kernel/index.md)
 - [Networking](../networking/index.md)
 - [Topic Map](../topic-map.md)

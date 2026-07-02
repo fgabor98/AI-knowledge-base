@@ -46,6 +46,66 @@ This file owns the taxonomy. Add and reorganize topics here before expanding the
 - linker scripts
 - embedded C constraints
 
+## C++ For Systems And Embedded Linux
+
+Beginner:
+
+- C++ compilation model
+- headers and source files
+- declarations, definitions, and One Definition Rule
+- namespaces
+- name mangling and ABI basics
+- object lifetime
+- constructors and destructors
+- references and value categories
+- RAII and deterministic cleanup
+- basic error handling without losing context
+- standard library overview
+- C interop with `extern "C"`
+
+Intermediate:
+
+- move semantics
+- copy elision and ownership transfer
+- smart pointers
+- custom deleters for C handles
+- STL containers and allocation behavior
+- strings, spans, views, and lifetime
+- exceptions policy
+- RTTI policy
+- templates and compile-time cost
+- `constexpr` and compile-time computation
+- wrapping C APIs safely
+- cross-compiling C++ applications
+
+Advanced:
+
+- embedded allocation strategies
+- no-heap and bounded-heap design
+- polymorphism without uncontrolled allocation
+- type erasure tradeoffs
+- template metaprogramming boundaries
+- `consteval`, concepts, and type traits
+- C++ concurrency primitives
+- lock-free data structure cautions
+- logging and diagnostics in services
+- ABI-stable plugin or shared-library boundaries
+- C++ testing frameworks
+- performance and code-size profiling
+
+Embedded Linux focus:
+
+- C++ daemon design
+- RAII wrappers for file descriptors, sockets, GPIO, serial ports, and IPC handles
+- POSIX and Linux API integration
+- systemd integration
+- CLI support tools
+- hardware-facing userspace services
+- cross-build and sysroot integration
+- exceptions and RTTI policy for embedded products
+- allocation visibility
+- host and target tests
+
 ## Bash Programming
 
 Beginner:
@@ -155,6 +215,53 @@ Advanced:
 - automation scripts
 - CLI tools
 - interacting with Linux commands
+
+## Linux Userspace And System Programming
+
+Beginner:
+
+- Linux filesystem layout
+- `/etc`, `/proc`, `/sys`, `/dev`, `/run`, `/var`, and `/tmp`
+- users, groups, ownership, and permissions
+- shells, commands, and exit status
+- processes and PIDs
+- environment variables
+- signals
+- sessions, process groups, and controlling terminals
+- package and file deployment concepts
+- logs with `dmesg`, syslog, and journald
+- basic networking commands
+- basic storage and mount inspection
+
+Intermediate:
+
+- system calls
+- file descriptors
+- pipes, FIFOs, and redirection
+- sockets
+- `poll`, `select`, and `epoll`
+- terminals, TTYs, and PTYs
+- services and daemons
+- systemd units, dependencies, ordering, and restart policy
+- device access through `/dev`, sysfs, udev, and devtmpfs
+- Linux capabilities
+- core dumps
+- userspace diagnostics with `strace`, `lsof`, `ss`, `ip`, `journalctl`, and `gdbserver`
+
+Advanced:
+
+- embedded read-only root filesystems
+- `tmpfs`, `overlayfs`, bind mounts, and persistent state
+- userspace hardware APIs
+- service supervision and watchdog integration
+- IPC design
+- update-aware daemon design
+- `rlimit` and cgroup constraints
+- namespaces
+- cross-compiled userspace applications
+- target diagnostics and support bundles
+- production logging
+- failure containment
 
 ## Linux Kernel Programming
 
@@ -574,29 +681,52 @@ Advanced:
 - runtime DTB identity checks
 - board porting DT workflow
 
-## Debugging
+## Debugging And Diagnostics
 
-- reading compiler diagnostics
+Beginner:
+
+- failure classification
 - reproducing failures
-- reducing test cases
+- reducing failures
+- first-failure evidence
+- compiler diagnostics
+- logging strategy
+- terminal and command-line evidence
 - GDB basics
 - core dumps
-- strace
-- ltrace
-- perf
-- ftrace
-- dynamic debug
-- tcpdump
-- logic analyzer workflow
+- `strace`
 - serial console workflow
-- logging strategy
+- lab notes
+
+Intermediate:
+
+- binary search and bisecting
+- hypothesis-driven debugging
+- timeout and hang classification
+- race-condition workflow
+- `ltrace`
+- `perf`
+- ftrace overview
+- dynamic debug overview
+- `tcpdump`
+- logic analyzer workflow
 - hardware-in-the-loop testing
-- board farm workflow
 - boot log parsing
-- automated flashing tests
-- production diagnostics
-- persistent log collection
+
+Advanced:
+
 - crash dump workflow
+- persistent logs
+- support bundle design
+- production diagnostics
+- automated flashing tests
+- board farm workflow
+- field failure triage
+- postmortems
+- observability requirements
+- remote diagnostics
+- reproducer automation
+- debug-data privacy and security
 
 ## Networking
 
@@ -761,6 +891,54 @@ Advanced:
 - Mender
 - OSTree
 
+## Systems And Embedded Architecture
+
+Foundations:
+
+- CPU architecture
+- memory hierarchy
+- caches
+- MMU and virtual memory
+- interrupts
+- DMA
+- buses
+- clocks, resets, regulators, and power rails
+- boot chain
+- firmware, kernel, and userspace responsibility split
+- latency, throughput, and jitter
+- observability and diagnostics
+
+Embedded Linux architecture:
+
+- bootloader-to-kernel handoff
+- Device Tree as the hardware contract
+- kernel driver vs userspace service decisions
+- service architecture
+- IPC architecture
+- logging and persistent evidence
+- read-only root filesystem architecture
+- persistent state architecture
+- update and rollback architecture
+- recovery and rescue architecture
+- watchdog strategy
+- hardware and software partitioning
+
+Advanced system design:
+
+- real-time constraints
+- fault containment
+- safety failure modes
+- secure boot and trust boundaries
+- heterogeneous SoC partitioning
+- remote firmware partitioning
+- power management architecture
+- networked device architecture
+- manufacturing and provisioning architecture
+- field diagnostics and support bundles
+- compatibility contracts
+- release architecture
+- tradeoff analysis
+
 ## Embedded Productization
 
 - embedded DevOps role
@@ -841,17 +1019,61 @@ Advanced:
 - fixture-driven tests
 - separation of manufacturing and production images
 
-## Patterns
+## Algorithms And Data Structures
 
-- ownership and lifetime
-- initialization and teardown
-- state machines
-- error propagation
-- retry and timeout handling
-- resource cleanup
-- concurrency boundaries
+Beginner:
+
+- arrays
+- strings and byte buffers
+- structs and records
+- linked lists
+- stacks
+- queues
+- ring buffers
+- maps and dictionaries
+- sets
+- sorting
+- searching
+- Big-O and constant factors
+
+Intermediate:
+
+- hash tables
+- binary trees
+- balanced tree overview
+- heaps and priority queues
+- graphs
+- bitsets and bitmaps
+- lookup tables
+- finite state machines
 - producer-consumer queues
-- configuration layering
-- logging levels
-- feature flags
+- retry and timeout state machines
+- intrusive data structures
+- memory pools and fixed-size allocators
+
+Advanced:
+
+- cache-aware layout
+- alignment and padding
+- zero-copy buffer ownership
+- bounded queues
+- lock-free data structure cautions
+- wait-free vs lock-free vs blocking
+- priority inversion
+- rate limiting and backpressure
+- exponential backoff and jitter
 - compatibility shims
+- feature flags and configuration layering
+- state-machine-driven system design
+
+Embedded and Linux focus:
+
+- ring buffers for interrupts, logging, serial I/O, and data acquisition
+- intrusive lists and trees
+- bitmaps for resources and CPU masks
+- fixed queues for producer-consumer handoff
+- table-driven parsers and dispatch
+- finite state machines for protocols and device lifecycle
+- retry, timeout, and backoff logic
+- bounded memory behavior
+- cache, DMA, and data-layout constraints

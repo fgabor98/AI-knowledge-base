@@ -38,6 +38,10 @@ nav:
   - Topic Map: topic-map.md
   - C:
       - c/index.md
+  - C++:
+      - cpp/index.md
+  - Algorithms And Data Structures:
+      - algorithms-and-data-structures/index.md
   - Bash:
       - Overview: bash/index.md
       - Beginner:
@@ -85,6 +89,8 @@ nav:
       - Review Notes: bash/review-notes.md
   - Python:
       - python/index.md
+  - Linux Userspace And System Programming:
+      - linux-userspace-and-system-programming/index.md
   - Linux Kernel:
       - Overview: linux-kernel/index.md
       - Kernel Foundations For Driver Developers:
@@ -217,7 +223,7 @@ nav:
       - device-tree/index.md
   - Embedded Productization:
       - embedded-productization/index.md
-  - Debugging:
+  - Debugging And Diagnostics:
       - debugging/index.md
   - Networking:
       - networking/index.md
@@ -340,7 +346,7 @@ nav:
           - Reproducible Embedded Linux Releases: build-systems/advanced/reproducible-embedded-linux-releases.md
           - Build CI For Embedded Linux: build-systems/advanced/build-ci-for-embedded-linux.md
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
-  - Patterns:
-      - patterns/index.md
+  - Systems And Embedded Architecture:
+      - systems-and-embedded-architecture/index.md
   - Templates:
       - Topic Page: topic-page-template.md

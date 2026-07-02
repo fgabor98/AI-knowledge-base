@@ -304,7 +304,7 @@ Decide whether CPU cost aligns with interrupt activity.
 ## Related Topics
 
 - [Ftrace And Tracepoints](ftrace-and-tracepoints.md)
-- [Debugging](../../debugging/index.md)
+- [Debugging And Diagnostics](../../debugging/index.md)
 - [Debug Vs Production Configs](../configuration-and-platform-policy/debug-vs-production-configs.md)
 - [Kernel Release Artifacts](../../build-systems/advanced/linux-kernel/kernel-release-artifacts.md)
 

@@ -22,12 +22,15 @@ Start with the [Topic Map](topic-map.md), then create individual pages from the 
 ## Main Areas
 
 - [C Programming](c/index.md)
+- [C++ For Systems And Embedded Linux](cpp/index.md)
+- [Algorithms And Data Structures](algorithms-and-data-structures/index.md)
 - [Bash Programming](bash/index.md)
 - [Python Programming](python/index.md)
+- [Linux Userspace And System Programming](linux-userspace-and-system-programming/index.md)
 - [Linux Kernel Programming](linux-kernel/index.md)
 - [Embedded Linux](embedded-linux/index.md)
 - [Embedded Productization](embedded-productization/index.md)
-- [Debugging](debugging/index.md)
+- [Debugging And Diagnostics](debugging/index.md)
 - [Networking](networking/index.md)
 - [Build Systems](build-systems/index.md)
-- [Patterns](patterns/index.md)
+- [Systems And Embedded Architecture](systems-and-embedded-architecture/index.md)

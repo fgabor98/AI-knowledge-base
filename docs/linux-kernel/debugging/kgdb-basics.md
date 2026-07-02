@@ -287,7 +287,7 @@ Document what happens if the kernel is stopped in KGDB longer than the watchdog 
 
 - [Oops, Panic, And Crash Logs](oops-panic-crash-logs.md)
 - [Debug Vs Production Configs](../configuration-and-platform-policy/debug-vs-production-configs.md)
-- [Debugging](../../debugging/index.md)
+- [Debugging And Diagnostics](../../debugging/index.md)
 - [Watchdog Options](../configuration-and-platform-policy/watchdog-options.md)
 
 ## Official References
