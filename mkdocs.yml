@@ -86,7 +86,131 @@ nav:
   - Python:
       - python/index.md
   - Linux Kernel:
-      - linux-kernel/index.md
+      - Overview: linux-kernel/index.md
+      - Kernel Foundations For Driver Developers:
+          - Overview: linux-kernel/foundations/index.md
+          - Kernel Mental Model: linux-kernel/foundations/kernel-mental-model.md
+          - Kernel C Survival Guide: linux-kernel/foundations/kernel-c-survival-guide.md
+          - Reading Kernel Source: linux-kernel/foundations/reading-kernel-source.md
+          - Kernel Development Lab Setup: linux-kernel/foundations/kernel-development-lab-setup.md
+          - Driver Development Workflow: linux-kernel/foundations/driver-development-workflow.md
+          - Debugging Ladder: linux-kernel/foundations/debugging-ladder.md
+          - Failure Taxonomy: linux-kernel/foundations/failure-taxonomy.md
+          - Execution Context Primer: linux-kernel/foundations/execution-context-primer.md
+          - Device Model Primer: linux-kernel/foundations/device-model-primer.md
+          - Small Lab Progression: linux-kernel/foundations/small-lab-progression.md
+          - Kernel Documentation Reading Guide For Beginners: linux-kernel/foundations/kernel-documentation-reading-guide-for-beginners.md
+      - Kernel Source, Build, And Tailoring:
+          - Overview: linux-kernel/source-build-and-tailoring/index.md
+          - Kernel Source Acquisition: linux-kernel/source-build-and-tailoring/kernel-source-acquisition.md
+          - Kernel Configuration And Tailoring: linux-kernel/source-build-and-tailoring/kernel-configuration-and-tailoring.md
+          - Kernel Build And Install Overview: linux-kernel/source-build-and-tailoring/kernel-build-and-install-overview.md
+      - Linux Device Driver Fundamentals:
+          - Overview: linux-kernel/fundamentals/index.md
+          - Kernel Module Lifecycle: linux-kernel/fundamentals/kernel-module-lifecycle.md
+          - Built-In Drivers Vs Loadable Modules: linux-kernel/fundamentals/built-in-vs-loadable-modules.md
+          - Device Tree Hardware Description: linux-kernel/fundamentals/device-tree-hardware-description.md
+          - Device Tree Overlays: linux-kernel/fundamentals/device-tree-overlays.md
+          - Driver Binding, Probe, And Remove: linux-kernel/fundamentals/driver-binding-probe-remove.md
+          - Platform Devices And Platform Drivers: linux-kernel/fundamentals/platform-devices-and-drivers.md
+          - Device Tree Matching From Drivers: linux-kernel/fundamentals/device-tree-matching.md
+          - Resource Lookup And Managed Allocation: linux-kernel/fundamentals/resource-lookup-and-devm.md
+          - Character Device Basics: linux-kernel/fundamentals/character-device-basics.md
+          - Device Classes, Uevents, And udev: linux-kernel/fundamentals/device-classes-uevents-and-udev.md
+          - Sysfs Attributes: linux-kernel/fundamentals/sysfs-attributes.md
+          - Kobjects And Sysfs Groups: linux-kernel/fundamentals/kobjects-and-sysfs-groups.md
+          - Pollable Sysfs Attributes: linux-kernel/fundamentals/pollable-sysfs-attributes.md
+          - Module Parameters And Driver Logging: linux-kernel/fundamentals/module-parameters-and-logging.md
+          - User-Space Hardware Access Vs Kernel Drivers: linux-kernel/fundamentals/userspace-hardware-access-vs-kernel-drivers.md
+      - Common Driver Interfaces:
+          - Overview: linux-kernel/driver-interfaces/index.md
+          - GPIO Consumer API: linux-kernel/driver-interfaces/gpio-consumer-api.md
+          - GPIO Controller Drivers: linux-kernel/driver-interfaces/gpio-controller-drivers.md
+          - GPIO Expanders: linux-kernel/driver-interfaces/gpio-expanders.md
+          - Legacy GPIO Interfaces: linux-kernel/driver-interfaces/legacy-gpio-interfaces.md
+          - Interrupt Processing Model: linux-kernel/driver-interfaces/interrupt-processing-model.md
+          - IRQ Handling: linux-kernel/driver-interfaces/irq-handling.md
+          - Threaded Interrupts: linux-kernel/driver-interfaces/threaded-interrupts.md
+          - I2C Client Drivers: linux-kernel/driver-interfaces/i2c-client-drivers.md
+          - SPI Device Drivers: linux-kernel/driver-interfaces/spi-device-drivers.md
+          - UART And TTY Integration Overview: linux-kernel/driver-interfaces/uart-tty-integration.md
+          - CAN Driver Integration Overview: linux-kernel/driver-interfaces/can-driver-integration.md
+          - PWM Driver Overview: linux-kernel/driver-interfaces/pwm-drivers.md
+          - Regmap: linux-kernel/driver-interfaces/regmap.md
+          - Clocks: linux-kernel/driver-interfaces/clocks.md
+          - Resets: linux-kernel/driver-interfaces/resets.md
+          - Regulators: linux-kernel/driver-interfaces/regulators.md
+          - Pinctrl: linux-kernel/driver-interfaces/pinctrl.md
+          - DMA Basics: linux-kernel/driver-interfaces/dma-basics.md
+          - IIO Subsystem: linux-kernel/driver-interfaces/iio-subsystem.md
+          - IIO Channels And Sysfs: linux-kernel/driver-interfaces/iio-channels-and-sysfs.md
+          - IIO Triggers And Buffers: linux-kernel/driver-interfaces/iio-triggers-and-buffers.md
+          - Input Subsystem: linux-kernel/driver-interfaces/input-subsystem.md
+          - Polled Input Devices: linux-kernel/driver-interfaces/polled-input-devices.md
+          - IRQ-Based Input Devices: linux-kernel/driver-interfaces/irq-based-input-devices.md
+      - Kernel Execution And Concurrency:
+          - Overview: linux-kernel/execution-and-concurrency/index.md
+          - Context Rules: linux-kernel/execution-and-concurrency/context-rules.md
+          - Sleepable Vs Atomic Code: linux-kernel/execution-and-concurrency/sleepable-vs-atomic-code.md
+          - Bottom Halves, Softirqs, And Tasklets: linux-kernel/execution-and-concurrency/bottom-halves-softirqs-and-tasklets.md
+          - Locking And Atomics: linux-kernel/execution-and-concurrency/locking-and-atomics.md
+          - Workqueues: linux-kernel/execution-and-concurrency/workqueues.md
+          - Concurrency Managed Workqueues: linux-kernel/execution-and-concurrency/concurrency-managed-workqueues.md
+          - Timers: linux-kernel/execution-and-concurrency/timers.md
+          - Hrtimers: linux-kernel/execution-and-concurrency/hrtimers.md
+          - Timekeeping And Kernel Timers: linux-kernel/execution-and-concurrency/timekeeping-and-kernel-timers.md
+          - Wait Queues And Completions: linux-kernel/execution-and-concurrency/wait-queues-and-completions.md
+          - Reference Counting And Lifetime: linux-kernel/execution-and-concurrency/reference-counting-and-lifetime.md
+      - Kernel Memory And I/O:
+          - Overview: linux-kernel/memory-and-io/index.md
+          - Kernel Memory Allocation: linux-kernel/memory-and-io/kernel-memory-allocation.md
+          - Kernel Virtual Memory And VMAs: linux-kernel/memory-and-io/kernel-virtual-memory-and-vmas.md
+          - MMIO And Register Access: linux-kernel/memory-and-io/mmio-and-register-access.md
+          - Userspace Copy And ioctl ABI: linux-kernel/memory-and-io/userspace-copy-and-ioctl-abi.md
+          - DMA Mapping Basics: linux-kernel/memory-and-io/dma-mapping-basics.md
+          - Single-Buffer DMA: linux-kernel/memory-and-io/single-buffer-dma.md
+          - Scatter-Gather DMA: linux-kernel/memory-and-io/scatter-gather-dma.md
+      - Kernel Configuration And Platform Policy:
+          - Overview: linux-kernel/configuration-and-platform-policy/index.md
+          - Debug Vs Production Configs: linux-kernel/configuration-and-platform-policy/debug-vs-production-configs.md
+          - Built-In Vs Module Policy: linux-kernel/configuration-and-platform-policy/built-in-vs-module-policy.md
+          - Kernel Command Line Policy: linux-kernel/configuration-and-platform-policy/kernel-command-line-policy.md
+          - Watchdog Options: linux-kernel/configuration-and-platform-policy/watchdog-options.md
+          - Module Signing And Hardening: linux-kernel/configuration-and-platform-policy/module-signing-and-hardening.md
+          - Namespaces, Cgroups, And LSM Overview: linux-kernel/configuration-and-platform-policy/namespaces-cgroups-lsm.md
+          - Initramfs Options: linux-kernel/configuration-and-platform-policy/initramfs-options.md
+          - Config Review Workflow: linux-kernel/configuration-and-platform-policy/config-review-workflow.md
+      - Kernel Debugging Basics:
+          - Overview: linux-kernel/debugging/index.md
+          - Dmesg And Log Levels: linux-kernel/debugging/dmesg-and-log-levels.md
+          - Dynamic Debug: linux-kernel/debugging/dynamic-debug.md
+          - Ftrace And Tracepoints: linux-kernel/debugging/ftrace-and-tracepoints.md
+          - Perf Overview: linux-kernel/debugging/perf-overview.md
+          - Debugfs And Sysfs Inspection: linux-kernel/debugging/debugfs-and-sysfs-inspection.md
+          - KGDB Basics: linux-kernel/debugging/kgdb-basics.md
+          - Oops, Panic, And Crash Logs: linux-kernel/debugging/oops-panic-crash-logs.md
+          - Watchdog Reset Diagnosis: linux-kernel/debugging/watchdog-reset-diagnosis.md
+          - Probe Failure Debugging: linux-kernel/debugging/probe-failure-debugging.md
+      - Power Management:
+          - Overview: linux-kernel/power-management/index.md
+          - Runtime PM: linux-kernel/power-management/runtime-pm.md
+          - Suspend And Resume: linux-kernel/power-management/suspend-resume.md
+          - Wake Sources: linux-kernel/power-management/wake-sources.md
+          - cpuidle And cpufreq: linux-kernel/power-management/cpuidle-cpufreq.md
+          - Power Domains: linux-kernel/power-management/power-domains.md
+          - Regulator And Clock Power Dependencies: linux-kernel/power-management/regulator-clock-power-dependencies.md
+          - Suspend And Resume Debugging: linux-kernel/power-management/suspend-resume-debugging.md
+      - Remoteproc, RPMsg, And Heterogeneous SoCs:
+          - Overview: linux-kernel/remoteproc-rpmsg/index.md
+          - Remoteproc Framework: linux-kernel/remoteproc-rpmsg/remoteproc-framework.md
+          - Firmware Loading: linux-kernel/remoteproc-rpmsg/firmware-loading.md
+          - Reserved Memory: linux-kernel/remoteproc-rpmsg/reserved-memory.md
+          - Virtio And RPMsg: linux-kernel/remoteproc-rpmsg/virtio-rpmsg.md
+          - PRU Integration Overview: linux-kernel/remoteproc-rpmsg/pru-integration.md
+          - R5 And M4 Firmware Lifecycle: linux-kernel/remoteproc-rpmsg/r5-m4-firmware-lifecycle.md
+          - Remote Core Logs And Crashes: linux-kernel/remoteproc-rpmsg/remote-core-logs-and-crashes.md
+          - Device Tree Nodes For Remote Cores: linux-kernel/remoteproc-rpmsg/device-tree-nodes-for-remote-cores.md
+      - Madieu Book Topic Coverage: linux-kernel/book-coverage.md
   - Embedded Linux:
       - embedded-linux/index.md
   - Device Tree:
