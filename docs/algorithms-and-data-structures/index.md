@@ -1,79 +1,58 @@
 ---
 status: draft
 reviewed: false
-domain: algorithms-data-structures
+domain: algorithms-data-models
 difficulty: beginner
 last_reviewed: null
 ---
 
-# Algorithms And Data Structures
+# Algorithms And Data Models
 
-Algorithms and data structures topics focused on practical systems programming, embedded constraints, correctness, and performance tradeoffs.
+Algorithmic problem solving topics focused on modeling a problem, choosing the right data representation, reasoning about cost, and implementing reliable algorithms under systems and embedded constraints.
 
-This section replaces the previous broad implementation-pattern placeholder. It should cover both classic algorithms/data structures and the recurring implementation patterns that matter in C, C++, Linux userspace, and kernel-adjacent work.
+This topic should not be a catalog of containers. Data structures belong here because they shape which algorithms are simple, efficient, deterministic, and maintainable.
 
 ## Learning Path
 
-Beginner:
+1. [Algorithmic Foundations](algorithmic-foundations.md)
+2. [Control Flow And Recursion](control-flow-and-recursion.md)
+3. [Complexity And Efficiency](complexity-and-efficiency.md)
+4. [Basic Algorithm Schemes](basic-algorithm-schemes.md)
+5. [Searching And Backtracking](searching-and-backtracking.md)
+6. [Sorting And Ordering](sorting-and-ordering.md)
+7. [Graph Algorithms](graph-algorithms.md)
+8. [Tree Algorithms](tree-algorithms.md)
+9. [Parallel And Dataflow Algorithms](parallel-and-dataflow-algorithms.md)
+10. [Data Structures For Algorithms](data-structures-for-algorithms.md)
+11. [Embedded Linux Algorithmic Constraints](embedded-linux-algorithmic-constraints.md)
 
-1. arrays
-2. strings and byte buffers
-3. structs and records
-4. linked lists
-5. stacks
-6. queues
-7. ring buffers
-8. maps and dictionaries
-9. sets
-10. sorting basics
-11. searching basics
-12. Big-O notation and constant factors
+## What This Topic Should Teach
 
-Intermediate:
-
-1. hash tables
-2. binary trees
-3. balanced tree overview
-4. heaps and priority queues
-5. graphs
-6. bitsets and bitmaps
-7. lookup tables
-8. finite state machines
-9. producer-consumer queues
-10. retry and timeout state machines
-11. intrusive data structures
-12. memory pools and fixed-size allocators
-
-Advanced:
-
-1. cache-aware data layout
-2. memory alignment and padding effects
-3. zero-copy buffer ownership
-4. bounded queues for embedded systems
-5. lock-free data structure cautions
-6. wait-free vs lock-free vs blocking designs
-7. priority inversion implications
-8. rate limiting and backpressure
-9. exponential backoff and jitter
-10. compatibility shims
-11. feature flags and configuration layering
-12. state-machine-driven system design
+- how to turn a problem statement into inputs, outputs, constraints, and invariants
+- how data modeling decisions constrain the algorithm
+- how sequence, branching, iteration, and recursion compose algorithms
+- how to reason about runtime, memory use, and constant factors
+- how to recognize basic algorithm schemes before reaching for complex tools
+- how search, backtracking, traversal, sorting, and shortest-path algorithms work
+- how stacks, queues, arrays, trees, graphs, hash tables, heaps, and bitmaps support algorithms
+- how embedded Linux constraints change otherwise standard algorithm choices
 
 ## Embedded And Linux Focus Areas
 
-- circular buffers for UART, CAN, logging, and sampling
-- intrusive lists in kernel-style C
-- bitmaps for resources and hardware state
-- fixed-size queues for deterministic memory usage
-- table-driven parsers and dispatch
-- finite state machines for device and service lifecycle
-- retry and timeout handling for unreliable hardware or networks
-- bounded memory behavior under load
-- data layout choices for cache and DMA
+- bounded memory behavior
+- predictable runtime behavior
+- recursion and stack-depth policy
+- interrupt-safe queues and buffers
+- cache-aware layout
+- DMA-friendly buffers
+- allocation failure handling
+- data integrity checks
+- algorithmic tradeoffs in drivers, daemons, boot code, and diagnostics
 
 ## Related Topics
 
 - [C Programming](../c/index.md)
 - [C++ For Systems And Embedded Linux](../cpp/index.md)
+- [Linux Userspace And System Programming](../linux-userspace-and-system-programming/index.md)
 - [Linux Kernel Programming](../linux-kernel/index.md)
 - [Systems And Embedded Architecture](../systems-and-embedded-architecture/index.md)

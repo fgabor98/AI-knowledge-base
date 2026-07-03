@@ -40,8 +40,19 @@ nav:
       - c/index.md
   - C++:
       - cpp/index.md
-  - Algorithms And Data Structures:
-      - algorithms-and-data-structures/index.md
+  - Algorithms And Data Models:
+      - Overview: algorithms-and-data-structures/index.md
+      - Algorithmic Foundations: algorithms-and-data-structures/algorithmic-foundations.md
+      - Control Flow And Recursion: algorithms-and-data-structures/control-flow-and-recursion.md
+      - Complexity And Efficiency: algorithms-and-data-structures/complexity-and-efficiency.md
+      - Basic Algorithm Schemes: algorithms-and-data-structures/basic-algorithm-schemes.md
+      - Searching And Backtracking: algorithms-and-data-structures/searching-and-backtracking.md
+      - Sorting And Ordering: algorithms-and-data-structures/sorting-and-ordering.md
+      - Graph Algorithms: algorithms-and-data-structures/graph-algorithms.md
+      - Tree Algorithms: algorithms-and-data-structures/tree-algorithms.md
+      - Parallel And Dataflow Algorithms: algorithms-and-data-structures/parallel-and-dataflow-algorithms.md
+      - Data Structures For Algorithms: algorithms-and-data-structures/data-structures-for-algorithms.md
+      - Embedded Linux Algorithmic Constraints: algorithms-and-data-structures/embedded-linux-algorithmic-constraints.md
   - Bash:
       - Overview: bash/index.md
       - Beginner:

@@ -23,7 +23,7 @@ Start with the [Topic Map](topic-map.md), then create individual pages from the 
 
 - [C Programming](c/index.md)
 - [C++ For Systems And Embedded Linux](cpp/index.md)
-- [Algorithms And Data Structures](algorithms-and-data-structures/index.md)
+- [Algorithms And Data Models](algorithms-and-data-structures/index.md)
 - [Bash Programming](bash/index.md)
 - [Python Programming](python/index.md)
 - [Linux Userspace And System Programming](linux-userspace-and-system-programming/index.md)

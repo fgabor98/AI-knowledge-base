@@ -1019,9 +1019,147 @@ Advanced system design:
 - fixture-driven tests
 - separation of manufacturing and production images
 
-## Algorithms And Data Structures
+## Algorithms And Data Models
 
-Beginner:
+Algorithmic foundations:
+
+- problem statements
+- input and output descriptions
+- preconditions and postconditions
+- invariants
+- edge cases
+- algorithm design vs implementation
+- data model choice
+- abstract data types
+- operations over data
+- representation independence
+- correctness arguments
+- example-driven validation
+
+Control flow and recursion:
+
+- sequence
+- branching
+- iteration
+- loop invariants
+- loop termination
+- recursion fundamentals
+- base cases
+- recursive cases
+- recursive call stack
+- recursion vs iteration
+- divide-and-conquer thinking
+- tail-recursive shape
+
+Complexity and efficiency:
+
+- runtime cost
+- memory cost
+- Big-O notation
+- constant factors
+- best-case, average-case, and worst-case behavior
+- input-size growth
+- time complexity
+- space complexity
+- reducing execution time
+- reducing memory use
+- reducing complexity by changing the algorithm
+- reducing complexity by changing the data model
+
+Basic algorithm schemes:
+
+- summation
+- counting
+- minimum search
+- maximum search
+- existence and decision checks
+- selection
+- filtering
+- accumulation
+- linear search
+- sentinel search
+- ordered linear search
+- binary search
+- recursive binary search
+
+Searching and backtracking:
+
+- search-space modeling
+- exhaustive search
+- guided search
+- constraint checking
+- pruning
+- partial solutions
+- backtracking
+- recursive backtracking
+- iterative backtracking with an explicit stack
+- N-queens style problems
+- failure propagation
+- search order and heuristics
+
+Sorting and ordering:
+
+- why ordering changes algorithms
+- comparison functions
+- stable vs unstable sorting
+- in-place vs out-of-place sorting
+- insertion sort as a learning algorithm
+- selection sort as a learning algorithm
+- bubble sort as a learning algorithm
+- merge-style thinking
+- sorting as preprocessing
+- ordered lookup
+- maintaining sorted data
+- partial ordering and priority
+
+Graph algorithms:
+
+- graph modeling
+- vertices and edges
+- directed and undirected graphs
+- weighted and unweighted graphs
+- adjacency lists
+- adjacency matrices
+- edge lists
+- visited-state tracking
+- depth-first search
+- breadth-first search
+- path reconstruction
+- unweighted shortest paths
+- Dijkstra's algorithm
+- Bellman-Ford algorithm
+
+Tree algorithms:
+
+- tree modeling
+- root, parent, child, leaf, and subtree concepts
+- binary trees
+- tree representation
+- expression trees
+- preorder traversal
+- inorder traversal
+- postorder traversal
+- level-order traversal
+- prefix, infix, and postfix notation
+- postfix conversion
+- stack-based expression evaluation
+
+Parallel and dataflow algorithms:
+
+- data channels
+- pipeline stages
+- input partitioning
+- fan-out and fan-in
+- reductions
+- associative operations
+- parallel minimum and maximum search
+- parallel sorting
+- work distribution
+- synchronization costs
+- ordering constraints
+- result merging
+
+Data structures for algorithms:
 
 - arrays
 - strings and byte buffers
@@ -1030,50 +1168,27 @@ Beginner:
 - stacks
 - queues
 - ring buffers
-- maps and dictionaries
-- sets
-- sorting
-- searching
-- Big-O and constant factors
-
-Intermediate:
-
 - hash tables
-- binary trees
-- balanced tree overview
 - heaps and priority queues
+- trees
 - graphs
 - bitsets and bitmaps
-- lookup tables
-- finite state machines
-- producer-consumer queues
-- retry and timeout state machines
 - intrusive data structures
 - memory pools and fixed-size allocators
 
-Advanced:
+Embedded Linux algorithmic constraints:
 
+- bounded memory
+- deterministic behavior
+- recursion policy
+- stack-depth limits
 - cache-aware layout
-- alignment and padding
-- zero-copy buffer ownership
-- bounded queues
-- lock-free data structure cautions
-- wait-free vs lock-free vs blocking
-- priority inversion
-- rate limiting and backpressure
-- exponential backoff and jitter
-- compatibility shims
-- feature flags and configuration layering
-- state-machine-driven system design
-
-Embedded and Linux focus:
-
-- ring buffers for interrupts, logging, serial I/O, and data acquisition
-- intrusive lists and trees
-- bitmaps for resources and CPU masks
-- fixed queues for producer-consumer handoff
-- table-driven parsers and dispatch
-- finite state machines for protocols and device lifecycle
-- retry, timeout, and backoff logic
-- bounded memory behavior
-- cache, DMA, and data-layout constraints
+- DMA-friendly buffers
+- interrupt-safe queues
+- real-time tradeoffs
+- allocation failure behavior
+- endianness
+- alignment constraints
+- data integrity checks
+- checksums and CRCs
+- watchdog-aware long-running operations

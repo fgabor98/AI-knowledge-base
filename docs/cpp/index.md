@@ -86,5 +86,5 @@ Advanced:
 - [C Programming](../c/index.md)
 - [Linux Userspace And System Programming](../linux-userspace-and-system-programming/index.md)
 - [Build Systems](../build-systems/index.md)
-- [Algorithms And Data Structures](../algorithms-and-data-structures/index.md)
+- [Algorithms And Data Models](../algorithms-and-data-structures/index.md)
 - [Embedded Linux](../embedded-linux/index.md)
