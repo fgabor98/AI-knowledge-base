@@ -26,6 +26,16 @@ Roadmap for small reusable algorithm patterns.
 - binary search
 - recursive binary search
 
+## Scaffold Pages
+
+- [Linear Scan Patterns](linear-scan-patterns.md)
+- [Binary Search](binary-search.md)
+
+## Programming Examples
+
+- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
+- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+
 ## Embedded And Systems Angle
 
 - use simple schemes as the default for small bounded inputs
@@ -35,6 +45,6 @@ Roadmap for small reusable algorithm patterns.
 
 ## Related Topics
 
-- [Control Flow And Recursion](control-flow-and-recursion.md)
-- [Searching And Backtracking](searching-and-backtracking.md)
-- [Data Structures For Algorithms](data-structures-for-algorithms.md)
+- [Control Flow And Recursion](../control-flow-and-recursion/index.md)
+- [Searching And Backtracking](../searching-and-backtracking/index.md)
+- [Data Structures For Algorithms](../data-structures-for-algorithms/index.md)

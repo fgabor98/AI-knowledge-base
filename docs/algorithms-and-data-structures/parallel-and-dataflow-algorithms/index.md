@@ -25,6 +25,17 @@ Roadmap for algorithms that split work across stages or workers.
 - ordering constraints
 - result merging
 
+## Scaffold Pages
+
+- [Pipeline And Dataflow Algorithms](pipeline-and-dataflow-algorithms.md)
+- [Partitioning Reductions And Fan-In](partitioning-reductions-and-fan-in.md)
+- [Synchronization Costs And Result Merging](synchronization-costs-and-result-merging.md)
+
+## Programming Examples
+
+- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
+- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+
 ## Embedded And Systems Angle
 
 - account for synchronization cost before parallelizing
@@ -34,6 +45,6 @@ Roadmap for algorithms that split work across stages or workers.
 
 ## Related Topics
 
-- [Complexity And Efficiency](complexity-and-efficiency.md)
-- [Data Structures For Algorithms](data-structures-for-algorithms.md)
-- [Embedded Linux Algorithmic Constraints](embedded-linux-algorithmic-constraints.md)
+- [Complexity And Efficiency](../complexity-and-efficiency/index.md)
+- [Data Structures For Algorithms](../data-structures-for-algorithms/index.md)
+- [Embedded Linux Algorithmic Constraints](../embedded-linux-algorithmic-constraints/index.md)

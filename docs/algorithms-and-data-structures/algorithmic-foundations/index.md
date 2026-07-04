@@ -25,6 +25,17 @@ Roadmap for the concepts that come before coding an algorithm.
 - correctness arguments
 - example-driven validation
 
+## Scaffold Pages
+
+- [Problem Modeling](problem-modeling.md)
+- [Invariants And Correctness](invariants-and-correctness.md)
+- [Data Modeling And Abstract Data Types](data-modeling-and-abstract-data-types.md)
+
+## Programming Examples
+
+- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
+- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+
 ## Embedded And Systems Angle
 
 - make failure cases explicit before implementation
@@ -34,6 +45,6 @@ Roadmap for the concepts that come before coding an algorithm.
 
 ## Related Topics
 
-- [Complexity And Efficiency](complexity-and-efficiency.md)
-- [Data Structures For Algorithms](data-structures-for-algorithms.md)
-- [Systems And Embedded Architecture](../systems-and-embedded-architecture/index.md)
+- [Complexity And Efficiency](../complexity-and-efficiency/index.md)
+- [Data Structures For Algorithms](../data-structures-for-algorithms/index.md)
+- [Systems And Embedded Architecture](../../systems-and-embedded-architecture/index.md)

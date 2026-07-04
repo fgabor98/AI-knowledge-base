@@ -25,6 +25,17 @@ Roadmap for the control patterns used to build algorithms.
 - divide-and-conquer thinking
 - tail-recursive shape
 
+## Scaffold Pages
+
+- [Loop Invariants And Termination](loop-invariants-and-termination.md)
+- [Recursion Fundamentals](recursion-fundamentals.md)
+- [Divide And Conquer](divide-and-conquer.md)
+
+## Programming Examples
+
+- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
+- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+
 ## Embedded And Systems Angle
 
 - understand stack-depth risk before using recursion
@@ -34,6 +45,6 @@ Roadmap for the control patterns used to build algorithms.
 
 ## Related Topics
 
-- [Basic Algorithm Schemes](basic-algorithm-schemes.md)
-- [Searching And Backtracking](searching-and-backtracking.md)
-- [Embedded Linux Algorithmic Constraints](embedded-linux-algorithmic-constraints.md)
+- [Basic Algorithm Schemes](../basic-algorithm-schemes/index.md)
+- [Searching And Backtracking](../searching-and-backtracking/index.md)
+- [Embedded Linux Algorithmic Constraints](../embedded-linux-algorithmic-constraints/index.md)

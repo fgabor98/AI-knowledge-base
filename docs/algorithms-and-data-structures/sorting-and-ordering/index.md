@@ -25,6 +25,17 @@ Roadmap for ordering as both an algorithmic operation and a design choice.
 - maintaining sorted data
 - partial ordering and priority
 
+## Scaffold Pages
+
+- [Sorting Fundamentals](sorting-fundamentals.md)
+- [Maintaining Sorted Data](maintaining-sorted-data.md)
+- [Priority And Partial Ordering](priority-and-partial-ordering.md)
+
+## Programming Examples
+
+- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
+- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+
 ## Embedded And Systems Angle
 
 - prefer predictable in-place algorithms for small fixed arrays
@@ -34,6 +45,6 @@ Roadmap for ordering as both an algorithmic operation and a design choice.
 
 ## Related Topics
 
-- [Basic Algorithm Schemes](basic-algorithm-schemes.md)
-- [Complexity And Efficiency](complexity-and-efficiency.md)
-- [Data Structures For Algorithms](data-structures-for-algorithms.md)
+- [Basic Algorithm Schemes](../basic-algorithm-schemes/index.md)
+- [Complexity And Efficiency](../complexity-and-efficiency/index.md)
+- [Data Structures For Algorithms](../data-structures-for-algorithms/index.md)
