@@ -282,7 +282,12 @@ nav:
       - embedded-linux/index.md
   - Device Tree:
       - Overview: device-tree/index.md
-      - Foundations: device-tree/foundations.md
+      - Foundations:
+          - Overview: device-tree/foundations.md
+          - The Hardware Description Model: device-tree/foundations/hardware-description-model.md
+          - Source And Binary Artifacts: device-tree/foundations/source-and-binary-artifacts.md
+          - Tree Anatomy And Vocabulary: device-tree/foundations/tree-anatomy-and-vocabulary.md
+          - First Device Tree Lab: device-tree/foundations/first-device-tree-lab.md
       - Syntax, Values, And Source Composition: device-tree/syntax-values-and-source-composition.md
       - Provider-Consumer Relationships: device-tree/provider-consumer-relationships.md
       - Standard Nodes And Properties: device-tree/standard-nodes-and-properties.md
