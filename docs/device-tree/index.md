@@ -12,6 +12,30 @@ Device Tree topics focused on describing embedded hardware for Linux, U-Boot, fi
 
 Device Tree appears in kernel, U-Boot, TI SDK, board porting, pinmux, clocks, regulators, networking, storage, and remoteproc work. This section is the standalone roadmap for learning it systematically.
 
+## Learning Materials
+
+1. [Foundations](foundations.md)
+2. [Syntax, Values, And Source Composition](syntax-values-and-source-composition.md)
+3. [Provider-Consumer Relationships](provider-consumer-relationships.md)
+4. [Standard Nodes And Properties](standard-nodes-and-properties.md)
+5. [Addressing And Bus Modeling](addressing-and-bus-modeling.md)
+6. [Driver Matching](driver-matching.md)
+7. [Pinctrl, GPIOs, And Interrupts](pinctrl-gpios-and-interrupts.md)
+8. [Clocks, Resets, Regulators, And Power](clocks-resets-regulators-and-power.md)
+9. [Common Peripheral Nodes](common-peripheral-nodes.md)
+10. [Graph Bindings And Complex Data Paths](graph-bindings-and-complex-data-paths.md)
+11. [Memory, Firmware, And Heterogeneous SoCs](memory-firmware-and-heterogeneous-socs.md)
+12. [U-Boot And Bootloader Device Tree](u-boot-and-bootloader-device-tree.md)
+13. [Boot-Time Mutation And Ownership](boot-time-mutation-and-ownership.md)
+14. [Binding Design And Stable ABI](binding-design-and-stable-abi.md)
+15. [Writing And Validating Binding Schemas](writing-and-validating-binding-schemas.md)
+16. [Overlays In Depth](overlays-in-depth.md)
+17. [Build And Diagnostic Tools](build-and-diagnostic-tools.md)
+18. [Runtime Inspection](runtime-inspection.md)
+19. [Security And Production Lifecycle](security-and-production-lifecycle.md)
+20. [Product-Scale Maintenance And Engineering](product-scale-maintenance-and-engineering.md)
+21. [Board Porting Workflow](board-porting-workflow.md)
+
 ## Roadmap
 
 ### Foundations
@@ -323,6 +347,22 @@ Device Tree appears in kernel, U-Boot, TI SDK, board porting, pinmux, clocks, re
 - reproducible DTB builds
 - DTB provenance and release manifests
 - field update compatibility
+
+### Product-Scale Maintenance And Engineering
+
+- Devicetree specification version differences and compatibility implications
+- schema and DTS review methodology
+- separating correctness, ABI, style, and maintainability concerns during review
+- maintaining downstream vendor trees vs upstream DTS
+- managing patch stacks and minimizing long-lived DTS divergence
+- cross-version kernel, bootloader, firmware, DTB, and overlay compatibility testing
+- large-product DT organization and ownership conventions
+- defining ownership boundaries across silicon, module, carrier-board, and product teams
+- CI design for multiple boards, product variants, and overlays
+- validation matrices and representative hardware coverage
+- deprecation and migration strategies for bindings, properties, and compatible strings
+- realistic board bring-up failure postmortems
+- converting failures and escapes into reusable review checks and CI coverage
 
 ### Board Porting Workflow
 

@@ -281,7 +281,28 @@ nav:
   - Embedded Linux:
       - embedded-linux/index.md
   - Device Tree:
-      - device-tree/index.md
+      - Overview: device-tree/index.md
+      - Foundations: device-tree/foundations.md
+      - Syntax, Values, And Source Composition: device-tree/syntax-values-and-source-composition.md
+      - Provider-Consumer Relationships: device-tree/provider-consumer-relationships.md
+      - Standard Nodes And Properties: device-tree/standard-nodes-and-properties.md
+      - Addressing And Bus Modeling: device-tree/addressing-and-bus-modeling.md
+      - Driver Matching: device-tree/driver-matching.md
+      - Pinctrl, GPIOs, And Interrupts: device-tree/pinctrl-gpios-and-interrupts.md
+      - Clocks, Resets, Regulators, And Power: device-tree/clocks-resets-regulators-and-power.md
+      - Common Peripheral Nodes: device-tree/common-peripheral-nodes.md
+      - Graph Bindings And Complex Data Paths: device-tree/graph-bindings-and-complex-data-paths.md
+      - Memory, Firmware, And Heterogeneous SoCs: device-tree/memory-firmware-and-heterogeneous-socs.md
+      - U-Boot And Bootloader Device Tree: device-tree/u-boot-and-bootloader-device-tree.md
+      - Boot-Time Mutation And Ownership: device-tree/boot-time-mutation-and-ownership.md
+      - Binding Design And Stable ABI: device-tree/binding-design-and-stable-abi.md
+      - Writing And Validating Binding Schemas: device-tree/writing-and-validating-binding-schemas.md
+      - Overlays In Depth: device-tree/overlays-in-depth.md
+      - Build And Diagnostic Tools: device-tree/build-and-diagnostic-tools.md
+      - Runtime Inspection: device-tree/runtime-inspection.md
+      - Security And Production Lifecycle: device-tree/security-and-production-lifecycle.md
+      - Product-Scale Maintenance And Engineering: device-tree/product-scale-maintenance-and-engineering.md
+      - Board Porting Workflow: device-tree/board-porting-workflow.md
   - Linux Kernel:
       - Overview: linux-kernel/index.md
       - Official Documentation Reading Checklist:
