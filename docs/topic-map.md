@@ -840,83 +840,293 @@ Advanced system design:
 
 ## Device Tree
 
-- what Device Tree solves
-- DTS
-- DTSI
-- DTB
-- overlays
-- source include structure
-- labels
-- phandles
-- node names
-- unit addresses
-- properties
-- `reg`
-- `ranges`
-- `#address-cells`
-- `#size-cells`
-- `interrupt-parent`
-- `interrupts`
-- `dma-ranges`
-- simple-bus
-- `compatible`
-- fallback compatible strings
-- `of_match_table`
-- platform devices
-- binding-driven driver expectations
-- optional vs required properties
-- pinmux
-- pin configuration
-- GPIO controllers
-- GPIO consumers
-- active-high vs active-low
-- interrupt controllers
-- interrupt trigger types
-- reset GPIOs
-- clock providers
-- clock consumers
-- reset controllers
-- fixed regulators
-- PMIC regulators
-- regulator constraints
-- power domains
-- wake sources
-- UART nodes
-- I2C nodes
-- SPI nodes
-- CAN nodes
-- USB nodes
-- PCIe nodes
-- MMC/SD/eMMC nodes
-- Ethernet MAC nodes
-- Ethernet PHY nodes
-- MDIO
-- fixed-link
-- `/memory`
-- `/chosen`
-- reserved memory
-- CMA
-- firmware nodes
-- remoteproc
-- RPMsg
-- PRU
-- R5/M4 cores
-- U-Boot control DTB
-- SPL DTB
-- Linux DTB
-- U-Boot-specific properties
-- pre-relocation properties
-- FIT image DTB selection
-- YAML bindings
-- `dt-bindings`
-- `dtc` warnings
-- `dtbs_check`
-- schema errors
-- `/proc/device-tree`
-- `/sys/firmware/devicetree/base`
-- decoded DTBs with `dtc`
-- runtime DTB identity checks
-- board porting DT workflow
+- Foundations
+  - what Device Tree solves
+  - Device Tree as a hardware description rather than driver configuration
+  - Device Tree bindings as a stable ABI across bootloaders, kernels, and operating systems
+  - Device Tree vs ACPI and when each hardware-description model applies
+  - DTS
+  - DTSI
+  - DTB
+  - DTBO
+  - overlays
+  - flattened Device Tree structure
+  - DTB header, memory reservation block, structure block, and strings block
+  - source include structure and inheritance
+  - labels
+  - phandles
+  - node names
+  - unit addresses
+  - properties
+  - paths and aliases
+  - comments and style
+- Syntax, Values, And Source Composition
+  - 32-bit cells and cell arrays
+  - strings and string lists
+  - byte arrays
+  - empty and boolean properties
+  - 64-bit values represented by multiple cells
+  - property and node references
+  - label references and path references
+  - `/bits/`
+  - `/delete-node/`
+  - `/delete-property/`
+  - `/include/` directives
+  - C preprocessor includes and macros
+  - DTS includes vs C preprocessor includes
+  - overriding and extending nodes from included DTSI files
+  - board, SoC, and shared-family source layering
+  - source formatting and Linux DTS coding style
+- Provider–Consumer Relationships
+  - phandles with argument cells
+  - zero-cell vs multi-cell providers
+  - `#clock-cells`
+  - `#reset-cells`
+  - `#gpio-cells`
+  - `#interrupt-cells`
+  - other provider-specific `#*-cells` properties
+  - consumer properties and `*-names` properties
+  - mapping a consumer property to its provider binding
+  - decoding specifier cells using the provider binding
+  - provider–consumer relationships for clocks, resets, GPIOs, interrupts, DMA, IOMMUs, PHYs, power domains, and regulators
+- Standard Nodes And Properties
+  - root-node `compatible`
+  - root-node `model`
+  - `status`
+  - `/aliases`
+  - `/cpus`
+  - CPU topology
+  - `/memory`
+  - `/chosen`
+  - `stdout-path`
+  - boot arguments
+  - `/reserved-memory`
+  - `/memreserve/`
+  - `interrupts-extended`
+  - `interrupt-map`
+  - `interrupt-map-mask`
+  - `dma-coherent`
+  - `iommus`
+  - `phys`
+  - `phy-names`
+- Addressing And Bus Modeling
+  - `reg`
+  - `ranges`
+  - `#address-cells`
+  - `#size-cells`
+  - `interrupt-parent`
+  - `interrupts`
+  - `dma-ranges`
+  - simple-bus
+  - bus-specific child addressing
+  - address translation across nested buses
+  - PCI host bridge address mapping
+  - PCI interrupt mapping
+- Driver Matching
+  - `compatible`
+  - fallback compatible strings
+  - board-compatible vs SoC-compatible fallback chains
+  - backward compatibility and when to introduce a new `compatible`
+  - `of_match_table`
+  - platform devices
+  - modalias
+  - binding-driven driver expectations
+  - optional vs required properties
+- Pinctrl, GPIOs, And Interrupts
+  - pinmux
+  - pin configuration
+  - GPIO controllers
+  - GPIO consumers
+  - active-high vs active-low
+  - interrupt controllers
+  - interrupt trigger types
+  - reset GPIOs
+- Clocks, Resets, Regulators, And Power
+  - clock providers
+  - clock consumers
+  - reset controllers
+  - fixed regulators
+  - PMIC regulators
+  - regulator constraints
+  - power domains
+  - wake sources
+  - runtime PM dependencies
+  - operating-points-v2 tables
+  - CPU frequency relationships
+  - thermal zones
+  - cooling devices
+- Common Peripheral Nodes
+  - UART
+  - I2C
+  - SPI
+  - CAN
+  - USB
+  - PCIe
+  - MMC
+  - SD
+  - eMMC
+  - Ethernet MAC
+  - Ethernet PHY
+  - MDIO
+  - fixed-link
+  - LEDs
+  - keys and buttons
+  - watchdogs
+  - RTCs
+  - hardware monitors
+  - NVMEM providers and consumers
+  - MTD devices and fixed partitions
+- Graph Bindings And Complex Data Paths
+  - `ports`
+  - `port`
+  - `endpoint`
+  - local and remote endpoints
+  - display pipelines
+  - camera pipelines
+  - audio routing
+  - graph validation and endpoint consistency
+- Memory, Firmware, And Heterogeneous SoCs
+  - CMA
+  - firmware nodes
+  - IOMMU topology
+  - DMA coherency
+  - DMA address translation
+  - remoteproc
+  - RPMsg
+  - PRU
+  - R5/M4 cores
+  - shared memory
+  - trusted firmware
+  - OP-TEE
+  - secure-world reserved memory
+- U-Boot And Bootloader Device Tree
+  - U-Boot control DTB
+  - SPL DTB
+  - Linux DTB
+  - U-Boot-specific properties
+  - pre-relocation properties
+  - overlays applied by U-Boot
+  - FIT image DTB selection
+  - environment-driven DTB loading
+- Boot-Time Mutation And Ownership
+  - bootloader fixups
+  - firmware fixups
+  - memory-size updates
+  - MAC-address injection
+  - serial-number injection
+  - `/chosen` modifications
+  - overlay application order
+  - DTB relocation and available padding
+  - ownership of each boot-time mutation
+  - built DTB vs bootloader-visible tree vs Linux runtime tree
+  - tracing the exact DTB and overlays selected during boot
+- Binding Design And Stable ABI
+  - describing hardware rather than Linux implementation details
+  - avoiding nodes created only to instantiate drivers
+  - complete hardware descriptions despite incomplete driver support
+  - binding backward compatibility
+  - compatible-string versioning
+  - property naming and standard unit suffixes
+  - standard property reuse
+  - avoiding policy in Device Tree
+  - board and product revision strategies
+  - Devicetree ABI versioning across product revisions
+  - binding review expectations
+  - upstream binding submission workflow
+  - submitting bindings before DTS users
+- Writing And Validating Binding Schemas
+  - YAML bindings
+  - `dt-bindings`
+  - `$id`
+  - `$schema`
+  - `maintainers`
+  - `description`
+  - `select`
+  - `properties`
+  - `patternProperties`
+  - `required`
+  - `$ref`
+  - `allOf`
+  - `oneOf`
+  - conditional schemas
+  - `additionalProperties` vs `unevaluatedProperties`
+  - child-node schemas
+  - property types
+  - array cardinality
+  - binding examples
+  - vendor bindings
+  - `dt_binding_check`
+  - targeted validation with `DT_SCHEMA_FILES`
+  - `dtc` warnings
+  - `dtbs_check`
+  - why invalid schemas can cause `dtbs_check` to skip checks
+  - schema errors
+  - undocumented properties
+- Overlays In Depth
+  - `/plugin/`
+  - fragments and targets
+  - label targets vs path targets
+  - `__symbols__`
+  - `__fixups__`
+  - local fixups
+  - base DTB symbol requirements
+  - compiling overlays with symbols
+  - bootloader-applied vs kernel-applied overlays
+  - overlay stacking and removal dependencies
+  - overlay compatibility across base DTB versions
+  - lifetime hazards when dynamically removing overlay nodes
+  - limitations of overlays as a board-variant mechanism
+- Build And Diagnostic Tools
+  - `dtc`
+  - `fdtdump`
+  - `fdtget`
+  - `fdtput`
+  - `fdtoverlay`
+  - U-Boot `fdt` commands
+  - compiler symbols with `-@`
+  - compiler warning levels
+  - kernel `W=1` and `W=2` Device Tree builds
+  - preprocessing a DTS
+  - tracing a generated DTB to its source and build rule
+  - `libfdt`
+  - firmware and bootloader use of `libfdt`
+- Runtime Inspection
+  - `/proc/device-tree`
+  - `/sys/firmware/devicetree/base`
+  - decoded DTBs with `dtc`
+  - checking deployed DTB identity
+  - `dmesg` probe logs
+  - driver bind/unbind checks
+  - comparing source DTS to runtime tree
+  - inspecting NUL-terminated property values safely
+  - inspecting binary cells and byte arrays
+  - comparing DTB hashes across build, boot media, and target
+  - inspecting the tree from U-Boot before kernel handoff
+- Security And Production Lifecycle
+  - DTB and DTBO integrity
+  - FIT signing and authenticated Device Tree selection
+  - measured boot and Device Tree
+  - malicious or untrusted DTB risks
+  - security impact of bootloader fixups and overlays
+  - coordinating kernel, DTB, modules, and firmware versions
+  - reproducible DTB builds
+  - DTB provenance and release manifests
+  - field update compatibility
+- Board Porting Workflow
+  - start from closest EVM
+  - board delta list
+  - minimal boot DTS
+  - console first
+  - boot media next
+  - regulators and clocks
+  - Ethernet
+  - storage
+  - remoteproc and reserved memory
+  - overlays
+  - board revision and product variant modeling
+  - minimizing board-specific deltas
+  - upstreaming bindings and DTS changes
+  - validation checklist
 
 ## Linux Kernel Programming
 
