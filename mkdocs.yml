@@ -288,7 +288,13 @@ nav:
           - Source And Binary Artifacts: device-tree/foundations/source-and-binary-artifacts.md
           - Tree Anatomy And Vocabulary: device-tree/foundations/tree-anatomy-and-vocabulary.md
           - First Device Tree Lab: device-tree/foundations/first-device-tree-lab.md
-      - Syntax, Values, And Source Composition: device-tree/syntax-values-and-source-composition.md
+      - Syntax, Values, And Source Composition:
+          - Overview: device-tree/syntax-values-and-source-composition.md
+          - DTS Grammar And Value Encodings: device-tree/syntax-values-and-source-composition/dts-grammar-and-value-encodings.md
+          - References, Amendments, And Deletions: device-tree/syntax-values-and-source-composition/references-amendments-and-deletions.md
+          - Includes, Preprocessing, And Macros: device-tree/syntax-values-and-source-composition/includes-preprocessing-and-macros.md
+          - Hardware-Based Layering And Source Style: device-tree/syntax-values-and-source-composition/hardware-based-layering-and-source-style.md
+          - Source Composition Lab: device-tree/syntax-values-and-source-composition/source-composition-lab.md
       - Provider-Consumer Relationships: device-tree/provider-consumer-relationships.md
       - Standard Nodes And Properties: device-tree/standard-nodes-and-properties.md
       - Addressing And Bus Modeling: device-tree/addressing-and-bus-modeling.md

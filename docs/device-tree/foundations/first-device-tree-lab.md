@@ -317,7 +317,7 @@ Kernel DTS files commonly rely on C preprocessing, generated include paths, and 
 ## References And Next Steps
 
 - [Devicetree Specification](https://www.devicetree.org/specifications/)
-- [Device Tree Compiler source and documentation](https://git.kernel.org/pub/scm/utils/dtc/dtc.git/)
+- [Device Tree Compiler source and documentation](https://github.com/dgibson/dtc)
 - [Device Tree Builds](../../build-systems/advanced/linux-kernel/device-tree-builds.md)
 - [Build And Diagnostic Tools](../build-and-diagnostic-tools.md)
 - [Runtime Inspection](../runtime-inspection.md)

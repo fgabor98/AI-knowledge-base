@@ -107,7 +107,7 @@ You are ready for the next module when you can answer all of these without refer
 
 - [Devicetree Specification releases](https://www.devicetree.org/specifications/)
 - [Linux and the Devicetree](https://docs.kernel.org/devicetree/usage-model.html)
-- [Devicetree bindings documentation](https://docs.kernel.org/devicetree/bindings/)
+- [Devicetree bindings documentation](https://docs.kernel.org/devicetree/bindings/index.html)
 - [Linux DTS coding style](https://docs.kernel.org/devicetree/bindings/dts-coding-style.html)
 
 ## Related Topics

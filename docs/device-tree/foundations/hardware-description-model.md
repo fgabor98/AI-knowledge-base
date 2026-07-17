@@ -194,7 +194,7 @@ This does not say “load a serial driver.” It states that a compatible UART e
 - [Devicetree Specification, The Devicetree](https://devicetree-specification.readthedocs.io/en/stable/devicetree-basics.html)
 - [Linux and the Devicetree](https://docs.kernel.org/devicetree/usage-model.html)
 - [Devicetree ABI](https://docs.kernel.org/devicetree/bindings/ABI.html)
-- [Devicetree bindings](https://docs.kernel.org/devicetree/bindings/)
+- [Devicetree bindings](https://docs.kernel.org/devicetree/bindings/index.html)
 
 ## Next Step
 
