@@ -46,6 +46,179 @@ This file owns the taxonomy. Add and reorganize topics here before expanding the
 - linker scripts
 - embedded C constraints
 
+## Algorithms And Data Models
+
+Algorithmic foundations:
+
+- problem statements
+- input and output descriptions
+- preconditions and postconditions
+- invariants
+- edge cases
+- algorithm design vs implementation
+- data model choice
+- abstract data types
+- operations over data
+- representation independence
+- correctness arguments
+- example-driven validation
+
+Control flow and recursion:
+
+- sequence
+- branching
+- iteration
+- loop invariants
+- loop termination
+- recursion fundamentals
+- base cases
+- recursive cases
+- recursive call stack
+- recursion vs iteration
+- divide-and-conquer thinking
+- tail-recursive shape
+
+Complexity and efficiency:
+
+- runtime cost
+- memory cost
+- Big-O notation
+- constant factors
+- best-case, average-case, and worst-case behavior
+- input-size growth
+- time complexity
+- space complexity
+- reducing execution time
+- reducing memory use
+- reducing complexity by changing the algorithm
+- reducing complexity by changing the data model
+
+Basic algorithm schemes:
+
+- summation
+- counting
+- minimum search
+- maximum search
+- existence and decision checks
+- selection
+- filtering
+- accumulation
+- linear search
+- sentinel search
+- ordered linear search
+- binary search
+- recursive binary search
+
+Searching and backtracking:
+
+- search-space modeling
+- exhaustive search
+- guided search
+- constraint checking
+- pruning
+- partial solutions
+- backtracking
+- recursive backtracking
+- iterative backtracking with an explicit stack
+- N-queens style problems
+- failure propagation
+- search order and heuristics
+
+Sorting and ordering:
+
+- why ordering changes algorithms
+- comparison functions
+- stable vs unstable sorting
+- in-place vs out-of-place sorting
+- insertion sort as a learning algorithm
+- selection sort as a learning algorithm
+- bubble sort as a learning algorithm
+- merge-style thinking
+- sorting as preprocessing
+- ordered lookup
+- maintaining sorted data
+- partial ordering and priority
+
+Graph algorithms:
+
+- graph modeling
+- vertices and edges
+- directed and undirected graphs
+- weighted and unweighted graphs
+- adjacency lists
+- adjacency matrices
+- edge lists
+- visited-state tracking
+- depth-first search
+- breadth-first search
+- path reconstruction
+- unweighted shortest paths
+- Dijkstra's algorithm
+- Bellman-Ford algorithm
+
+Tree algorithms:
+
+- tree modeling
+- root, parent, child, leaf, and subtree concepts
+- binary trees
+- tree representation
+- expression trees
+- preorder traversal
+- inorder traversal
+- postorder traversal
+- level-order traversal
+- prefix, infix, and postfix notation
+- postfix conversion
+- stack-based expression evaluation
+
+Parallel and dataflow algorithms:
+
+- data channels
+- pipeline stages
+- input partitioning
+- fan-out and fan-in
+- reductions
+- associative operations
+- parallel minimum and maximum search
+- parallel sorting
+- work distribution
+- synchronization costs
+- ordering constraints
+- result merging
+
+Data structures for algorithms:
+
+- arrays
+- strings and byte buffers
+- structs and records
+- linked lists
+- stacks
+- queues
+- ring buffers
+- hash tables
+- heaps and priority queues
+- trees
+- graphs
+- bitsets and bitmaps
+- intrusive data structures
+- memory pools and fixed-size allocators
+
+Embedded Linux algorithmic constraints:
+
+- bounded memory
+- deterministic behavior
+- recursion policy
+- stack-depth limits
+- cache-aware layout
+- DMA-friendly buffers
+- interrupt-safe queues
+- real-time tradeoffs
+- allocation failure behavior
+- endianness
+- alignment constraints
+- data integrity checks
+- checksums and CRCs
+- watchdog-aware long-running operations
 ## C++ For Systems And Embedded Linux
 
 Beginner:
@@ -216,6 +389,128 @@ Advanced:
 - CLI tools
 - interacting with Linux commands
 
+## Build Systems
+
+- build systems for embedded Linux roadmap
+- Linux kernel build system
+- U-Boot build system
+- Yocto and OpenEmbedded
+- TI Processor SDK Linux
+- direct compiler invocation
+- object files and linking
+- preprocessing, compilation, assembly, and linking pipeline
+- static libraries
+- shared libraries
+- symbol visibility
+- ABI compatibility
+- linker search paths
+- runtime dynamic linker paths
+- RPATH and RUNPATH
+- debug symbols and build IDs
+- Make basics
+- recursive Make
+- non-recursive Make
+- generated dependency files
+- parallel builds
+- CMake basics
+- modern CMake targets
+- CMake presets
+- CMake toolchain files
+- CMake `find_package`
+- CMake imported targets
+- CMake exported targets
+- CMake install rules
+- CPack basics
+- Ninja
+- Meson
+- Autotools
+- Bazel-like hermetic build concepts
+- remote build cache concepts
+- pkg-config
+- target `pkg-config`
+- cross-compilation
+- target triples
+- sysroots
+- staging directories
+- toolchain files
+- toolchain version pinning
+- SDK sysroots
+- generated SDKs
+- kernel module builds
+- Kbuild
+- Kconfig
+- defconfig
+- U-Boot SPL and TPL
+- FIT images
+- dependency tracking
+- source fetching
+- source mirrors
+- dependency vendoring
+- Git submodules
+- patch management
+- quilt patch workflow
+- generated code dependencies
+- host tools in cross-builds
+- code generators
+- reproducible builds
+- hermetic builds
+- deterministic archives
+- timestamp control
+- build path reproducibility
+- offline builds
+- build containers
+- build environment isolation
+- ccache
+- sstate cache
+- download caches
+- artifact caches
+- build performance profiling
+- incremental build correctness
+- CI build checks
+- static analysis integration
+- compiler warnings policy
+- unit test integration
+- cross-test strategy
+- emulator-based tests
+- sanitizer integration
+- coverage integration
+- image size regression checks
+- release artifact generation
+- build provenance
+- release manifests
+- SBOM generation
+- license manifest generation
+- source archive generation
+- debug symbol packages
+- binary package feeds
+- package signing
+- artifact promotion
+- artifact retention
+- Yocto recipes
+- Yocto layers
+- Yocto images
+- BitBake tasks
+- BitBake task signatures
+- BitBake fetchers
+- Yocto SDK generation
+- OpenEmbedded metadata
+- TI Arago layers
+- TI oe-layersetup
+- TI Processor SDK image targets
+- Buildroot packages
+- Buildroot external trees
+- Buildroot rootfs overlays
+- Buildroot post-build scripts
+- Buildroot post-image scripts
+- PTXdist
+- OpenWrt build system
+- vendor BSP build flows
+- root filesystem image tools
+- RAUC
+- SWUpdate
+- Mender
+- OSTree
+
 ## Linux Userspace And System Programming
 
 Beginner:
@@ -263,199 +558,141 @@ Advanced:
 - production logging
 - failure containment
 
-## Linux Kernel Programming
+## Debugging And Diagnostics
 
-- kernel foundations for driver developers
-  - kernel mental model
-  - kernel space vs user space
-  - system calls
-  - processes and tasks
-  - interrupts
-  - drivers as hardware integration
-  - kernel C survival guide
-  - `container_of`
-  - intrusive lists
-  - embedded structs
-  - function pointers
-  - callbacks
-  - `ERR_PTR`
-  - `IS_ERR`
-  - `PTR_ERR`
-  - `goto` cleanup style
-  - kernel C is not userspace C
-  - no libc in kernel code
-  - kernel logging APIs
-  - kernel memory allocation APIs
-  - `__user` pointers
-  - userspace copy helpers
-  - `__iomem` pointers
-  - small kernel stack
-  - no floating point in normal kernel code
-  - UAPI vs internal kernel API
-  - reference ownership preview
-  - `kref`
-  - `refcount_t`
-  - RCU preview
-  - per-CPU variable preview
-  - kernel taint flags
-  - sparse
-  - smatch
-  - Coccinelle
-  - reading kernel source
-  - source navigation with `rg` and `git grep`
-  - call-chain reading
-  - struct-first reading
-  - kernel development lab setup
-  - VM and QEMU labs
-  - spare board labs
-  - serial console
-  - recovery kernel
-  - driver development workflow
-  - debugging ladder
-  - failure taxonomy
-  - execution context primer
-  - device model primer
-  - small lab progression
-  - kernel documentation reading guide for beginners
-- kernel source, build, and tailoring
-  - kernel source acquisition
-  - upstream kernel source
-  - vendor kernel source
-  - source provenance
-  - kernel configuration and tailoring
-  - kernel build and install overview
-  - external module build prerequisites
-  - kernel image, DTB, and module artifacts
-- Linux device driver fundamentals
-  - kernel module lifecycle
-  - built-in drivers vs loadable modules
-  - device tree hardware description
-  - device tree overlays
-  - driver binding, probe, and remove
-  - platform devices and platform drivers
-  - device tree matching from drivers
-  - `of_match_table`
-  - `compatible` strings
-  - resource lookup
-  - `devm_*` managed allocation
-  - character devices
-  - device classes, uevents, and udev
-  - sysfs attributes
-  - kobjects and sysfs groups
-  - pollable sysfs attributes
-  - module parameters
-  - driver logging with `dev_*`
-  - user-space hardware access vs kernel drivers
-- common driver interfaces
-  - GPIO consumer API
-  - GPIO controller drivers
-  - GPIO expanders
-  - legacy GPIO interfaces
-  - interrupt processing model
-  - interrupt domains
-  - interrupt controller drivers
-  - IRQ handling
-  - threaded interrupts
-  - I2C client drivers
-  - SPI device drivers
-  - UART and TTY integration
-  - CAN driver integration
-  - PWM driver overview
-  - regmap
-  - clocks
-  - resets
-  - regulators
-  - pinctrl
-  - DMA basics
-  - IIO subsystem
-  - IIO channels and sysfs
-  - IIO triggers and buffers
-  - input subsystem
-  - polled input devices
-  - IRQ-based input devices
-- kernel execution and concurrency
-  - interrupt context vs process context
-  - sleepable vs atomic code
-  - bottom halves
-  - softirqs
-  - tasklets
-  - locking
-  - atomic operations
-  - workqueues
-  - concurrency managed workqueues
-  - timers
-  - hrtimers
-  - kernel timekeeping
-  - time-related APIs
-  - wait queues
-  - completions
-  - lifetime and reference counting
-- kernel memory and I/O
-  - kernel memory allocation
-  - allocation flags
-  - `kmalloc`
-  - `vmalloc`
-  - virtual memory areas
-  - MMIO
-  - register accessors
-  - userspace copy helpers
-  - `ioctl` ABI basics
-  - DMA mapping basics
-  - single-buffer DMA
-  - scatter-gather DMA
-- kernel configuration and platform policy
-  - debug configs vs production configs
-  - built-in vs module policy
-  - kernel command line policy
-  - watchdog-related options
-  - module signing
-  - kernel hardening options
-  - namespaces and cgroups overview
-  - LSM overview
-  - initramfs-related options
-  - config review workflow
-- kernel debugging basics
-  - `dmesg`
-  - log levels
-  - dynamic debug
-  - ftrace
-  - tracepoints
-  - perf overview
-  - debugfs
-  - sysfs inspection
-  - KGDB basics
-  - oops, panic, and crash logs
-  - watchdog reset diagnosis
-  - probe failure debugging
-- power management
-  - runtime PM
-  - suspend and resume
-  - wake sources
-  - cpuidle and cpufreq
-  - power domains
-  - regulator constraints
-  - clock gating
-  - device tree power dependencies
-  - suspend and resume debugging
-- remoteproc, RPMsg, and heterogeneous SoCs
-  - remoteproc framework
-  - firmware loading
-  - reserved memory
-  - virtio and RPMsg
-  - PRU integration overview
-  - R5 and M4 firmware lifecycle
-  - remote core logs
-  - crash handling
-  - device tree nodes for remote cores
-- kernel build mechanics are tracked under Build Systems
-  - Linux kernel build system
-  - Kbuild
-  - Kconfig
-  - defconfig
-  - menuconfig
-  - out-of-tree builds with `O=`
-  - external modules with `M=`
-  - kernel image outputs
+Beginner:
+
+- failure classification
+- reproducing failures
+- reducing failures
+- first-failure evidence
+- compiler diagnostics
+- logging strategy
+- terminal and command-line evidence
+- GDB basics
+- core dumps
+- `strace`
+- serial console workflow
+- lab notes
+
+Intermediate:
+
+- binary search and bisecting
+- hypothesis-driven debugging
+- timeout and hang classification
+- race-condition workflow
+- `ltrace`
+- `perf`
+- ftrace overview
+- dynamic debug overview
+- `tcpdump`
+- logic analyzer workflow
+- hardware-in-the-loop testing
+- boot log parsing
+
+Advanced:
+
+- crash dump workflow
+- persistent logs
+- support bundle design
+- production diagnostics
+- automated flashing tests
+- board farm workflow
+- field failure triage
+- postmortems
+- observability requirements
+- remote diagnostics
+- reproducer automation
+- debug-data privacy and security
+
+## Networking
+
+- Ethernet basics
+- IPv4
+- IPv6
+- routing
+- DNS
+- DHCP
+- sockets
+- TCP
+- UDP
+- netlink basics
+- Linux network interfaces
+- firewall basics
+- tcpdump and packet inspection
+- embedded network bring-up
+- MAC vs PHY
+- MDIO
+- PHY addresses
+- link negotiation
+- RGMII/RMII interface modes
+- PHY reset GPIOs
+- PHY interrupt lines
+- fixed-link
+- device tree networking nodes
+- U-Boot Ethernet vs Linux Ethernet
+- static IP
+- routes
+- systemd-networkd
+- NetworkManager tradeoffs
+- interface naming
+- ethtool
+- ARP checks
+- link-state checks
+- VLANs
+- bridges
+- nftables overview
+- NTP
+- PTP overview
+- service discovery overview
+
+## Systems And Embedded Architecture
+
+Foundations:
+
+- CPU architecture
+- memory hierarchy
+- caches
+- MMU and virtual memory
+- interrupts
+- DMA
+- buses
+- clocks, resets, regulators, and power rails
+- boot chain
+- firmware, kernel, and userspace responsibility split
+- latency, throughput, and jitter
+- observability and diagnostics
+
+Embedded Linux architecture:
+
+- bootloader-to-kernel handoff
+- Device Tree as the hardware contract
+- kernel driver vs userspace service decisions
+- service architecture
+- IPC architecture
+- logging and persistent evidence
+- read-only root filesystem architecture
+- persistent state architecture
+- update and rollback architecture
+- recovery and rescue architecture
+- watchdog strategy
+- hardware and software partitioning
+
+Advanced system design:
+
+- real-time constraints
+- fault containment
+- safety failure modes
+- secure boot and trust boundaries
+- heterogeneous SoC partitioning
+- remote firmware partitioning
+- power management architecture
+- networked device architecture
+- manufacturing and provisioning architecture
+- field diagnostics and support bundles
+- compatibility contracts
+- release architecture
+- tradeoff analysis
 
 ## Embedded Linux
 
@@ -681,263 +918,199 @@ Advanced:
 - runtime DTB identity checks
 - board porting DT workflow
 
-## Debugging And Diagnostics
+## Linux Kernel Programming
 
-Beginner:
-
-- failure classification
-- reproducing failures
-- reducing failures
-- first-failure evidence
-- compiler diagnostics
-- logging strategy
-- terminal and command-line evidence
-- GDB basics
-- core dumps
-- `strace`
-- serial console workflow
-- lab notes
-
-Intermediate:
-
-- binary search and bisecting
-- hypothesis-driven debugging
-- timeout and hang classification
-- race-condition workflow
-- `ltrace`
-- `perf`
-- ftrace overview
-- dynamic debug overview
-- `tcpdump`
-- logic analyzer workflow
-- hardware-in-the-loop testing
-- boot log parsing
-
-Advanced:
-
-- crash dump workflow
-- persistent logs
-- support bundle design
-- production diagnostics
-- automated flashing tests
-- board farm workflow
-- field failure triage
-- postmortems
-- observability requirements
-- remote diagnostics
-- reproducer automation
-- debug-data privacy and security
-
-## Networking
-
-- Ethernet basics
-- IPv4
-- IPv6
-- routing
-- DNS
-- DHCP
-- sockets
-- TCP
-- UDP
-- netlink basics
-- Linux network interfaces
-- firewall basics
-- tcpdump and packet inspection
-- embedded network bring-up
-- MAC vs PHY
-- MDIO
-- PHY addresses
-- link negotiation
-- RGMII/RMII interface modes
-- PHY reset GPIOs
-- PHY interrupt lines
-- fixed-link
-- device tree networking nodes
-- U-Boot Ethernet vs Linux Ethernet
-- static IP
-- routes
-- systemd-networkd
-- NetworkManager tradeoffs
-- interface naming
-- ethtool
-- ARP checks
-- link-state checks
-- VLANs
-- bridges
-- nftables overview
-- NTP
-- PTP overview
-- service discovery overview
-
-## Build Systems
-
-- build systems for embedded Linux roadmap
-- Linux kernel build system
-- U-Boot build system
-- Yocto and OpenEmbedded
-- TI Processor SDK Linux
-- direct compiler invocation
-- object files and linking
-- preprocessing, compilation, assembly, and linking pipeline
-- static libraries
-- shared libraries
-- symbol visibility
-- ABI compatibility
-- linker search paths
-- runtime dynamic linker paths
-- RPATH and RUNPATH
-- debug symbols and build IDs
-- Make basics
-- recursive Make
-- non-recursive Make
-- generated dependency files
-- parallel builds
-- CMake basics
-- modern CMake targets
-- CMake presets
-- CMake toolchain files
-- CMake `find_package`
-- CMake imported targets
-- CMake exported targets
-- CMake install rules
-- CPack basics
-- Ninja
-- Meson
-- Autotools
-- Bazel-like hermetic build concepts
-- remote build cache concepts
-- pkg-config
-- target `pkg-config`
-- cross-compilation
-- target triples
-- sysroots
-- staging directories
-- toolchain files
-- toolchain version pinning
-- SDK sysroots
-- generated SDKs
-- kernel module builds
-- Kbuild
-- Kconfig
-- defconfig
-- U-Boot SPL and TPL
-- FIT images
-- dependency tracking
-- source fetching
-- source mirrors
-- dependency vendoring
-- Git submodules
-- patch management
-- quilt patch workflow
-- generated code dependencies
-- host tools in cross-builds
-- code generators
-- reproducible builds
-- hermetic builds
-- deterministic archives
-- timestamp control
-- build path reproducibility
-- offline builds
-- build containers
-- build environment isolation
-- ccache
-- sstate cache
-- download caches
-- artifact caches
-- build performance profiling
-- incremental build correctness
-- CI build checks
-- static analysis integration
-- compiler warnings policy
-- unit test integration
-- cross-test strategy
-- emulator-based tests
-- sanitizer integration
-- coverage integration
-- image size regression checks
-- release artifact generation
-- build provenance
-- release manifests
-- SBOM generation
-- license manifest generation
-- source archive generation
-- debug symbol packages
-- binary package feeds
-- package signing
-- artifact promotion
-- artifact retention
-- Yocto recipes
-- Yocto layers
-- Yocto images
-- BitBake tasks
-- BitBake task signatures
-- BitBake fetchers
-- Yocto SDK generation
-- OpenEmbedded metadata
-- TI Arago layers
-- TI oe-layersetup
-- TI Processor SDK image targets
-- Buildroot packages
-- Buildroot external trees
-- Buildroot rootfs overlays
-- Buildroot post-build scripts
-- Buildroot post-image scripts
-- PTXdist
-- OpenWrt build system
-- vendor BSP build flows
-- root filesystem image tools
-- RAUC
-- SWUpdate
-- Mender
-- OSTree
-
-## Systems And Embedded Architecture
-
-Foundations:
-
-- CPU architecture
-- memory hierarchy
-- caches
-- MMU and virtual memory
-- interrupts
-- DMA
-- buses
-- clocks, resets, regulators, and power rails
-- boot chain
-- firmware, kernel, and userspace responsibility split
-- latency, throughput, and jitter
-- observability and diagnostics
-
-Embedded Linux architecture:
-
-- bootloader-to-kernel handoff
-- Device Tree as the hardware contract
-- kernel driver vs userspace service decisions
-- service architecture
-- IPC architecture
-- logging and persistent evidence
-- read-only root filesystem architecture
-- persistent state architecture
-- update and rollback architecture
-- recovery and rescue architecture
-- watchdog strategy
-- hardware and software partitioning
-
-Advanced system design:
-
-- real-time constraints
-- fault containment
-- safety failure modes
-- secure boot and trust boundaries
-- heterogeneous SoC partitioning
-- remote firmware partitioning
-- power management architecture
-- networked device architecture
-- manufacturing and provisioning architecture
-- field diagnostics and support bundles
-- compatibility contracts
-- release architecture
-- tradeoff analysis
+- kernel foundations for driver developers
+  - kernel mental model
+  - kernel space vs user space
+  - system calls
+  - processes and tasks
+  - interrupts
+  - drivers as hardware integration
+  - kernel C survival guide
+  - `container_of`
+  - intrusive lists
+  - embedded structs
+  - function pointers
+  - callbacks
+  - `ERR_PTR`
+  - `IS_ERR`
+  - `PTR_ERR`
+  - `goto` cleanup style
+  - kernel C is not userspace C
+  - no libc in kernel code
+  - kernel logging APIs
+  - kernel memory allocation APIs
+  - `__user` pointers
+  - userspace copy helpers
+  - `__iomem` pointers
+  - small kernel stack
+  - no floating point in normal kernel code
+  - UAPI vs internal kernel API
+  - reference ownership preview
+  - `kref`
+  - `refcount_t`
+  - RCU preview
+  - per-CPU variable preview
+  - kernel taint flags
+  - sparse
+  - smatch
+  - Coccinelle
+  - reading kernel source
+  - source navigation with `rg` and `git grep`
+  - call-chain reading
+  - struct-first reading
+  - kernel development lab setup
+  - VM and QEMU labs
+  - spare board labs
+  - serial console
+  - recovery kernel
+  - driver development workflow
+  - debugging ladder
+  - failure taxonomy
+  - execution context primer
+  - device model primer
+  - small lab progression
+  - kernel documentation reading guide for beginners
+- kernel source, build, and tailoring
+  - kernel source acquisition
+  - upstream kernel source
+  - vendor kernel source
+  - source provenance
+  - kernel configuration and tailoring
+  - kernel build and install overview
+  - external module build prerequisites
+  - kernel image, DTB, and module artifacts
+- Linux device driver fundamentals
+  - kernel module lifecycle
+  - built-in drivers vs loadable modules
+  - device tree hardware description
+  - device tree overlays
+  - driver binding, probe, and remove
+  - platform devices and platform drivers
+  - device tree matching from drivers
+  - `of_match_table`
+  - `compatible` strings
+  - resource lookup
+  - `devm_*` managed allocation
+  - character devices
+  - device classes, uevents, and udev
+  - sysfs attributes
+  - kobjects and sysfs groups
+  - pollable sysfs attributes
+  - module parameters
+  - driver logging with `dev_*`
+  - user-space hardware access vs kernel drivers
+- common driver interfaces
+  - GPIO consumer API
+  - GPIO controller drivers
+  - GPIO expanders
+  - legacy GPIO interfaces
+  - interrupt processing model
+  - interrupt domains
+  - interrupt controller drivers
+  - IRQ handling
+  - threaded interrupts
+  - I2C client drivers
+  - SPI device drivers
+  - UART and TTY integration
+  - CAN driver integration
+  - PWM driver overview
+  - regmap
+  - clocks
+  - resets
+  - regulators
+  - pinctrl
+  - DMA basics
+  - IIO subsystem
+  - IIO channels and sysfs
+  - IIO triggers and buffers
+  - input subsystem
+  - polled input devices
+  - IRQ-based input devices
+- kernel execution and concurrency
+  - interrupt context vs process context
+  - sleepable vs atomic code
+  - bottom halves
+  - softirqs
+  - tasklets
+  - locking
+  - atomic operations
+  - workqueues
+  - concurrency managed workqueues
+  - timers
+  - hrtimers
+  - kernel timekeeping
+  - time-related APIs
+  - wait queues
+  - completions
+  - lifetime and reference counting
+- kernel memory and I/O
+  - kernel memory allocation
+  - allocation flags
+  - `kmalloc`
+  - `vmalloc`
+  - virtual memory areas
+  - MMIO
+  - register accessors
+  - userspace copy helpers
+  - `ioctl` ABI basics
+  - DMA mapping basics
+  - single-buffer DMA
+  - scatter-gather DMA
+- kernel configuration and platform policy
+  - debug configs vs production configs
+  - built-in vs module policy
+  - kernel command line policy
+  - watchdog-related options
+  - module signing
+  - kernel hardening options
+  - namespaces and cgroups overview
+  - LSM overview
+  - initramfs-related options
+  - config review workflow
+- kernel debugging basics
+  - `dmesg`
+  - log levels
+  - dynamic debug
+  - ftrace
+  - tracepoints
+  - perf overview
+  - debugfs
+  - sysfs inspection
+  - KGDB basics
+  - oops, panic, and crash logs
+  - watchdog reset diagnosis
+  - probe failure debugging
+- power management
+  - runtime PM
+  - suspend and resume
+  - wake sources
+  - cpuidle and cpufreq
+  - power domains
+  - regulator constraints
+  - clock gating
+  - device tree power dependencies
+  - suspend and resume debugging
+- remoteproc, RPMsg, and heterogeneous SoCs
+  - remoteproc framework
+  - firmware loading
+  - reserved memory
+  - virtio and RPMsg
+  - PRU integration overview
+  - R5 and M4 firmware lifecycle
+  - remote core logs
+  - crash handling
+  - device tree nodes for remote cores
+- kernel build mechanics are tracked under Build Systems
+  - Linux kernel build system
+  - Kbuild
+  - Kconfig
+  - defconfig
+  - menuconfig
+  - out-of-tree builds with `O=`
+  - external modules with `M=`
+  - kernel image outputs
 
 ## Embedded Productization
 
@@ -1018,177 +1191,3 @@ Advanced system design:
 - EEPROM programming
 - fixture-driven tests
 - separation of manufacturing and production images
-
-## Algorithms And Data Models
-
-Algorithmic foundations:
-
-- problem statements
-- input and output descriptions
-- preconditions and postconditions
-- invariants
-- edge cases
-- algorithm design vs implementation
-- data model choice
-- abstract data types
-- operations over data
-- representation independence
-- correctness arguments
-- example-driven validation
-
-Control flow and recursion:
-
-- sequence
-- branching
-- iteration
-- loop invariants
-- loop termination
-- recursion fundamentals
-- base cases
-- recursive cases
-- recursive call stack
-- recursion vs iteration
-- divide-and-conquer thinking
-- tail-recursive shape
-
-Complexity and efficiency:
-
-- runtime cost
-- memory cost
-- Big-O notation
-- constant factors
-- best-case, average-case, and worst-case behavior
-- input-size growth
-- time complexity
-- space complexity
-- reducing execution time
-- reducing memory use
-- reducing complexity by changing the algorithm
-- reducing complexity by changing the data model
-
-Basic algorithm schemes:
-
-- summation
-- counting
-- minimum search
-- maximum search
-- existence and decision checks
-- selection
-- filtering
-- accumulation
-- linear search
-- sentinel search
-- ordered linear search
-- binary search
-- recursive binary search
-
-Searching and backtracking:
-
-- search-space modeling
-- exhaustive search
-- guided search
-- constraint checking
-- pruning
-- partial solutions
-- backtracking
-- recursive backtracking
-- iterative backtracking with an explicit stack
-- N-queens style problems
-- failure propagation
-- search order and heuristics
-
-Sorting and ordering:
-
-- why ordering changes algorithms
-- comparison functions
-- stable vs unstable sorting
-- in-place vs out-of-place sorting
-- insertion sort as a learning algorithm
-- selection sort as a learning algorithm
-- bubble sort as a learning algorithm
-- merge-style thinking
-- sorting as preprocessing
-- ordered lookup
-- maintaining sorted data
-- partial ordering and priority
-
-Graph algorithms:
-
-- graph modeling
-- vertices and edges
-- directed and undirected graphs
-- weighted and unweighted graphs
-- adjacency lists
-- adjacency matrices
-- edge lists
-- visited-state tracking
-- depth-first search
-- breadth-first search
-- path reconstruction
-- unweighted shortest paths
-- Dijkstra's algorithm
-- Bellman-Ford algorithm
-
-Tree algorithms:
-
-- tree modeling
-- root, parent, child, leaf, and subtree concepts
-- binary trees
-- tree representation
-- expression trees
-- preorder traversal
-- inorder traversal
-- postorder traversal
-- level-order traversal
-- prefix, infix, and postfix notation
-- postfix conversion
-- stack-based expression evaluation
-
-Parallel and dataflow algorithms:
-
-- data channels
-- pipeline stages
-- input partitioning
-- fan-out and fan-in
-- reductions
-- associative operations
-- parallel minimum and maximum search
-- parallel sorting
-- work distribution
-- synchronization costs
-- ordering constraints
-- result merging
-
-Data structures for algorithms:
-
-- arrays
-- strings and byte buffers
-- structs and records
-- linked lists
-- stacks
-- queues
-- ring buffers
-- hash tables
-- heaps and priority queues
-- trees
-- graphs
-- bitsets and bitmaps
-- intrusive data structures
-- memory pools and fixed-size allocators
-
-Embedded Linux algorithmic constraints:
-
-- bounded memory
-- deterministic behavior
-- recursion policy
-- stack-depth limits
-- cache-aware layout
-- DMA-friendly buffers
-- interrupt-safe queues
-- real-time tradeoffs
-- allocation failure behavior
-- endianness
-- alignment constraints
-- data integrity checks
-- checksums and CRCs
-- watchdog-aware long-running operations
