@@ -42,17 +42,68 @@ nav:
       - cpp/index.md
   - Algorithms And Data Models:
       - Overview: algorithms-and-data-structures/index.md
-      - Algorithmic Foundations: algorithms-and-data-structures/algorithmic-foundations.md
-      - Control Flow And Recursion: algorithms-and-data-structures/control-flow-and-recursion.md
-      - Complexity And Efficiency: algorithms-and-data-structures/complexity-and-efficiency.md
-      - Basic Algorithm Schemes: algorithms-and-data-structures/basic-algorithm-schemes.md
-      - Searching And Backtracking: algorithms-and-data-structures/searching-and-backtracking.md
-      - Sorting And Ordering: algorithms-and-data-structures/sorting-and-ordering.md
-      - Graph Algorithms: algorithms-and-data-structures/graph-algorithms.md
-      - Tree Algorithms: algorithms-and-data-structures/tree-algorithms.md
-      - Parallel And Dataflow Algorithms: algorithms-and-data-structures/parallel-and-dataflow-algorithms.md
-      - Data Structures For Algorithms: algorithms-and-data-structures/data-structures-for-algorithms.md
-      - Embedded Linux Algorithmic Constraints: algorithms-and-data-structures/embedded-linux-algorithmic-constraints.md
+      - Algorithmic Foundations:
+          - Algorithmic Foundations: algorithms-and-data-structures/algorithmic-foundations/index.md
+          - Problem Modeling: algorithms-and-data-structures/algorithmic-foundations/problem-modeling.md
+          - Invariants And Correctness: algorithms-and-data-structures/algorithmic-foundations/invariants-and-correctness.md
+          - Data Modeling And Abstract Data Types: algorithms-and-data-structures/algorithmic-foundations/data-modeling-and-abstract-data-types.md
+      - Control Flow And Recursion:
+          - Control Flow And Recursion: algorithms-and-data-structures/control-flow-and-recursion/index.md
+          - Loop Invariants And Termination: algorithms-and-data-structures/control-flow-and-recursion/loop-invariants-and-termination.md
+          - Recursion Fundamentals: algorithms-and-data-structures/control-flow-and-recursion/recursion-fundamentals.md
+          - Divide And Conquer: algorithms-and-data-structures/control-flow-and-recursion/divide-and-conquer.md
+      - Complexity And Efficiency:
+          - Complexity And Efficiency: algorithms-and-data-structures/complexity-and-efficiency/index.md
+          - Big-O And Growth: algorithms-and-data-structures/complexity-and-efficiency/big-o-and-growth.md
+          - Time And Space Complexity: algorithms-and-data-structures/complexity-and-efficiency/time-and-space-complexity.md
+          - Constant Factors And Cache Effects: algorithms-and-data-structures/complexity-and-efficiency/constant-factors-and-cache-effects.md
+      - Basic Algorithm Schemes:
+          - Basic Algorithm Schemes: algorithms-and-data-structures/basic-algorithm-schemes/index.md
+          - Linear Scan Patterns: algorithms-and-data-structures/basic-algorithm-schemes/linear-scan-patterns.md
+          - Binary Search: algorithms-and-data-structures/basic-algorithm-schemes/binary-search.md
+      - Searching And Backtracking:
+          - Searching And Backtracking: algorithms-and-data-structures/searching-and-backtracking/index.md
+          - Search-Space Modeling: algorithms-and-data-structures/searching-and-backtracking/search-space-modeling.md
+          - Backtracking: algorithms-and-data-structures/searching-and-backtracking/backtracking.md
+          - Pruning And Search Heuristics: algorithms-and-data-structures/searching-and-backtracking/pruning-and-search-heuristics.md
+      - Sorting And Ordering:
+          - Sorting And Ordering: algorithms-and-data-structures/sorting-and-ordering/index.md
+          - Sorting Fundamentals: algorithms-and-data-structures/sorting-and-ordering/sorting-fundamentals.md
+          - Maintaining Sorted Data: algorithms-and-data-structures/sorting-and-ordering/maintaining-sorted-data.md
+          - Priority And Partial Ordering: algorithms-and-data-structures/sorting-and-ordering/priority-and-partial-ordering.md
+      - Graph Algorithms:
+          - Graph Algorithms: algorithms-and-data-structures/graph-algorithms/index.md
+          - Graph Representations: algorithms-and-data-structures/graph-algorithms/graph-representations.md
+          - Depth-First Search: algorithms-and-data-structures/graph-algorithms/depth-first-search.md
+          - Breadth-First Search: algorithms-and-data-structures/graph-algorithms/breadth-first-search.md
+          - Shortest Path Algorithms: algorithms-and-data-structures/graph-algorithms/shortest-path-algorithms.md
+      - Tree Algorithms:
+          - Tree Algorithms: algorithms-and-data-structures/tree-algorithms/index.md
+          - Tree Representations: algorithms-and-data-structures/tree-algorithms/tree-representations.md
+          - Tree Traversals: algorithms-and-data-structures/tree-algorithms/tree-traversals.md
+          - Expression Trees And Stack Evaluation: algorithms-and-data-structures/tree-algorithms/expression-trees-and-stack-evaluation.md
+      - Parallel And Dataflow Algorithms:
+          - Parallel And Dataflow Algorithms: algorithms-and-data-structures/parallel-and-dataflow-algorithms/index.md
+          - Pipeline And Dataflow Algorithms: algorithms-and-data-structures/parallel-and-dataflow-algorithms/pipeline-and-dataflow-algorithms.md
+          - Partitioning Reductions And Fan-In: algorithms-and-data-structures/parallel-and-dataflow-algorithms/partitioning-reductions-and-fan-in.md
+          - Synchronization Costs And Result Merging: algorithms-and-data-structures/parallel-and-dataflow-algorithms/synchronization-costs-and-result-merging.md
+      - Data Structures For Algorithms:
+          - Data Structures For Algorithms: algorithms-and-data-structures/data-structures-for-algorithms/index.md
+          - Arrays Buffers And Records: algorithms-and-data-structures/data-structures-for-algorithms/arrays-buffers-and-records.md
+          - Linked Lists Stacks And Queues: algorithms-and-data-structures/data-structures-for-algorithms/linked-lists-stacks-and-queues.md
+          - Ring Buffers: algorithms-and-data-structures/data-structures-for-algorithms/ring-buffers.md
+          - Hash Tables: algorithms-and-data-structures/data-structures-for-algorithms/hash-tables.md
+          - Heaps And Priority Queues: algorithms-and-data-structures/data-structures-for-algorithms/heaps-and-priority-queues.md
+          - Bitsets And Bitmaps: algorithms-and-data-structures/data-structures-for-algorithms/bitsets-and-bitmaps.md
+          - Intrusive Data Structures: algorithms-and-data-structures/data-structures-for-algorithms/intrusive-data-structures.md
+          - Memory Pools And Fixed-Size Allocators: algorithms-and-data-structures/data-structures-for-algorithms/memory-pools-and-fixed-size-allocators.md
+      - Embedded Linux Algorithmic Constraints:
+          - Embedded Linux Algorithmic Constraints: algorithms-and-data-structures/embedded-linux-algorithmic-constraints/index.md
+          - Bounded Memory And Allocation Failure: algorithms-and-data-structures/embedded-linux-algorithmic-constraints/bounded-memory-and-allocation-failure.md
+          - Deterministic Runtime And Real-Time Tradeoffs: algorithms-and-data-structures/embedded-linux-algorithmic-constraints/deterministic-runtime-and-real-time-tradeoffs.md
+          - Recursion And Stack-Depth Policy: algorithms-and-data-structures/embedded-linux-algorithmic-constraints/recursion-and-stack-depth-policy.md
+          - Cache-Aware And DMA-Friendly Layouts: algorithms-and-data-structures/embedded-linux-algorithmic-constraints/cache-aware-and-dma-friendly-layouts.md
+          - Interrupt-Safe Queues And Buffers: algorithms-and-data-structures/embedded-linux-algorithmic-constraints/interrupt-safe-queues-and-buffers.md
   - Bash:
       - Overview: bash/index.md
       - Beginner:

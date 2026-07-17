@@ -25,6 +25,17 @@ Roadmap for hierarchical data and tree traversals.
 - postfix conversion
 - stack-based expression evaluation
 
+## Scaffold Pages
+
+- [Tree Representations](tree-representations.md)
+- [Tree Traversals](tree-traversals.md)
+- [Expression Trees And Stack Evaluation](expression-trees-and-stack-evaluation.md)
+
+## Programming Examples
+
+- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
+- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+
 ## Embedded And Systems Angle
 
 - replace recursive traversal with explicit stacks when depth is unbounded
@@ -34,6 +45,6 @@ Roadmap for hierarchical data and tree traversals.
 
 ## Related Topics
 
-- [Control Flow And Recursion](control-flow-and-recursion.md)
-- [Data Structures For Algorithms](data-structures-for-algorithms.md)
-- [Sorting And Ordering](sorting-and-ordering.md)
+- [Control Flow And Recursion](../control-flow-and-recursion/index.md)
+- [Data Structures For Algorithms](../data-structures-for-algorithms/index.md)
+- [Sorting And Ordering](../sorting-and-ordering/index.md)
