@@ -295,7 +295,13 @@ nav:
           - Includes, Preprocessing, And Macros: device-tree/syntax-values-and-source-composition/includes-preprocessing-and-macros.md
           - Hardware-Based Layering And Source Style: device-tree/syntax-values-and-source-composition/hardware-based-layering-and-source-style.md
           - Source Composition Lab: device-tree/syntax-values-and-source-composition/source-composition-lab.md
-      - Provider-Consumer Relationships: device-tree/provider-consumer-relationships.md
+      - Provider-Consumer Relationships:
+          - Overview: device-tree/provider-consumer-relationships.md
+          - Specifier Decoding And Resource Names: device-tree/provider-consumer-relationships/specifier-decoding-and-resource-names.md
+          - Clocks, Resets, And Power Domains: device-tree/provider-consumer-relationships/clocks-resets-and-power-domains.md
+          - GPIO And Interrupt Relationships: device-tree/provider-consumer-relationships/gpio-and-interrupt-relationships.md
+          - DMA, IOMMU, PHY, And Regulator Dependencies: device-tree/provider-consumer-relationships/dma-iommu-phy-and-regulator-dependencies.md
+          - Provider-Consumer Tracing Lab: device-tree/provider-consumer-relationships/provider-consumer-tracing-lab.md
       - Standard Nodes And Properties: device-tree/standard-nodes-and-properties.md
       - Addressing And Bus Modeling: device-tree/addressing-and-bus-modeling.md
       - Driver Matching: device-tree/driver-matching.md
