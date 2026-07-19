@@ -328,8 +328,25 @@ nav:
           - Modaliases, Module Metadata, And Autoloading: device-tree/driver-matching/modaliases-module-metadata-and-autoloading.md
           - Binding-Driven Probe Contracts: device-tree/driver-matching/binding-driven-probe-contracts.md
           - Driver Matching And Probe Diagnosis Lab: device-tree/driver-matching/driver-matching-and-probe-diagnosis-lab.md
-      - Pinctrl, GPIOs, And Interrupts: device-tree/pinctrl-gpios-and-interrupts.md
-      - Clocks, Resets, Regulators, And Power: device-tree/clocks-resets-regulators-and-power.md
+      - Pinctrl, GPIOs, And Interrupts:
+          - Overview: device-tree/pinctrl-gpios-and-interrupts.md
+          - Pinmux, Pin Configuration, And States: device-tree/pinctrl-gpios-and-interrupts/pinmux-pin-configuration-and-states.md
+          - GPIO Controllers, Ranges, Line Names, And Hogs: device-tree/pinctrl-gpios-and-interrupts/gpio-controllers-ranges-line-names-and-hogs.md
+          - GPIO Consumers, Polarity, And Reset Sequencing: device-tree/pinctrl-gpios-and-interrupts/gpio-consumers-polarity-and-reset-sequencing.md
+          - Interrupt Controllers, Specifiers, And Trigger Types: device-tree/pinctrl-gpios-and-interrupts/interrupt-controllers-specifiers-and-trigger-types.md
+          - GPIO Interrupts, Cascades, And Shared Lines: device-tree/pinctrl-gpios-and-interrupts/gpio-interrupts-cascades-and-shared-lines.md
+          - Sleep States, Wakeup, And Ownership: device-tree/pinctrl-gpios-and-interrupts/sleep-states-wakeup-and-ownership.md
+          - Pin, GPIO, And Interrupt Bring-Up Lab: device-tree/pinctrl-gpios-and-interrupts/pin-gpio-and-interrupt-bring-up-lab.md
+      - Clocks, Resets, Regulators, And Power:
+          - Overview: device-tree/clocks-resets-regulators-and-power.md
+          - Clock Trees, Consumers, And Assignments: device-tree/clocks-resets-regulators-and-power/clock-trees-consumers-and-assignments.md
+          - Reset Controllers And Safe Sequencing: device-tree/clocks-resets-regulators-and-power/reset-controllers-and-safe-sequencing.md
+          - Regulators, Supplies, And Board Constraints: device-tree/clocks-resets-regulators-and-power/regulators-supplies-and-board-constraints.md
+          - Power Domains, Runtime PM, And Device Links: device-tree/clocks-resets-regulators-and-power/power-domains-runtime-pm-and-device-links.md
+          - Operating Points, DVFS, And Performance States: device-tree/clocks-resets-regulators-and-power/operating-points-dvfs-and-performance-states.md
+          - Thermal Zones, Trips, And Cooling Maps: device-tree/clocks-resets-regulators-and-power/thermal-zones-trips-and-cooling-maps.md
+          - Power Lifecycle, Ordering, And Diagnosis: device-tree/clocks-resets-regulators-and-power/power-lifecycle-ordering-and-diagnosis.md
+          - Integrated Power Bring-Up Lab: device-tree/clocks-resets-regulators-and-power/integrated-power-bring-up-lab.md
       - Common Peripheral Nodes: device-tree/common-peripheral-nodes.md
       - Graph Bindings And Complex Data Paths: device-tree/graph-bindings-and-complex-data-paths.md
       - Memory, Firmware, And Heterogeneous SoCs: device-tree/memory-firmware-and-heterogeneous-socs.md
