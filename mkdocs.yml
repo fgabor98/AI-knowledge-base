@@ -302,7 +302,14 @@ nav:
           - GPIO And Interrupt Relationships: device-tree/provider-consumer-relationships/gpio-and-interrupt-relationships.md
           - DMA, IOMMU, PHY, And Regulator Dependencies: device-tree/provider-consumer-relationships/dma-iommu-phy-and-regulator-dependencies.md
           - Provider-Consumer Tracing Lab: device-tree/provider-consumer-relationships/provider-consumer-tracing-lab.md
-      - Standard Nodes And Properties: device-tree/standard-nodes-and-properties.md
+      - Standard Nodes And Properties:
+          - Overview: device-tree/standard-nodes-and-properties.md
+          - Root Identity, Availability, And Aliases: device-tree/standard-nodes-and-properties/root-identity-availability-and-aliases.md
+          - CPUs, Topology, And Memory: device-tree/standard-nodes-and-properties/cpus-topology-and-memory.md
+          - Chosen And Boot Handoff: device-tree/standard-nodes-and-properties/chosen-and-boot-handoff.md
+          - Reserved Memory: device-tree/standard-nodes-and-properties/reserved-memory.md
+          - Cross-Cutting Standard Relationships: device-tree/standard-nodes-and-properties/cross-cutting-standard-relationships.md
+          - Standard Platform Tree Lab: device-tree/standard-nodes-and-properties/standard-platform-tree-lab.md
       - Addressing And Bus Modeling: device-tree/addressing-and-bus-modeling.md
       - Driver Matching: device-tree/driver-matching.md
       - Pinctrl, GPIOs, And Interrupts: device-tree/pinctrl-gpios-and-interrupts.md
