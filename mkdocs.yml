@@ -310,7 +310,15 @@ nav:
           - Reserved Memory: device-tree/standard-nodes-and-properties/reserved-memory.md
           - Cross-Cutting Standard Relationships: device-tree/standard-nodes-and-properties/cross-cutting-standard-relationships.md
           - Standard Platform Tree Lab: device-tree/standard-nodes-and-properties/standard-platform-tree-lab.md
-      - Addressing And Bus Modeling: device-tree/addressing-and-bus-modeling.md
+      - Addressing And Bus Modeling:
+          - Overview: device-tree/addressing-and-bus-modeling.md
+          - Cell Counts, reg, And Unit Addresses: device-tree/addressing-and-bus-modeling/cell-counts-reg-and-unit-addresses.md
+          - simple-bus, ranges, And Nested Translation: device-tree/addressing-and-bus-modeling/simple-bus-ranges-and-nested-translation.md
+          - DMA Address Spaces And dma-ranges: device-tree/addressing-and-bus-modeling/dma-address-spaces-and-dma-ranges.md
+          - Interrupt Parents, Specifiers, And Routing: device-tree/addressing-and-bus-modeling/interrupt-parents-specifiers-and-routing.md
+          - Bus-Specific Child Addressing: device-tree/addressing-and-bus-modeling/bus-specific-child-addressing.md
+          - PCI Host Bridges, Address Windows, And Interrupts: device-tree/addressing-and-bus-modeling/pci-host-bridges-address-windows-and-interrupts.md
+          - Address Translation And Bus Modeling Lab: device-tree/addressing-and-bus-modeling/address-translation-and-bus-modeling-lab.md
       - Driver Matching: device-tree/driver-matching.md
       - Pinctrl, GPIOs, And Interrupts: device-tree/pinctrl-gpios-and-interrupts.md
       - Clocks, Resets, Regulators, And Power: device-tree/clocks-resets-regulators-and-power.md
