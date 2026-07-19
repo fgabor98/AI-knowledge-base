@@ -319,7 +319,15 @@ nav:
           - Bus-Specific Child Addressing: device-tree/addressing-and-bus-modeling/bus-specific-child-addressing.md
           - PCI Host Bridges, Address Windows, And Interrupts: device-tree/addressing-and-bus-modeling/pci-host-bridges-address-windows-and-interrupts.md
           - Address Translation And Bus Modeling Lab: device-tree/addressing-and-bus-modeling/address-translation-and-bus-modeling-lab.md
-      - Driver Matching: device-tree/driver-matching.md
+      - Driver Matching:
+          - Overview: device-tree/driver-matching.md
+          - Compatible Contracts And Fallback Chains: device-tree/driver-matching/compatible-contracts-and-fallback-chains.md
+          - Compatible Evolution And Stable ABI Decisions: device-tree/driver-matching/compatible-evolution-and-stable-abi-decisions.md
+          - From Device Tree Nodes To Linux Devices: device-tree/driver-matching/from-device-tree-nodes-to-linux-devices.md
+          - of_match_table, Variant Data, And Probe Selection: device-tree/driver-matching/of-match-table-variant-data-and-probe-selection.md
+          - Modaliases, Module Metadata, And Autoloading: device-tree/driver-matching/modaliases-module-metadata-and-autoloading.md
+          - Binding-Driven Probe Contracts: device-tree/driver-matching/binding-driven-probe-contracts.md
+          - Driver Matching And Probe Diagnosis Lab: device-tree/driver-matching/driver-matching-and-probe-diagnosis-lab.md
       - Pinctrl, GPIOs, And Interrupts: device-tree/pinctrl-gpios-and-interrupts.md
       - Clocks, Resets, Regulators, And Power: device-tree/clocks-resets-regulators-and-power.md
       - Common Peripheral Nodes: device-tree/common-peripheral-nodes.md
