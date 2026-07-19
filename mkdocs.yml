@@ -347,7 +347,19 @@ nav:
           - Thermal Zones, Trips, And Cooling Maps: device-tree/clocks-resets-regulators-and-power/thermal-zones-trips-and-cooling-maps.md
           - Power Lifecycle, Ordering, And Diagnosis: device-tree/clocks-resets-regulators-and-power/power-lifecycle-ordering-and-diagnosis.md
           - Integrated Power Bring-Up Lab: device-tree/clocks-resets-regulators-and-power/integrated-power-bring-up-lab.md
-      - Common Peripheral Nodes: device-tree/common-peripheral-nodes.md
+      - Common Peripheral Nodes:
+          - Overview: device-tree/common-peripheral-nodes.md
+          - UARTs, Consoles, And Serial Children: device-tree/common-peripheral-nodes/uarts-consoles-and-serial-children.md
+          - I2C Controllers, Devices, And Muxes: device-tree/common-peripheral-nodes/i2c-controllers-devices-and-muxes.md
+          - SPI Controllers, Chip Selects, And Peripherals: device-tree/common-peripheral-nodes/spi-controllers-chip-selects-and-peripherals.md
+          - CAN Controllers, Transceivers, And Bit Timing: device-tree/common-peripheral-nodes/can-controllers-transceivers-and-bit-timing.md
+          - USB Controllers, PHYs, Roles, And Connectors: device-tree/common-peripheral-nodes/usb-controllers-phys-roles-and-connectors.md
+          - PCIe Host Bridges, Windows, And Enumeration: device-tree/common-peripheral-nodes/pcie-host-bridges-windows-and-enumeration.md
+          - MMC, SD, SDIO, And eMMC: device-tree/common-peripheral-nodes/mmc-sd-sdio-and-emmc.md
+          - Ethernet MACs, MDIO, PHYs, And Fixed Links: device-tree/common-peripheral-nodes/ethernet-macs-mdio-phys-and-fixed-links.md
+          - Board Services - LEDs, Keys, Watchdogs, RTC, Hwmon, And NVMEM: device-tree/common-peripheral-nodes/board-services-leds-keys-watchdogs-rtc-hwmon-and-nvmem.md
+          - MTD, SPI NOR, And Fixed Partitions: device-tree/common-peripheral-nodes/mtd-spi-nor-and-fixed-partitions.md
+          - Peripheral Integration And Diagnosis Lab: device-tree/common-peripheral-nodes/peripheral-integration-and-diagnosis-lab.md
       - Graph Bindings And Complex Data Paths: device-tree/graph-bindings-and-complex-data-paths.md
       - Memory, Firmware, And Heterogeneous SoCs: device-tree/memory-firmware-and-heterogeneous-socs.md
       - U-Boot And Bootloader Device Tree: device-tree/u-boot-and-bootloader-device-tree.md
