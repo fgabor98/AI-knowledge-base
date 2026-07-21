@@ -10,6 +10,8 @@ last_reviewed: null
 
 Official section: [Working with the kernel development community](https://docs.kernel.org/process/index.html)
 
+Knowledge-guide companion: [Stage 1](knowledge-guide-companion.md#stage-1-development-process-and-kernel-source)
+
 ## Orientation
 
 - [ ] **P0** [HOWTO do Linux kernel development](https://docs.kernel.org/process/howto.html)

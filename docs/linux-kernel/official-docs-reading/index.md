@@ -48,8 +48,12 @@ Mark a checkbox only after you can explain the document's main contract in your
 own words. For P0 documents, also locate the relevant headers and at least one
 in-tree driver.
 
+Use the [Knowledge Guide Companion Checklist](knowledge-guide-companion.md) to
+track all related Linux Kernel chapter pages in the same eight-stage order.
+
 ## Recommended Path
 
+- [ ] [Knowledge Guide Companion Checklist](knowledge-guide-companion.md)
 - [ ] 1. [Development Process And Kernel Source](01-development-process-and-source.md)
 - [ ] 2. [Build System, Kconfig, And Development Tools](02-build-kconfig-and-devtools.md)
 - [ ] 3. [Core APIs, Concurrency, Memory, And DMA](03-core-api-concurrency-memory.md)

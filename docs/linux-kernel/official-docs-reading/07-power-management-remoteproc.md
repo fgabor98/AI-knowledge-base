@@ -8,6 +8,8 @@ last_reviewed: null
 
 # 7. Power Management And Heterogeneous SoCs
 
+Knowledge-guide companion: [Stage 7](knowledge-guide-companion.md#stage-7-power-management-and-heterogeneous-socs)
+
 ## Device Power Management
 
 - [ ] **P0** [CPU and device power management](https://docs.kernel.org/driver-api/pm/index.html)

@@ -11,6 +11,8 @@ last_reviewed: null
 Official sections: [Core API](https://docs.kernel.org/core-api/index.html) and
 [Locking](https://docs.kernel.org/locking/index.html)
 
+Knowledge-guide companion: [Stage 3](knowledge-guide-companion.md#stage-3-core-apis-concurrency-memory-and-dma)
+
 ## Core Utilities And Driver Execution
 
 - [ ] **P0** [Driver basics](https://docs.kernel.org/driver-api/basics.html)

@@ -10,6 +10,8 @@ last_reviewed: null
 
 Official parent: [Driver implementer's API guide](https://docs.kernel.org/driver-api/index.html)
 
+Knowledge-guide companion: [Stage 5](knowledge-guide-companion.md#stage-5-embedded-driver-subsystems)
+
 Read the P0 sections in the order below. For each subsystem, study its consumer
 API before its controller/provider API unless the project implements a provider.
 

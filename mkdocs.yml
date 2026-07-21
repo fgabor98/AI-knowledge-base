@@ -286,6 +286,7 @@ nav:
       - Overview: linux-kernel/index.md
       - Official Documentation Reading Checklist:
           - Overview: linux-kernel/official-docs-reading/index.md
+          - Knowledge Guide Companion: linux-kernel/official-docs-reading/knowledge-guide-companion.md
           - Development Process And Kernel Source: linux-kernel/official-docs-reading/01-development-process-and-source.md
           - Build System, Kconfig, And Development Tools: linux-kernel/official-docs-reading/02-build-kconfig-and-devtools.md
           - Core APIs, Concurrency, Memory, And DMA: linux-kernel/official-docs-reading/03-core-api-concurrency-memory.md

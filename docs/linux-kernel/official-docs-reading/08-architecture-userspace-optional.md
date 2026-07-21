@@ -12,6 +12,8 @@ This checklist completes the official top-level documentation map. Read P0/P1
 items for embedded product work; use P2 areas when a project actually needs
 them.
 
+Knowledge-guide companion: [Stage 8](knowledge-guide-companion.md#stage-8-architecture-userspace-abi-administration-and-policy)
+
 ## ARM And ARM64
 
 - [ ] **P0** [ARM64 architecture documentation](https://docs.kernel.org/arch/arm64/index.html)

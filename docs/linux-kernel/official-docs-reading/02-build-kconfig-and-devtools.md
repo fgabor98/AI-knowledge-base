@@ -11,6 +11,8 @@ last_reviewed: null
 Official sections: [Kernel Build System](https://docs.kernel.org/kbuild/index.html) and
 [Development tools](https://docs.kernel.org/dev-tools/index.html)
 
+Knowledge-guide companion: [Stage 2](knowledge-guide-companion.md#stage-2-build-system-kconfig-and-development-tools)
+
 ## Kbuild And External Modules
 
 - [ ] **P0** [Kernel build system](https://docs.kernel.org/kbuild/index.html)

@@ -12,6 +12,8 @@ Official sections: [Driver APIs](https://docs.kernel.org/driver-api/index.html),
 [Open Firmware and Devicetree](https://docs.kernel.org/devicetree/index.html), and
 [Firmware](https://docs.kernel.org/firmware-guide/index.html)
 
+Knowledge-guide companion: [Stage 4](knowledge-guide-companion.md#stage-4-driver-model-device-tree-and-firmware)
+
 ## Device And Driver Model
 
 - [ ] **P0** [Driver model overview](https://docs.kernel.org/driver-api/driver-model/overview.html)

@@ -13,6 +13,8 @@ Official sections: [Development tools](https://docs.kernel.org/dev-tools/index.h
 [Tracing](https://docs.kernel.org/trace/index.html), and
 [Fault injection](https://docs.kernel.org/fault-injection/index.html)
 
+Knowledge-guide companion: [Stage 6](knowledge-guide-companion.md#stage-6-debugging-tracing-and-testing)
+
 ## Debugging Fundamentals
 
 - [ ] **P0** [Debugging advice for kernel developers](https://docs.kernel.org/process/debugging/index.html)
