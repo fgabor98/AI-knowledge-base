@@ -284,6 +284,16 @@ nav:
       - device-tree/index.md
   - Linux Kernel:
       - Overview: linux-kernel/index.md
+      - Official Documentation Reading Checklist:
+          - Overview: linux-kernel/official-docs-reading/index.md
+          - Development Process And Kernel Source: linux-kernel/official-docs-reading/01-development-process-and-source.md
+          - Build System, Kconfig, And Development Tools: linux-kernel/official-docs-reading/02-build-kconfig-and-devtools.md
+          - Core APIs, Concurrency, Memory, And DMA: linux-kernel/official-docs-reading/03-core-api-concurrency-memory.md
+          - Driver Model, Device Tree, And Firmware: linux-kernel/official-docs-reading/04-driver-model-devicetree-firmware.md
+          - Embedded Driver Subsystems: linux-kernel/official-docs-reading/05-embedded-driver-subsystems.md
+          - Debugging, Tracing, And Testing: linux-kernel/official-docs-reading/06-debugging-tracing-testing.md
+          - Power Management And Heterogeneous SoCs: linux-kernel/official-docs-reading/07-power-management-remoteproc.md
+          - Architecture, Userspace ABI, Administration, And Optional Areas: linux-kernel/official-docs-reading/08-architecture-userspace-optional.md
       - Kernel Foundations For Driver Developers:
           - Overview: linux-kernel/foundations/index.md
           - Kernel Mental Model: linux-kernel/foundations/kernel-mental-model.md

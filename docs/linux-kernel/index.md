@@ -14,17 +14,18 @@ For kernel build mechanics, start with the [Linux Kernel Build System](../build-
 
 ## Learning Materials
 
-1. [Kernel Foundations For Driver Developers](foundations/index.md)
-2. [Kernel Source, Build, And Tailoring](source-build-and-tailoring/index.md)
-3. [Linux Device Driver Fundamentals](fundamentals/index.md)
-4. [Common Driver Interfaces](driver-interfaces/index.md)
-5. [Kernel Execution And Concurrency](execution-and-concurrency/index.md)
-6. [Kernel Memory And I/O](memory-and-io/index.md)
-7. [Kernel Configuration And Platform Policy](configuration-and-platform-policy/index.md)
-8. [Kernel Debugging Basics](debugging/index.md)
-9. [Power Management](power-management/index.md)
-10. [Remoteproc, RPMsg, And Heterogeneous SoCs](remoteproc-rpmsg/index.md)
-11. [Madieu Book Topic Coverage](book-coverage.md)
+1. [Official Linux Kernel Documentation Reading Checklist](official-docs-reading/index.md)
+2. [Kernel Foundations For Driver Developers](foundations/index.md)
+3. [Kernel Source, Build, And Tailoring](source-build-and-tailoring/index.md)
+4. [Linux Device Driver Fundamentals](fundamentals/index.md)
+5. [Common Driver Interfaces](driver-interfaces/index.md)
+6. [Kernel Execution And Concurrency](execution-and-concurrency/index.md)
+7. [Kernel Memory And I/O](memory-and-io/index.md)
+8. [Kernel Configuration And Platform Policy](configuration-and-platform-policy/index.md)
+9. [Kernel Debugging Basics](debugging/index.md)
+10. [Power Management](power-management/index.md)
+11. [Remoteproc, RPMsg, And Heterogeneous SoCs](remoteproc-rpmsg/index.md)
+12. [Madieu Book Topic Coverage](book-coverage.md)
 
 ## Chapter Boundaries
 
