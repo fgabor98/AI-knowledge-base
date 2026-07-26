@@ -1,0 +1,19 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			linux_kernel_lab_gpio {
+				compatible = "example,linux-kernel-gpio";
+				status = "okay";
+
+				/* Add a board-specific property before testing a real line:
+				 * reset-gpios = <&gpio1 3 GPIO_ACTIVE_LOW>;
+				 */
+			};
+		};
+	};
+};
+
