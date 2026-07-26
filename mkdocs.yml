@@ -360,7 +360,17 @@ nav:
           - Board Services - LEDs, Keys, Watchdogs, RTC, Hwmon, And NVMEM: device-tree/common-peripheral-nodes/board-services-leds-keys-watchdogs-rtc-hwmon-and-nvmem.md
           - MTD, SPI NOR, And Fixed Partitions: device-tree/common-peripheral-nodes/mtd-spi-nor-and-fixed-partitions.md
           - Peripheral Integration And Diagnosis Lab: device-tree/common-peripheral-nodes/peripheral-integration-and-diagnosis-lab.md
-      - Graph Bindings And Complex Data Paths: device-tree/graph-bindings-and-complex-data-paths.md
+      - Graph Bindings And Complex Data Paths:
+          - Overview: device-tree/graph-bindings-and-complex-data-paths.md
+          - Graph Vocabulary, Containers, And Numbering: device-tree/graph-bindings-and-complex-data-paths/graph-vocabulary-containers-and-numbering.md
+          - Endpoint Links And Interface Contracts: device-tree/graph-bindings-and-complex-data-paths/endpoint-links-and-interface-contracts.md
+          - Display Pipelines - Controllers, Bridges, Panels, And Connectors: device-tree/graph-bindings-and-complex-data-paths/display-pipelines-controllers-bridges-panels-and-connectors.md
+          - Camera Pipelines - Sensors, Receivers, ISPs, And Capture: device-tree/graph-bindings-and-complex-data-paths/camera-pipelines-sensors-receivers-isps-and-capture.md
+          - Audio Graphs, DAI Links, And Routing: device-tree/graph-bindings-and-complex-data-paths/audio-graphs-dai-links-and-routing.md
+          - Multi-Endpoint Topologies, Crossbars, And Shared Resources: device-tree/graph-bindings-and-complex-data-paths/multi-endpoint-topologies-crossbars-and-shared-resources.md
+          - Lifecycle, Ownership, And Pipeline Power: device-tree/graph-bindings-and-complex-data-paths/lifecycle-ownership-and-pipeline-power.md
+          - Graph Validation And Runtime Diagnosis: device-tree/graph-bindings-and-complex-data-paths/graph-validation-and-runtime-diagnosis.md
+          - Complex Pipeline Integration Lab: device-tree/graph-bindings-and-complex-data-paths/complex-pipeline-integration-lab.md
       - Memory, Firmware, And Heterogeneous SoCs: device-tree/memory-firmware-and-heterogeneous-socs.md
       - U-Boot And Bootloader Device Tree: device-tree/u-boot-and-bootloader-device-tree.md
       - Boot-Time Mutation And Ownership: device-tree/boot-time-mutation-and-ownership.md
