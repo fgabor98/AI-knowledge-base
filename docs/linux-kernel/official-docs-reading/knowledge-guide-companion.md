@@ -37,20 +37,20 @@ the words once is not enough.
 
 Official tracker: [Development Process And Kernel Source](01-development-process-and-source.md)
 
-- [ ] [Linux Kernel Programming Overview](../index.md)
-- [ ] [Kernel Foundations For Driver Developers](../foundations/index.md)
-- [ ] [Kernel Mental Model](../foundations/kernel-mental-model.md)
-- [ ] [Kernel C Survival Guide](../foundations/kernel-c-survival-guide.md)
-- [ ] [Reading Kernel Source](../foundations/reading-kernel-source.md)
-- [ ] [Kernel Development Lab Setup](../foundations/kernel-development-lab-setup.md)
-- [ ] [Driver Development Workflow](../foundations/driver-development-workflow.md)
-- [ ] [Small Lab Progression](../foundations/small-lab-progression.md)
-- [ ] [Kernel Documentation Reading Guide For Beginners](../foundations/kernel-documentation-reading-guide-for-beginners.md)
+- [x] [Linux Kernel Programming Overview](../index.md)
+- [x] [Kernel Foundations For Driver Developers](../foundations/index.md)
+- [x] [Kernel Mental Model](../foundations/kernel-mental-model.md)
+- [x] [Kernel C Survival Guide](../foundations/kernel-c-survival-guide.md)
+- [x] [Reading Kernel Source](../foundations/reading-kernel-source.md)
+- [x] [Kernel Development Lab Setup](../foundations/kernel-development-lab-setup.md)
+- [x] [Driver Development Workflow](../foundations/driver-development-workflow.md)
+- [x] [Small Lab Progression](../foundations/small-lab-progression.md)
+- [x] [Kernel Documentation Reading Guide For Beginners](../foundations/kernel-documentation-reading-guide-for-beginners.md)
 
 Stage completion:
 
-- [ ] I can locate a driver's Kconfig, Makefile, registration, match, probe, runtime, and teardown paths.
-- [ ] I have a recoverable lab and can prove which kernel, DTB, and module are running.
+- [x] I can locate a driver's Kconfig, Makefile, registration, match, probe, runtime, and teardown paths.
+- [x] I have a recoverable lab and can prove which kernel, DTB, and module are running.
 
 ## Stage 2: Build System, Kconfig, And Development Tools
 
