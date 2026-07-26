@@ -393,7 +393,17 @@ nav:
           - Bootloader Overlay Application And Working-FDT Safety: device-tree/u-boot-and-bootloader-device-tree/bootloader-overlay-application-and-working-fdt-safety.md
           - Binman, Firmware Packaging, And DT-Based Image Layout: device-tree/u-boot-and-bootloader-device-tree/binman-firmware-packaging-and-dt-based-image-layout.md
           - Bootloader DT Selection And Handoff Lab: device-tree/u-boot-and-bootloader-device-tree/bootloader-dt-selection-and-handoff-lab.md
-      - Boot-Time Mutation And Ownership: device-tree/boot-time-mutation-and-ownership.md
+      - Boot-Time Mutation And Ownership:
+          - Overview: device-tree/boot-time-mutation-and-ownership.md
+          - Mutation Provenance, Authorities, And Checkpoints: device-tree/boot-time-mutation-and-ownership/mutation-provenance-authorities-and-checkpoints.md
+          - Libfdt Capacity, Relocation, And Failure Atomicity: device-tree/boot-time-mutation-and-ownership/libfdt-capacity-relocation-and-failure-atomicity.md
+          - RAM Discovery, Reservations, And Memory Fixups: device-tree/boot-time-mutation-and-ownership/ram-discovery-reservations-and-memory-fixups.md
+          - /chosen, Boot Arguments, Initrd, Console, And Seeds: device-tree/boot-time-mutation-and-ownership/chosen-bootargs-initrd-console-and-seeds.md
+          - MAC Addresses, Serial Numbers, And Board Identity: device-tree/boot-time-mutation-and-ownership/mac-addresses-serial-numbers-and-board-identity.md
+          - Overlay Order, Composition, And Conflict Ownership: device-tree/boot-time-mutation-and-ownership/overlay-order-composition-and-conflict-ownership.md
+          - Firmware, Secure World, And Cross-Stage Ownership: device-tree/boot-time-mutation-and-ownership/firmware-secure-world-and-cross-stage-ownership.md
+          - Final-Tree Validation, Diffing, And Runtime Forensics: device-tree/boot-time-mutation-and-ownership/final-tree-validation-diffing-and-runtime-forensics.md
+          - Boot-Time Mutation Provenance Lab: device-tree/boot-time-mutation-and-ownership/boot-time-mutation-provenance-lab.md
       - Binding Design And Stable ABI: device-tree/binding-design-and-stable-abi.md
       - Writing And Validating Binding Schemas: device-tree/writing-and-validating-binding-schemas.md
       - Overlays In Depth: device-tree/overlays-in-depth.md
