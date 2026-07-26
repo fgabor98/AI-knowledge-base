@@ -382,7 +382,17 @@ nav:
           - PRU, R5/M4, DSP, And Cluster Modeling: device-tree/memory-firmware-and-heterogeneous-socs/pru-r5-m4-dsp-and-cluster-modeling.md
           - Trusted Firmware, OP-TEE, And Secure-World Boundaries: device-tree/memory-firmware-and-heterogeneous-socs/trusted-firmware-op-tee-and-secure-world-boundaries.md
           - Heterogeneous SoC Integration And Recovery Lab: device-tree/memory-firmware-and-heterogeneous-socs/heterogeneous-soc-integration-and-recovery-lab.md
-      - U-Boot And Bootloader Device Tree: device-tree/u-boot-and-bootloader-device-tree.md
+      - U-Boot And Bootloader Device Tree:
+          - Overview: device-tree/u-boot-and-bootloader-device-tree.md
+          - Control, Working, SPL, And Linux Device Trees: device-tree/u-boot-and-bootloader-device-tree/control-working-spl-and-linux-device-trees.md
+          - U-Boot DT Sources, Upstream Sync, And Build Artifacts: device-tree/u-boot-and-bootloader-device-tree/u-boot-dt-sources-upstream-sync-and-build-artifacts.md
+          - Driver Model, Boot Phases, And Pre-Relocation Properties: device-tree/u-boot-and-bootloader-device-tree/driver-model-boot-phases-and-pre-relocation-properties.md
+          - TPL, SPL, SRAM Budgets, And Multi-DTB Selection: device-tree/u-boot-and-bootloader-device-tree/tpl-spl-sram-budgets-and-multi-dtb-selection.md
+          - FIT Configurations, DTB Selection, And Verified Boot: device-tree/u-boot-and-bootloader-device-tree/fit-configurations-dtb-selection-and-verified-boot.md
+          - Environment, Bootstd, Extlinux, And OS DTB Loading: device-tree/u-boot-and-bootloader-device-tree/environment-bootstd-extlinux-and-os-dtb-loading.md
+          - Bootloader Overlay Application And Working-FDT Safety: device-tree/u-boot-and-bootloader-device-tree/bootloader-overlay-application-and-working-fdt-safety.md
+          - Binman, Firmware Packaging, And DT-Based Image Layout: device-tree/u-boot-and-bootloader-device-tree/binman-firmware-packaging-and-dt-based-image-layout.md
+          - Bootloader DT Selection And Handoff Lab: device-tree/u-boot-and-bootloader-device-tree/bootloader-dt-selection-and-handoff-lab.md
       - Boot-Time Mutation And Ownership: device-tree/boot-time-mutation-and-ownership.md
       - Binding Design And Stable ABI: device-tree/binding-design-and-stable-abi.md
       - Writing And Validating Binding Schemas: device-tree/writing-and-validating-binding-schemas.md
