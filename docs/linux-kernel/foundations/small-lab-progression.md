@@ -38,6 +38,31 @@ This page defines a staged lab sequence. Each lab should produce observable evid
 - Use a recoverable VM, QEMU target, or spare board.
 - Do not mix kernel config, Device Tree, source, and userspace changes unless the lab explicitly requires it.
 
+## Runnable Checkpoints
+
+The source tree contains one buildable checkpoint for each lab under
+[`examples/linux-kernel/small-labs/`](../../../examples/linux-kernel/small-labs/README.md).
+Build and inspect the checkpoint before changing it; keep the previous one as
+a known-good comparison.
+
+| Lab | Checkpoint | Artifact |
+| --- | --- | --- |
+| 1 | [Hello module](../../../examples/linux-kernel/small-labs/01-hello/README.md) | `hello.ko` |
+| 2 | [Module parameters](../../../examples/linux-kernel/small-labs/02-parameters/README.md) | `lab_params.ko` |
+| 3 | [Dummy character device](../../../examples/linux-kernel/small-labs/03-char-device/README.md) | `lab_char.ko` |
+| 4 | [Software platform driver](../../../examples/linux-kernel/small-labs/04-platform-driver/README.md) | driver + device-helper modules |
+| 5 | [Device Tree matching](../../../examples/linux-kernel/small-labs/05-device-tree/README.md) | module + overlay |
+| 6 | [GPIO consumer](../../../examples/linux-kernel/small-labs/06-gpio-consumer/README.md) | module + overlay |
+| 7 | [I2C client](../../../examples/linux-kernel/small-labs/07-i2c-client/README.md) | driver + client-helper modules |
+| 8 | [Threaded virtual IRQ](../../../examples/linux-kernel/small-labs/08-threaded-irq/README.md) | `lab_irq.ko` |
+| 9 | [Basic tracing](../../../examples/linux-kernel/small-labs/09-tracing/README.md) | `trace-demo.sh` |
+
+Labs 4 and 7 include helper modules because the driver needs a software device
+to bind to. Labs 5 and 6 include Device Tree overlays, but applying an overlay
+is target-specific. Lab 8 uses a timer-driven virtual IRQ so the hard-handler
+and threaded-handler split can be observed without claiming a real hardware
+interrupt. Lab 9 traces Lab 8 and therefore does not add another module.
+
 ## Lab 1: Hello Module
 
 Goal:
@@ -113,15 +138,15 @@ Example:
 
 ```c
 static int interval_ms = 1000;
-module_param(interval_ms, int, 0644);
+module_param(interval_ms, int, 0444);
 MODULE_PARM_DESC(interval_ms, "Polling interval in milliseconds");
 ```
 
 Load:
 
 ```bash
-sudo insmod hello_params.ko interval_ms=500
-cat /sys/module/hello_params/parameters/interval_ms
+sudo insmod lab_params.ko interval_ms=500
+cat /sys/module/lab_params/parameters/interval_ms
 ```
 
 Success evidence:
@@ -206,9 +231,9 @@ Approach:
 Inspection:
 
 ```bash
-find /sys/bus/platform/devices -maxdepth 1 -name '*demo*'
-readlink /sys/bus/platform/devices/demo.0/driver
-udevadm info /dev/demo0
+find /sys/bus/platform/devices -maxdepth 1 -name 'lab_platform_demo*'
+readlink /sys/bus/platform/devices/lab_platform_demo.0/driver
+udevadm info /dev/platform_demo0
 ```
 
 Success evidence:
