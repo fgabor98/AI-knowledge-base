@@ -371,7 +371,17 @@ nav:
           - Lifecycle, Ownership, And Pipeline Power: device-tree/graph-bindings-and-complex-data-paths/lifecycle-ownership-and-pipeline-power.md
           - Graph Validation And Runtime Diagnosis: device-tree/graph-bindings-and-complex-data-paths/graph-validation-and-runtime-diagnosis.md
           - Complex Pipeline Integration Lab: device-tree/graph-bindings-and-complex-data-paths/complex-pipeline-integration-lab.md
-      - Memory, Firmware, And Heterogeneous SoCs: device-tree/memory-firmware-and-heterogeneous-socs.md
+      - Memory, Firmware, And Heterogeneous SoCs:
+          - Overview: device-tree/memory-firmware-and-heterogeneous-socs.md
+          - Memory Ownership, RAM, And Reserved Regions: device-tree/memory-firmware-and-heterogeneous-socs/memory-ownership-ram-and-reserved-regions.md
+          - CMA, Shared DMA Pools, And Static Carveouts: device-tree/memory-firmware-and-heterogeneous-socs/cma-shared-dma-pools-and-static-carveouts.md
+          - DMA Addressing, Coherency, And IOMMU Topology: device-tree/memory-firmware-and-heterogeneous-socs/dma-addressing-coherency-and-iommu-topology.md
+          - Firmware Images, Resource Tables, And Host Contracts: device-tree/memory-firmware-and-heterogeneous-socs/firmware-images-resource-tables-and-host-contracts.md
+          - Remoteproc Topology, Boot, Stop, And Recovery: device-tree/memory-firmware-and-heterogeneous-socs/remoteproc-topology-boot-stop-and-recovery.md
+          - RPMsg, Mailboxes, Virtqueues, And Shared Memory: device-tree/memory-firmware-and-heterogeneous-socs/rpmsg-mailboxes-virtqueues-and-shared-memory.md
+          - PRU, R5/M4, DSP, And Cluster Modeling: device-tree/memory-firmware-and-heterogeneous-socs/pru-r5-m4-dsp-and-cluster-modeling.md
+          - Trusted Firmware, OP-TEE, And Secure-World Boundaries: device-tree/memory-firmware-and-heterogeneous-socs/trusted-firmware-op-tee-and-secure-world-boundaries.md
+          - Heterogeneous SoC Integration And Recovery Lab: device-tree/memory-firmware-and-heterogeneous-socs/heterogeneous-soc-integration-and-recovery-lab.md
       - U-Boot And Bootloader Device Tree: device-tree/u-boot-and-bootloader-device-tree.md
       - Boot-Time Mutation And Ownership: device-tree/boot-time-mutation-and-ownership.md
       - Binding Design And Stable ABI: device-tree/binding-design-and-stable-abi.md
