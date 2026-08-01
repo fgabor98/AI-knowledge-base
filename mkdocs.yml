@@ -434,7 +434,16 @@ nav:
           - Linux Runtime Overlays, Devices, Notifiers, And Lifetime: device-tree/overlays-in-depth/linux-runtime-overlays-devices-notifiers-and-lifetime.md
           - Validation, Security, And Product Architecture: device-tree/overlays-in-depth/validation-security-and-product-architecture.md
           - Overlay Composition And Lifecycle Lab: device-tree/overlays-in-depth/overlay-composition-and-lifecycle-lab.md
-      - Build And Diagnostic Tools: device-tree/build-and-diagnostic-tools.md
+      - Build And Diagnostic Tools:
+          - Overview: device-tree/build-and-diagnostic-tools.md
+          - Build Pipeline, Preprocessing, And Artifact Provenance: device-tree/build-and-diagnostic-tools/build-pipeline-preprocessing-and-artifact-provenance.md
+          - dtc, Symbols, Warnings, And Round Trips: device-tree/build-and-diagnostic-tools/dtc-symbols-warnings-and-round-trips.md
+          - fdtdump And fdtget Binary Inspection: device-tree/build-and-diagnostic-tools/fdtdump-and-fdtget-binary-inspection.md
+          - fdtput, fdtoverlay, And Controlled Artifact Mutation: device-tree/build-and-diagnostic-tools/fdtput-fdtoverlay-and-controlled-artifact-mutation.md
+          - U-Boot fdt Commands And Handoff Inspection: device-tree/build-and-diagnostic-tools/u-boot-fdt-commands-and-handoff-inspection.md
+          - libfdt Programming, Capacity, And Error Discipline: device-tree/build-and-diagnostic-tools/libfdt-programming-capacity-and-error-discipline.md
+          - Diagnostic Workflow, Semantic Diffing, And CI Evidence: device-tree/build-and-diagnostic-tools/diagnostic-workflow-semantic-diffing-and-ci-evidence.md
+          - Device Tree Artifact Provenance And Diagnosis Lab: device-tree/build-and-diagnostic-tools/device-tree-artifact-provenance-and-diagnosis-lab.md
       - Runtime Inspection: device-tree/runtime-inspection.md
       - Security And Production Lifecycle: device-tree/security-and-production-lifecycle.md
       - Product-Scale Maintenance And Engineering: device-tree/product-scale-maintenance-and-engineering.md
