@@ -282,6 +282,17 @@ nav:
       - embedded-linux/index.md
   - Device Tree:
       - Overview: device-tree/index.md
+      - Official Documentation Reading Checklist:
+          - Overview: device-tree/official-docs-reading/index.md
+          - Knowledge Guide Companion: device-tree/official-docs-reading/knowledge-guide-companion.md
+          - Specification Foundations And The Core Tree Model: device-tree/official-docs-reading/01-specification-foundations-and-core-tree-model.md
+          - DTS, FDT, dtc, And libfdt: device-tree/official-docs-reading/02-dts-fdt-dtc-and-libfdt.md
+          - Linux OF Devices, Matching, And Resources: device-tree/official-docs-reading/03-linux-of-devices-matching-and-resources.md
+          - Standard Nodes, Buses, Providers, And Subsystems: device-tree/official-docs-reading/04-standard-nodes-buses-providers-and-subsystems.md
+          - Memory, DMA, Firmware, And Heterogeneous SoCs: device-tree/official-docs-reading/05-memory-dma-firmware-and-heterogeneous-socs.md
+          - U-Boot Handoff, Mutation, FIT, And Overlays: device-tree/official-docs-reading/06-u-boot-handoff-mutation-fit-and-overlays.md
+          - Binding ABI, Schema Validation, And Upstreaming: device-tree/official-docs-reading/07-binding-abi-schema-validation-and-upstreaming.md
+          - Runtime, Security, Production, And Board Porting: device-tree/official-docs-reading/08-runtime-security-production-and-board-porting.md
       - Foundations:
           - Overview: device-tree/foundations.md
           - The Hardware Description Model: device-tree/foundations/hardware-description-model.md
