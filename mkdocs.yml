@@ -474,7 +474,16 @@ nav:
           - Matrix CI, Artifact Validation, And Compatibility Testing: device-tree/product-scale-maintenance-and-engineering/matrix-ci-artifact-validation-and-compatibility-testing.md
           - Hardware Coverage, Release Qualification, And Learning From Escapes: device-tree/product-scale-maintenance-and-engineering/hardware-coverage-release-qualification-and-learning-from-escapes.md
           - Product-Family Maintenance And Regression Prevention Lab: device-tree/product-scale-maintenance-and-engineering/product-family-maintenance-and-regression-prevention-lab.md
-      - Board Porting Workflow: device-tree/board-porting-workflow.md
+      - Board Porting Workflow:
+          - Overview: device-tree/board-porting-workflow.md
+          - Reference Board Selection, Hardware Delta, And Evidence Baseline: device-tree/board-porting-workflow/reference-board-selection-hardware-delta-and-evidence-baseline.md
+          - Minimal DTB, Boot Handoff, Memory, Console, And Boot Storage: device-tree/board-porting-workflow/minimal-dtb-boot-handoff-memory-console-and-boot-storage.md
+          - Power, Clock, Reset, Pinctrl, And GPIO Bring-Up: device-tree/board-porting-workflow/power-clock-reset-pinctrl-and-gpio-bring-up.md
+          - Buses, Storage, Networking, And Peripheral Enablement: device-tree/board-porting-workflow/buses-storage-networking-and-peripheral-enablement.md
+          - DMA, IOMMU, Reserved Memory, And Remote Processor Integration: device-tree/board-porting-workflow/dma-iommu-reserved-memory-and-remote-processor-integration.md
+          - Board Revisions, Variants, Overlays, And Identity: device-tree/board-porting-workflow/board-revisions-variants-overlays-and-identity.md
+          - Validation, Upstreaming, And Production Handoff: device-tree/board-porting-workflow/validation-upstreaming-and-production-handoff.md
+          - Custom Board Porting Capstone Lab: device-tree/board-porting-workflow/custom-board-porting-capstone-lab.md
   - Linux Kernel:
       - Overview: linux-kernel/index.md
       - Official Documentation Reading Checklist:
