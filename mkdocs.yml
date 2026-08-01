@@ -404,7 +404,16 @@ nav:
           - Firmware, Secure World, And Cross-Stage Ownership: device-tree/boot-time-mutation-and-ownership/firmware-secure-world-and-cross-stage-ownership.md
           - Final-Tree Validation, Diffing, And Runtime Forensics: device-tree/boot-time-mutation-and-ownership/final-tree-validation-diffing-and-runtime-forensics.md
           - Boot-Time Mutation Provenance Lab: device-tree/boot-time-mutation-and-ownership/boot-time-mutation-provenance-lab.md
-      - Binding Design And Stable ABI: device-tree/binding-design-and-stable-abi.md
+      - Binding Design And Stable ABI:
+          - Overview: device-tree/binding-design-and-stable-abi.md
+          - Hardware Description Contracts And Policy Boundaries: device-tree/binding-design-and-stable-abi/hardware-description-contracts-and-policy-boundaries.md
+          - Complete Bindings And Extensible Hardware Models: device-tree/binding-design-and-stable-abi/complete-bindings-and-extensible-hardware-models.md
+          - Property Design, Naming, Units, And Standard Reuse: device-tree/binding-design-and-stable-abi/property-design-naming-units-and-standard-reuse.md
+          - Compatible Identities, Fallbacks, And Variant Data: device-tree/binding-design-and-stable-abi/compatible-identities-fallbacks-and-variant-data.md
+          - Backward Compatibility, Deprecation, And Migration: device-tree/binding-design-and-stable-abi/backward-compatibility-deprecation-and-migration.md
+          - Board Revisions, Products, And Deployment Matrices: device-tree/binding-design-and-stable-abi/board-revisions-products-and-deployment-matrices.md
+          - Review Strategy And Upstream Submission Order: device-tree/binding-design-and-stable-abi/review-strategy-and-upstream-submission-order.md
+          - Binding Design And ABI Review Lab: device-tree/binding-design-and-stable-abi/binding-design-and-abi-review-lab.md
       - Writing And Validating Binding Schemas: device-tree/writing-and-validating-binding-schemas.md
       - Overlays In Depth: device-tree/overlays-in-depth.md
       - Build And Diagnostic Tools: device-tree/build-and-diagnostic-tools.md
