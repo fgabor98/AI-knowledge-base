@@ -454,7 +454,16 @@ nav:
           - Probe Deferral, Supplier Links, And Resource State: device-tree/runtime-inspection/probe-deferral-supplier-links-and-resource-state.md
           - Controlled Bind/Unbind And Runtime Forensics: device-tree/runtime-inspection/controlled-bind-unbind-and-runtime-forensics.md
           - Runtime Device Tree And Probe Forensics Lab: device-tree/runtime-inspection/runtime-device-tree-and-probe-forensics-lab.md
-      - Security And Production Lifecycle: device-tree/security-and-production-lifecycle.md
+      - Security And Production Lifecycle:
+          - Overview: device-tree/security-and-production-lifecycle.md
+          - Device Tree Threat Model And Trust Boundaries: device-tree/security-and-production-lifecycle/device-tree-threat-model-and-trust-boundaries.md
+          - FIT Authenticated Selection And Key Policy: device-tree/security-and-production-lifecycle/fit-authenticated-selection-and-key-policy.md
+          - Mutation, Overlay, And Fixup Chain Of Custody: device-tree/security-and-production-lifecycle/mutation-overlay-and-fixup-chain-of-custody.md
+          - Measured Boot, Attestation, And Runtime Evidence: device-tree/security-and-production-lifecycle/measured-boot-attestation-and-runtime-evidence.md
+          - Versioned Release Sets, Compatibility, And Rollback: device-tree/security-and-production-lifecycle/versioned-release-sets-compatibility-and-rollback.md
+          - Reproducible DTB Builds, Provenance, And Manifests: device-tree/security-and-production-lifecycle/reproducible-dtb-builds-provenance-and-manifests.md
+          - Field Updates, Recovery, And Key Rotation: device-tree/security-and-production-lifecycle/field-updates-recovery-and-key-rotation.md
+          - Secure Device Tree Release And Update Lab: device-tree/security-and-production-lifecycle/secure-device-tree-release-and-update-lab.md
       - Product-Scale Maintenance And Engineering: device-tree/product-scale-maintenance-and-engineering.md
       - Board Porting Workflow: device-tree/board-porting-workflow.md
   - Linux Kernel:
