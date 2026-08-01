@@ -414,7 +414,16 @@ nav:
           - Board Revisions, Products, And Deployment Matrices: device-tree/binding-design-and-stable-abi/board-revisions-products-and-deployment-matrices.md
           - Review Strategy And Upstream Submission Order: device-tree/binding-design-and-stable-abi/review-strategy-and-upstream-submission-order.md
           - Binding Design And ABI Review Lab: device-tree/binding-design-and-stable-abi/binding-design-and-abi-review-lab.md
-      - Writing And Validating Binding Schemas: device-tree/writing-and-validating-binding-schemas.md
+      - Writing And Validating Binding Schemas:
+          - Overview: device-tree/writing-and-validating-binding-schemas.md
+          - Schema Anatomy, Identity, And Node Selection: device-tree/writing-and-validating-binding-schemas/schema-anatomy-identity-and-node-selection.md
+          - Property Types, Encodings, And Cardinality: device-tree/writing-and-validating-binding-schemas/property-types-encodings-and-cardinality.md
+          - References, Composition, Conditionals, And Closure: device-tree/writing-and-validating-binding-schemas/references-composition-conditionals-and-closure.md
+          - Child Nodes, Name Patterns, And Common Schemas: device-tree/writing-and-validating-binding-schemas/child-nodes-name-patterns-and-common-schemas.md
+          - Examples, Vendor Bindings, And Authoring Workflow: device-tree/writing-and-validating-binding-schemas/examples-vendor-bindings-and-authoring-workflow.md
+          - Validation Toolchain And Targeted Checks: device-tree/writing-and-validating-binding-schemas/validation-toolchain-and-targeted-checks.md
+          - Diagnosing Schema, Example, And DTB Failures: device-tree/writing-and-validating-binding-schemas/diagnosing-schema-example-and-dtb-failures.md
+          - Binding Schema Authoring And Validation Lab: device-tree/writing-and-validating-binding-schemas/binding-schema-authoring-and-validation-lab.md
       - Overlays In Depth: device-tree/overlays-in-depth.md
       - Build And Diagnostic Tools: device-tree/build-and-diagnostic-tools.md
       - Runtime Inspection: device-tree/runtime-inspection.md
