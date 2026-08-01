@@ -424,7 +424,16 @@ nav:
           - Validation Toolchain And Targeted Checks: device-tree/writing-and-validating-binding-schemas/validation-toolchain-and-targeted-checks.md
           - Diagnosing Schema, Example, And DTB Failures: device-tree/writing-and-validating-binding-schemas/diagnosing-schema-example-and-dtb-failures.md
           - Binding Schema Authoring And Validation Lab: device-tree/writing-and-validating-binding-schemas/binding-schema-authoring-and-validation-lab.md
-      - Overlays In Depth: device-tree/overlays-in-depth.md
+      - Overlays In Depth:
+          - Overview: device-tree/overlays-in-depth.md
+          - Overlay Source, Fragments, And Target Selection: device-tree/overlays-in-depth/overlay-source-fragments-and-target-selection.md
+          - Symbols, Fixups, Local Fixups, And Compilation: device-tree/overlays-in-depth/symbols-fixups-local-fixups-and-compilation.md
+          - Resolver, Phandle Relocation, And Merge Semantics: device-tree/overlays-in-depth/resolver-phandle-relocation-and-merge-semantics.md
+          - Base Compatibility, Versioning, And Overlay ABI: device-tree/overlays-in-depth/base-compatibility-versioning-and-overlay-abi.md
+          - Stacking, Dependencies, Conflicts, And Removal Order: device-tree/overlays-in-depth/stacking-dependencies-conflicts-and-removal-order.md
+          - Linux Runtime Overlays, Devices, Notifiers, And Lifetime: device-tree/overlays-in-depth/linux-runtime-overlays-devices-notifiers-and-lifetime.md
+          - Validation, Security, And Product Architecture: device-tree/overlays-in-depth/validation-security-and-product-architecture.md
+          - Overlay Composition And Lifecycle Lab: device-tree/overlays-in-depth/overlay-composition-and-lifecycle-lab.md
       - Build And Diagnostic Tools: device-tree/build-and-diagnostic-tools.md
       - Runtime Inspection: device-tree/runtime-inspection.md
       - Security And Production Lifecycle: device-tree/security-and-production-lifecycle.md
