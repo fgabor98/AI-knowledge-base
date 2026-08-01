@@ -444,7 +444,16 @@ nav:
           - libfdt Programming, Capacity, And Error Discipline: device-tree/build-and-diagnostic-tools/libfdt-programming-capacity-and-error-discipline.md
           - Diagnostic Workflow, Semantic Diffing, And CI Evidence: device-tree/build-and-diagnostic-tools/diagnostic-workflow-semantic-diffing-and-ci-evidence.md
           - Device Tree Artifact Provenance And Diagnosis Lab: device-tree/build-and-diagnostic-tools/device-tree-artifact-provenance-and-diagnosis-lab.md
-      - Runtime Inspection: device-tree/runtime-inspection.md
+      - Runtime Inspection:
+          - Overview: device-tree/runtime-inspection.md
+          - Runtime Tree Surfaces And Boot-FDT Identity: device-tree/runtime-inspection/runtime-tree-surfaces-and-boot-fdt-identity.md
+          - Binary-Safe Property Inspection And Decoding: device-tree/runtime-inspection/binary-safe-property-inspection-and-decoding.md
+          - Live-Tree Capture, Normalization, And Semantic Diffing: device-tree/runtime-inspection/live-tree-capture-normalization-and-semantic-diffing.md
+          - From Live Device Tree Node To Linux Device: device-tree/runtime-inspection/from-live-device-tree-node-to-linux-device.md
+          - Matching, Modaliases, Modules, And Bound Drivers: device-tree/runtime-inspection/matching-modaliases-modules-and-bound-drivers.md
+          - Probe Deferral, Supplier Links, And Resource State: device-tree/runtime-inspection/probe-deferral-supplier-links-and-resource-state.md
+          - Controlled Bind/Unbind And Runtime Forensics: device-tree/runtime-inspection/controlled-bind-unbind-and-runtime-forensics.md
+          - Runtime Device Tree And Probe Forensics Lab: device-tree/runtime-inspection/runtime-device-tree-and-probe-forensics-lab.md
       - Security And Production Lifecycle: device-tree/security-and-production-lifecycle.md
       - Product-Scale Maintenance And Engineering: device-tree/product-scale-maintenance-and-engineering.md
       - Board Porting Workflow: device-tree/board-porting-workflow.md
