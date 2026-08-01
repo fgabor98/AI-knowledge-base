@@ -464,7 +464,16 @@ nav:
           - Reproducible DTB Builds, Provenance, And Manifests: device-tree/security-and-production-lifecycle/reproducible-dtb-builds-provenance-and-manifests.md
           - Field Updates, Recovery, And Key Rotation: device-tree/security-and-production-lifecycle/field-updates-recovery-and-key-rotation.md
           - Secure Device Tree Release And Update Lab: device-tree/security-and-production-lifecycle/secure-device-tree-release-and-update-lab.md
-      - Product-Scale Maintenance And Engineering: device-tree/product-scale-maintenance-and-engineering.md
+      - Product-Scale Maintenance And Engineering:
+          - Overview: device-tree/product-scale-maintenance-and-engineering.md
+          - Specification, Binding, And Toolchain Compatibility Baselines: device-tree/product-scale-maintenance-and-engineering/specification-binding-and-toolchain-compatibility-baselines.md
+          - Layering, Variants, Ownership, And Source Architecture: device-tree/product-scale-maintenance-and-engineering/layering-variants-ownership-and-source-architecture.md
+          - Multidimensional Review And Change Design: device-tree/product-scale-maintenance-and-engineering/multidimensional-review-and-change-design.md
+          - Upstream Development And Downstream Patch-Stack Discipline: device-tree/product-scale-maintenance-and-engineering/upstream-development-and-downstream-patch-stack-discipline.md
+          - Binding Evolution, Deprecation, And Migration: device-tree/product-scale-maintenance-and-engineering/binding-evolution-deprecation-and-migration.md
+          - Matrix CI, Artifact Validation, And Compatibility Testing: device-tree/product-scale-maintenance-and-engineering/matrix-ci-artifact-validation-and-compatibility-testing.md
+          - Hardware Coverage, Release Qualification, And Learning From Escapes: device-tree/product-scale-maintenance-and-engineering/hardware-coverage-release-qualification-and-learning-from-escapes.md
+          - Product-Family Maintenance And Regression Prevention Lab: device-tree/product-scale-maintenance-and-engineering/product-family-maintenance-and-regression-prevention-lab.md
       - Board Porting Workflow: device-tree/board-porting-workflow.md
   - Linux Kernel:
       - Overview: linux-kernel/index.md
