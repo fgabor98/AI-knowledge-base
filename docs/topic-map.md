@@ -63,6 +63,18 @@ Algorithmic foundations:
 - correctness arguments
 - example-driven validation
 
+Algorithm design techniques:
+
+- greedy algorithms
+- exchange arguments
+- dynamic programming
+- memoization and tabulation
+- amortized analysis
+- recurrence relations
+- algorithm testing and reference models
+- fuzzing and invariant-based validation
+- string and protocol parsing algorithms
+
 Control flow and recursion:
 
 - sequence
@@ -108,6 +120,9 @@ Basic algorithm schemes:
 - ordered linear search
 - binary search
 - recursive binary search
+- two-pointer and sliding-window patterns
+- prefix sums and difference arrays
+- monotonic stacks and queues
 
 Searching and backtracking:
 
@@ -155,6 +170,11 @@ Graph algorithms:
 - unweighted shortest paths
 - Dijkstra's algorithm
 - Bellman-Ford algorithm
+- topological sorting and DAG processing
+- strongly connected components
+- minimum spanning trees
+- disjoint-set union
+- A* and goal-directed search
 
 Tree algorithms:
 
@@ -170,6 +190,11 @@ Tree algorithms:
 - prefix, infix, and postfix notation
 - postfix conversion
 - stack-based expression evaluation
+- binary search tree operations
+- balanced-tree tradeoffs
+- tries and prefix trees
+- lowest common ancestor
+- tree aggregation and dynamic programming
 
 Parallel and dataflow algorithms:
 
@@ -185,6 +210,10 @@ Parallel and dataflow algorithms:
 - synchronization costs
 - ordering constraints
 - result merging
+- work scheduling and load balancing
+- work stealing
+- atomic and lock-free algorithm patterns
+- memory ordering and publication
 
 Data structures for algorithms:
 
@@ -202,6 +231,8 @@ Data structures for algorithms:
 - bitsets and bitmaps
 - intrusive data structures
 - memory pools and fixed-size allocators
+- deques
+- disjoint-set union
 
 Embedded Linux algorithmic constraints:
 
@@ -219,6 +250,8 @@ Embedded Linux algorithmic constraints:
 - data integrity checks
 - checksums and CRCs
 - watchdog-aware long-running operations
+- corruption recovery and bounded retries
+- watchdog-friendly chunked processing
 ## C++ For Systems And Embedded Linux
 
 Beginner:

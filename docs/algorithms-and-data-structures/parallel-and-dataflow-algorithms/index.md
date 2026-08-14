@@ -8,7 +8,7 @@ last_reviewed: null
 
 # Parallel And Dataflow Algorithms
 
-Roadmap for algorithms that split work across stages or workers.
+Overview of algorithms that split work across stages or workers.
 
 ## Coverage
 
@@ -25,16 +25,18 @@ Roadmap for algorithms that split work across stages or workers.
 - ordering constraints
 - result merging
 
-## Scaffold Pages
+## Pages In This Section
 
 - [Pipeline And Dataflow Algorithms](pipeline-and-dataflow-algorithms.md)
 - [Partitioning Reductions And Fan-In](partitioning-reductions-and-fan-in.md)
 - [Synchronization Costs And Result Merging](synchronization-costs-and-result-merging.md)
+- [Work Scheduling And Load Balancing](work-scheduling-and-load-balancing.md)
+- [Atomic And Lock-Free Algorithm Patterns](atomic-and-lock-free-algorithm-patterns.md)
 
 ## Programming Examples
 
-- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
-- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+- C: use bounded queues, explicit ownership, and visible synchronization policy.
+- Python: use simulations and reference models where helpful.
 
 ## Embedded And Systems Angle
 

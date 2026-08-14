@@ -8,7 +8,7 @@ last_reviewed: null
 
 # Data Structures For Algorithms
 
-Roadmap for data structures as algorithm enablers rather than standalone names to memorize.
+Overview of data structures as algorithm enablers rather than standalone names to memorize.
 
 ## Coverage
 
@@ -27,7 +27,7 @@ Roadmap for data structures as algorithm enablers rather than standalone names t
 - intrusive data structures
 - memory pools and fixed-size allocators
 
-## Scaffold Pages
+## Pages In This Section
 
 - [Arrays Buffers And Records](arrays-buffers-and-records.md)
 - [Linked Lists Stacks And Queues](linked-lists-stacks-and-queues.md)
@@ -37,11 +37,13 @@ Roadmap for data structures as algorithm enablers rather than standalone names t
 - [Bitsets And Bitmaps](bitsets-and-bitmaps.md)
 - [Intrusive Data Structures](intrusive-data-structures.md)
 - [Memory Pools And Fixed-Size Allocators](memory-pools-and-fixed-size-allocators.md)
+- [Deques](deques.md)
+- [Disjoint-Set Union](disjoint-set-union.md)
 
 ## Programming Examples
 
-- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
-- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+- C: use bounded implementations with explicit invariants, ownership, and failure behavior.
+- Python: use semantic reference models and test generators where helpful.
 
 ## Embedded And Systems Angle
 

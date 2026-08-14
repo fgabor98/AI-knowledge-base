@@ -278,6 +278,7 @@ For each scheme, ask:
 
 - [Linear Scan Patterns](linear-scan-patterns.md)
 - [Binary Search](binary-search.md)
+- [Practical Sequence Patterns](practical-sequence-patterns.md)
 
 ## Related Topics
 
