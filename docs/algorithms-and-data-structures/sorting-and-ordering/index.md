@@ -8,7 +8,7 @@ last_reviewed: null
 
 # Sorting And Ordering
 
-Roadmap for ordering as both an algorithmic operation and a design choice.
+Overview of ordering as both an algorithmic operation and a design choice.
 
 ## Coverage
 
@@ -25,7 +25,7 @@ Roadmap for ordering as both an algorithmic operation and a design choice.
 - maintaining sorted data
 - partial ordering and priority
 
-## Scaffold Pages
+## Pages In This Section
 
 - [Sorting Fundamentals](sorting-fundamentals.md)
 - [Maintaining Sorted Data](maintaining-sorted-data.md)
@@ -33,8 +33,8 @@ Roadmap for ordering as both an algorithmic operation and a design choice.
 
 ## Programming Examples
 
-- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
-- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+- C: use bounded implementations with explicit comparison, error, and memory behavior.
+- Python: use reference implementations and test oracles where helpful.
 
 ## Embedded And Systems Angle
 

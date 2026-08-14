@@ -8,7 +8,7 @@ last_reviewed: null
 
 # Tree Algorithms
 
-Roadmap for hierarchical data and tree traversals.
+Overview of hierarchical data and tree traversals.
 
 ## Coverage
 
@@ -25,16 +25,17 @@ Roadmap for hierarchical data and tree traversals.
 - postfix conversion
 - stack-based expression evaluation
 
-## Scaffold Pages
+## Pages In This Section
 
 - [Tree Representations](tree-representations.md)
 - [Tree Traversals](tree-traversals.md)
 - [Expression Trees And Stack Evaluation](expression-trees-and-stack-evaluation.md)
+- [Advanced Tree Algorithms](advanced-tree-algorithms.md)
 
 ## Programming Examples
 
-- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
-- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+- C: use bounded node storage and explicit ownership, depth, and failure behavior.
+- Python: use reference trees and test oracles where helpful.
 
 ## Embedded And Systems Angle
 

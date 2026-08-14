@@ -14,7 +14,7 @@ This topic should not be a catalog of containers. Data structures belong here be
 
 ## Learning Path
 
-Start with each main-topic overview, then expand into its scaffold pages as the material is filled in.
+Start with each main-topic overview, then use the linked chapter pages. New roadmap pages are marked `draft` until they are fully expanded and reviewed.
 
 ### Algorithmic Foundations
 
@@ -22,6 +22,15 @@ Start with each main-topic overview, then expand into its scaffold pages as the 
 2. [Problem Modeling](algorithmic-foundations/problem-modeling.md)
 3. [Invariants And Correctness](algorithmic-foundations/invariants-and-correctness.md)
 4. [Data Modeling And Abstract Data Types](algorithmic-foundations/data-modeling-and-abstract-data-types.md)
+
+### Algorithm Design Techniques
+
+1. [Algorithm Design Techniques](algorithm-design-techniques/index.md)
+2. [Greedy Algorithms](algorithm-design-techniques/greedy-algorithms.md)
+3. [Dynamic Programming](algorithm-design-techniques/dynamic-programming.md)
+4. [Amortized Analysis And Recurrence Relations](algorithm-design-techniques/amortized-analysis-and-recurrence-relations.md)
+5. [Algorithm Testing Fuzzing And Reference Models](algorithm-design-techniques/algorithm-testing-fuzzing-and-reference-models.md)
+6. [String And Protocol Parsing Algorithms](algorithm-design-techniques/string-and-protocol-parsing-algorithms.md)
 
 ### Control Flow And Recursion
 
@@ -42,6 +51,7 @@ Start with each main-topic overview, then expand into its scaffold pages as the 
 1. [Basic Algorithm Schemes](basic-algorithm-schemes/index.md)
 2. [Linear Scan Patterns](basic-algorithm-schemes/linear-scan-patterns.md)
 3. [Binary Search](basic-algorithm-schemes/binary-search.md)
+4. [Practical Sequence Patterns](basic-algorithm-schemes/practical-sequence-patterns.md)
 
 ### Searching And Backtracking
 
@@ -64,6 +74,7 @@ Start with each main-topic overview, then expand into its scaffold pages as the 
 3. [Depth-First Search](graph-algorithms/depth-first-search.md)
 4. [Breadth-First Search](graph-algorithms/breadth-first-search.md)
 5. [Shortest Path Algorithms](graph-algorithms/shortest-path-algorithms.md)
+6. [Advanced Graph Algorithms](graph-algorithms/advanced-graph-algorithms.md)
 
 ### Tree Algorithms
 
@@ -71,6 +82,7 @@ Start with each main-topic overview, then expand into its scaffold pages as the 
 2. [Tree Representations](tree-algorithms/tree-representations.md)
 3. [Tree Traversals](tree-algorithms/tree-traversals.md)
 4. [Expression Trees And Stack Evaluation](tree-algorithms/expression-trees-and-stack-evaluation.md)
+5. [Advanced Tree Algorithms](tree-algorithms/advanced-tree-algorithms.md)
 
 ### Parallel And Dataflow Algorithms
 
@@ -78,6 +90,8 @@ Start with each main-topic overview, then expand into its scaffold pages as the 
 2. [Pipeline And Dataflow Algorithms](parallel-and-dataflow-algorithms/pipeline-and-dataflow-algorithms.md)
 3. [Partitioning Reductions And Fan-In](parallel-and-dataflow-algorithms/partitioning-reductions-and-fan-in.md)
 4. [Synchronization Costs And Result Merging](parallel-and-dataflow-algorithms/synchronization-costs-and-result-merging.md)
+5. [Work Scheduling And Load Balancing](parallel-and-dataflow-algorithms/work-scheduling-and-load-balancing.md)
+6. [Atomic And Lock-Free Algorithm Patterns](parallel-and-dataflow-algorithms/atomic-and-lock-free-algorithm-patterns.md)
 
 ### Data Structures For Algorithms
 
@@ -90,6 +104,8 @@ Start with each main-topic overview, then expand into its scaffold pages as the 
 7. [Bitsets And Bitmaps](data-structures-for-algorithms/bitsets-and-bitmaps.md)
 8. [Intrusive Data Structures](data-structures-for-algorithms/intrusive-data-structures.md)
 9. [Memory Pools And Fixed-Size Allocators](data-structures-for-algorithms/memory-pools-and-fixed-size-allocators.md)
+10. [Deques](data-structures-for-algorithms/deques.md)
+11. [Disjoint-Set Union](data-structures-for-algorithms/disjoint-set-union.md)
 
 ### Embedded Linux Algorithmic Constraints
 
@@ -99,6 +115,7 @@ Start with each main-topic overview, then expand into its scaffold pages as the 
 4. [Recursion And Stack-Depth Policy](embedded-linux-algorithmic-constraints/recursion-and-stack-depth-policy.md)
 5. [Cache-Aware And DMA-Friendly Layouts](embedded-linux-algorithmic-constraints/cache-aware-and-dma-friendly-layouts.md)
 6. [Interrupt-Safe Queues And Buffers](embedded-linux-algorithmic-constraints/interrupt-safe-queues-and-buffers.md)
+7. [Data Integrity Checksums And Watchdog-Friendly Processing](embedded-linux-algorithmic-constraints/data-integrity-checksums-and-watchdog-processing.md)
 
 ## What This Topic Should Teach
 
@@ -107,8 +124,13 @@ Start with each main-topic overview, then expand into its scaffold pages as the 
 - how sequence, branching, iteration, and recursion compose algorithms
 - how to reason about runtime, memory use, and constant factors
 - how to recognize basic algorithm schemes before reaching for complex tools
+- how greedy, dynamic-programming, and amortized techniques shape algorithm design
+- how to validate algorithms with reference models, fuzzing, and invariant-based tests
+- how to process sequences, strings, and protocols with bounded state
 - how search, backtracking, traversal, sorting, and shortest-path algorithms work
+- how advanced graph and tree algorithms support dependency, connectivity, and query problems
 - how stacks, queues, arrays, trees, graphs, hash tables, heaps, and bitmaps support algorithms
+- how scheduling, atomics, and lock-free patterns change parallel algorithm costs
 - how embedded Linux constraints change otherwise standard algorithm choices
 
 ## Embedded And Linux Focus Areas
@@ -120,6 +142,8 @@ Start with each main-topic overview, then expand into its scaffold pages as the 
 - cache-aware layout
 - DMA-friendly buffers
 - allocation failure handling
+- checksums, CRCs, and corruption recovery
+- watchdog-friendly chunking and bounded retries
 - data integrity checks
 - algorithmic tradeoffs in drivers, daemons, boot code, and diagnostics
 

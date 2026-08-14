@@ -8,7 +8,7 @@ last_reviewed: null
 
 # Embedded Linux Algorithmic Constraints
 
-Roadmap for adapting algorithms to embedded Linux, kernel-adjacent, and hardware-facing work.
+Overview of adapting algorithms to embedded Linux, kernel-adjacent, and hardware-facing work.
 
 ## Coverage
 
@@ -27,18 +27,19 @@ Roadmap for adapting algorithms to embedded Linux, kernel-adjacent, and hardware
 - checksums and CRCs
 - watchdog-aware long-running operations
 
-## Scaffold Pages
+## Pages In This Section
 
 - [Bounded Memory And Allocation Failure](bounded-memory-and-allocation-failure.md)
 - [Deterministic Runtime And Real-Time Tradeoffs](deterministic-runtime-and-real-time-tradeoffs.md)
 - [Recursion And Stack-Depth Policy](recursion-and-stack-depth-policy.md)
 - [Cache-Aware And DMA-Friendly Layouts](cache-aware-and-dma-friendly-layouts.md)
 - [Interrupt-Safe Queues And Buffers](interrupt-safe-queues-and-buffers.md)
+- [Data Integrity Checksums And Watchdog-Friendly Processing](data-integrity-checksums-and-watchdog-processing.md)
 
 ## Programming Examples
 
-- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
-- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+- C: use bounded implementations with explicit context, error, and memory behavior.
+- Python: use reference models and fault-injection tests where helpful.
 
 ## Embedded And Systems Angle
 

@@ -8,7 +8,7 @@ last_reviewed: null
 
 # Graph Algorithms
 
-Roadmap for modeling relationships and traversing graph-shaped problems.
+Overview of modeling relationships and traversing graph-shaped problems.
 
 ## Coverage
 
@@ -27,17 +27,18 @@ Roadmap for modeling relationships and traversing graph-shaped problems.
 - Dijkstra's algorithm
 - Bellman-Ford algorithm
 
-## Scaffold Pages
+## Pages In This Section
 
 - [Graph Representations](graph-representations.md)
 - [Depth-First Search](depth-first-search.md)
 - [Breadth-First Search](breadth-first-search.md)
 - [Shortest Path Algorithms](shortest-path-algorithms.md)
+- [Advanced Graph Algorithms](advanced-graph-algorithms.md)
 
 ## Programming Examples
 
-- C: add the primary implementation example, with bounds, error handling, and memory behavior visible.
-- Python: add a reference implementation when it helps explain the algorithm, generate test cases, or compare behavior.
+- C: use bounded graph storage and explicit unreachable, overflow, and failure behavior.
+- Python: use small reference graphs and test oracles where helpful.
 
 ## Embedded And Systems Angle
 
