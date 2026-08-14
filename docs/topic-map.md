@@ -12,39 +12,259 @@ This file owns the taxonomy. Add and reorganize topics here before expanding the
 
 ## C Programming
 
-- compilation model
-- translation units
-- declarations vs definitions
-- storage duration and linkage
-- integer types and promotions
-- pointers
-- arrays vs pointers
-- pointer arithmetic
-- structs and unions
-- alignment and padding
-- bit fields
-- const correctness
-- volatile
-- restrict
+### Orientation
+
+- origins and history
+  - BCPL and B
+  - Dennis Ritchie and early C
+  - Unix and the PDP-11
+  - K&R C
+  - ANSI C and ISO C
+  - C90, C99, C11, C17, and C23
+- standards and conformance
+  - ISO C standard structure
+  - hosted and freestanding implementations
+  - conforming programs and implementations
+  - undefined, unspecified, and implementation-defined behavior
+  - constraint violations and required diagnostics
+  - defect reports and corrigenda
+  - compiler language modes and extensions
+- use cases and environments
+  - bare-metal firmware
+  - RTOS applications
+  - bootloaders
+  - device drivers
+  - Linux kernel code
+  - embedded Linux userspace
+  - protocol stacks
+  - safety-critical and security-critical systems
+  - C interoperability
+- hosted and freestanding C
+  - runtime assumptions
+  - standard-library availability
+  - startup without an operating system
+  - minimal runtime support
+  - portability boundaries
+- learning workflow and tooling
+  - compiler and debugger setup
+  - command-line workflow
+  - build and test loop
+  - reading diagnostics
+  - host-based experimentation
+  - target-based experimentation
+
+### Language Fundamentals
+
+- source code and syntax
+  - translation units
+  - tokens and preprocessing tokens
+  - identifiers and keywords
+  - literals
+  - declarations and definitions
+  - statements and expressions
+- types, values, and objects
+  - integer types
+  - floating-point types
+  - character types
+  - Boolean values
+  - void
+  - enumerated types
+  - sizeof and type widths
+  - value ranges and representations
+- expressions and operators
+  - arithmetic, relational, logical, and bitwise operators
+  - assignment, conditional, and comma operators
+  - casts
+  - precedence and associativity
+  - evaluation order and side effects
+- control flow
+  - if and switch
+  - loops
+  - break and continue
+  - goto and return
+  - state-machine control flow
+  - loop invariants and termination
+- functions
+  - declarations and prototypes
+  - definitions
+  - parameters and return values
+  - variadic functions
+  - recursion
+  - function pointers
+  - callbacks
+  - reentrancy
+  - function contracts
+- arrays, strings, and buffers
+  - array initialization
+  - array-to-pointer conversion
+  - multidimensional arrays
+  - null-terminated strings
+  - binary buffers
+  - bounds and capacities
+  - flexible array members
+- structures, unions, and enumerations
+  - structure declaration and initialization
+  - nested structures
+  - unions
+  - tagged unions
+  - enumerations
+  - structure layout
+  - padding and alignment
+- declarations and declarators
+  - declaration specifiers
+  - pointer declarators
+  - arrays of pointers
+  - pointers to arrays
+  - functions returning pointers
+  - pointers to functions
+  - typedef
+  - incomplete and compatible types
+- initialization
+  - zero and static initialization
+  - automatic initialization
+  - designated initializers
+  - compound literals
+  - partial initialization
+  - initialization order
+
+### Semantics And Memory
+
+- storage duration, scope, and linkage
+- pointer fundamentals
+- pointer arithmetic and bounds
+- const, volatile, and restrict
+- conversions, promotions, and aliasing
+- object representation, alignment, and padding
+- memory layout and allocation
 - undefined behavior
-- implementation-defined behavior
-- strict aliasing
-- memory layout
-- stack vs heap
-- static vs dynamic allocation
-- ownership conventions
-- error handling patterns
-- bit manipulation
-- function pointers
-- callbacks
-- macro hygiene
-- header file design
-- build flags and warnings
+- memory safety and lifetime
+- ownership and bounds reasoning
+- stack, heap, static, and thread-local storage
+
+### Modular Design And APIs
+
+- translation units and headers
+- preprocessor and macros
+- APIs and opaque types
+- ownership and resource lifetimes
+- error handling
+- callbacks and function tables
+- architecture patterns
+- public versus private interfaces
+- dependency direction
+- driver and hardware abstraction boundaries
+- compile-time and link-time configuration
+
+### Standard Library And Ecosystem
+
+- ISO C library overview
+- memory and string APIs
+- I/O, diagnostics, and errors
+- numeric, time, and character APIs
+- atomics, threads, and signals
+- embedded libc implementations
+  - newlib
+  - picolibc
+  - musl
+  - glibc
+  - vendor libc implementations
+- POSIX and system interfaces
+- common embedded libraries
+  - vendor HALs
+  - CMSIS-style interfaces
+  - RTOS APIs
+  - networking stacks
+  - TLS libraries
+  - USB and CAN stacks
+  - filesystem libraries
+  - serialization libraries
+  - test and mocking frameworks
+
+### Compilation, Linking, And ABI
+
+- translation pipeline
+- compiler modes, warnings, and optimization
+- object files, symbols, and relocations
+- static and dynamic linking
+- linker scripts and memory layout
+- startup, runtime, and main
+- cross-compilation and sysroots
+- ABI, calling conventions, and FFI
+- debug information and binary inspection
+- preprocessing, assembly, map files, and disassembly
+- ELF, archives, shared libraries, and relocations
+
+### Correctness, Quality, And Security
+
+- coding practices
+- portability
+- testing strategy
+- static analysis
+- sanitizers and dynamic analysis
 - debugging with GDB
-- sanitizers
-- linker basics
-- linker scripts
-- embedded C constraints
+- security
+- safety standards and MISRA
+- formal methods
+- compiler diagnostics and quality gates
+- fuzzing, fault injection, and coverage
+- requirements and traceability
+
+### Embedded C And Hardware
+
+- freestanding C
+- startup, reset, and vector tables
+- memory-mapped I/O
+- interrupts, exceptions, and faults
+- DMA, cache, and memory barriers
+- real-time constraints
+- peripheral drivers
+- RTOS integration
+- bootloaders and firmware images
+- GPIO, timers, UART, SPI, I2C, CAN, USB, Ethernet, ADC, DAC, flash, and storage
+- watchdogs and recovery paths
+- deterministic allocation and stack sizing
+
+### Platform-Specific C
+
+- microcontroller platforms
+- ARM Cortex-M
+- ARM Cortex-A and AArch64
+- RISC-V
+- x86-64
+- embedded Linux
+- multicore and heterogeneous systems
+- compiler and vendor extensions
+- processor ABIs
+- MMU, MPU, cache, and privilege boundaries
+- SMP, AMP, remote processors, and shared peripherals
+
+### Advanced C
+
+- advanced type system
+- C memory model and concurrency
+- compiler optimization and undefined behavior
+- advanced data structures
+- numerical and fixed-point C
+- performance and code size
+- protocols and serialization
+- C library implementation
+- C interoperability
+- atomics and lock-free structures
+- compiler-generated code
+- zero-copy and bounded-memory designs
+
+### Professional Practice And Capstones
+
+- code review and maintainability
+- product-quality C workflow
+- portable C library capstone
+- bounded protocol parser capstone
+- bare-metal firmware capstone
+- RTOS component capstone
+- embedded Linux service capstone
+- senior-level outcomes
+- requirements, design records, coding standards, tests, static analysis, reproducible builds, and release evidence
+
 
 ## Algorithms And Data Models
 

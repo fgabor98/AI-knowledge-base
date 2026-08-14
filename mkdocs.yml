@@ -37,7 +37,119 @@ nav:
   - Home: index.md
   - Topic Map: topic-map.md
   - C:
-      - c/index.md
+      - "Overview": c/index.md
+      - "Orientation":
+          - "Orientation": c/orientation/index.md
+          - "Origins And History": c/orientation/origins-and-history.md
+          - "Standards And Conformance": c/orientation/standards-and-conformance.md
+          - "Use Cases And Environments": c/orientation/use-cases-and-environments.md
+          - "Hosted And Freestanding C": c/orientation/hosted-and-freestanding.md
+          - "Learning Workflow And Tooling": c/orientation/learning-workflow-and-tooling.md
+      - "Language Fundamentals":
+          - "Language Fundamentals": c/language-fundamentals/index.md
+          - "Source Code And Syntax": c/language-fundamentals/source-code-and-syntax.md
+          - "Types, Values, And Objects": c/language-fundamentals/types-values-and-objects.md
+          - "Expressions And Operators": c/language-fundamentals/expressions-and-operators.md
+          - "Control Flow": c/language-fundamentals/control-flow.md
+          - "Functions": c/language-fundamentals/functions.md
+          - "Arrays, Strings, And Buffers": c/language-fundamentals/arrays-strings-and-buffers.md
+          - "Structures, Unions, And Enumerations": c/language-fundamentals/structures-unions-and-enums.md
+          - "Declarations And Declarators": c/language-fundamentals/declarations-and-declarators.md
+          - "Initialization": c/language-fundamentals/initialization.md
+      - "Semantics And Memory":
+          - "Semantics And Memory": c/semantics-and-memory/index.md
+          - "Storage Duration, Scope, And Linkage": c/semantics-and-memory/storage-duration-scope-and-linkage.md
+          - "Pointer Fundamentals": c/semantics-and-memory/pointer-fundamentals.md
+          - "Pointer Arithmetic And Bounds": c/semantics-and-memory/pointer-arithmetic-and-bounds.md
+          - "Const, Volatile, And Restrict": c/semantics-and-memory/qualifiers-const-volatile-restrict.md
+          - "Conversions, Promotions, And Aliasing": c/semantics-and-memory/conversions-promotions-and-aliasing.md
+          - "Object Representation, Alignment, And Padding": c/semantics-and-memory/object-representation-alignment-and-padding.md
+          - "Memory Layout And Allocation": c/semantics-and-memory/memory-layout-and-allocation.md
+          - "Undefined Behavior": c/semantics-and-memory/undefined-behavior.md
+          - "Memory Safety And Lifetime": c/semantics-and-memory/memory-safety-and-lifetime.md
+      - "Modular Design And APIs":
+          - "Modular Design And APIs": c/modular-design-and-apis/index.md
+          - "Translation Units And Headers": c/modular-design-and-apis/translation-units-and-headers.md
+          - "Preprocessor And Macros": c/modular-design-and-apis/preprocessor-and-macros.md
+          - "APIs And Opaque Types": c/modular-design-and-apis/api-and-opaque-types.md
+          - "Ownership And Resource Lifetimes": c/modular-design-and-apis/ownership-and-resource-lifetimes.md
+          - "Error Handling": c/modular-design-and-apis/error-handling.md
+          - "Callbacks And Function Tables": c/modular-design-and-apis/callbacks-and-function-tables.md
+          - "Architecture Patterns": c/modular-design-and-apis/architecture-patterns.md
+      - "Standard Library And Ecosystem":
+          - "Standard Library And Ecosystem": c/standard-library-and-ecosystem/index.md
+          - "Standard Library Overview": c/standard-library-and-ecosystem/standard-library-overview.md
+          - "Memory And String APIs": c/standard-library-and-ecosystem/memory-and-string-apis.md
+          - "I/O, Diagnostics, And Errors": c/standard-library-and-ecosystem/io-diagnostics-and-errors.md
+          - "Numeric, Time, And Character APIs": c/standard-library-and-ecosystem/numeric-time-and-character-apis.md
+          - "Atomics, Threads, And Signals": c/standard-library-and-ecosystem/atomics-threads-and-signals.md
+          - "Embedded libc Implementations": c/standard-library-and-ecosystem/embedded-libc.md
+          - "POSIX And System Interfaces": c/standard-library-and-ecosystem/posix-and-system-interfaces.md
+          - "Common Embedded Libraries": c/standard-library-and-ecosystem/common-embedded-libraries.md
+      - "Compilation, Linking, And ABI":
+          - "Compilation, Linking, And ABI": c/compilation-linking-and-abi/index.md
+          - "Translation Pipeline": c/compilation-linking-and-abi/translation-pipeline.md
+          - "Compiler Modes, Warnings, And Optimization": c/compilation-linking-and-abi/compiler-modes-warnings-and-optimization.md
+          - "Object Files, Symbols, And Relocations": c/compilation-linking-and-abi/object-files-symbols-and-relocations.md
+          - "Static And Dynamic Linking": c/compilation-linking-and-abi/static-and-dynamic-linking.md
+          - "Linker Scripts And Memory Layout": c/compilation-linking-and-abi/linker-scripts-and-memory-layout.md
+          - "Startup, Runtime, And main": c/compilation-linking-and-abi/startup-runtime-and-main.md
+          - "Cross-Compilation And Sysroots": c/compilation-linking-and-abi/cross-compilation-and-sysroots.md
+          - "ABI, Calling Conventions, And FFI": c/compilation-linking-and-abi/abi-calling-conventions-and-ffi.md
+          - "Debug Information And Binary Inspection": c/compilation-linking-and-abi/debug-information-and-binary-inspection.md
+      - "Correctness, Quality, And Security":
+          - "Correctness, Quality, And Security": c/correctness-quality-and-security/index.md
+          - "Coding Practices": c/correctness-quality-and-security/coding-practices.md
+          - "Portability": c/correctness-quality-and-security/portability.md
+          - "Testing Strategy": c/correctness-quality-and-security/testing-strategy.md
+          - "Static Analysis": c/correctness-quality-and-security/static-analysis.md
+          - "Sanitizers And Dynamic Analysis": c/correctness-quality-and-security/sanitizers-and-dynamic-analysis.md
+          - "Debugging With GDB": c/correctness-quality-and-security/debugging-with-gdb.md
+          - "Security": c/correctness-quality-and-security/security.md
+          - "Safety Standards And MISRA": c/correctness-quality-and-security/safety-standards-and-misra.md
+          - "Formal Methods": c/correctness-quality-and-security/formal-methods.md
+      - "Embedded C And Hardware":
+          - "Embedded C And Hardware": c/embedded-c-and-hardware/index.md
+          - "Freestanding C": c/embedded-c-and-hardware/freestanding-c.md
+          - "Startup, Reset, And Vector Tables": c/embedded-c-and-hardware/startup-reset-and-vector-tables.md
+          - "Memory-Mapped I/O": c/embedded-c-and-hardware/memory-mapped-io.md
+          - "Interrupts, Exceptions, And Faults": c/embedded-c-and-hardware/interrupts-exceptions-and-faults.md
+          - "DMA, Cache, And Memory Barriers": c/embedded-c-and-hardware/dma-cache-and-memory-barriers.md
+          - "Real-Time Constraints": c/embedded-c-and-hardware/real-time-constraints.md
+          - "Peripheral Drivers": c/embedded-c-and-hardware/peripheral-drivers.md
+          - "RTOS Integration": c/embedded-c-and-hardware/rtos-integration.md
+          - "Bootloaders And Firmware Images": c/embedded-c-and-hardware/bootloaders-and-firmware-images.md
+      - "Platform-Specific C":
+          - "Platform-Specific C": c/platform-specific-c/index.md
+          - "Microcontroller Platforms": c/platform-specific-c/microcontroller-platforms.md
+          - "ARM Cortex-M": c/platform-specific-c/arm-cortex-m.md
+          - "ARM Cortex-A And AArch64": c/platform-specific-c/arm-cortex-a-and-aarch64.md
+          - "RISC-V": c/platform-specific-c/risc-v.md
+          - "x86-64": c/platform-specific-c/x86-64.md
+          - "Embedded Linux": c/platform-specific-c/embedded-linux.md
+          - "Multicore And Heterogeneous Systems": c/platform-specific-c/multicore-and-heterogeneous-systems.md
+          - "Compiler And Vendor Extensions": c/platform-specific-c/compiler-and-vendor-extensions.md
+      - "Advanced C":
+          - "Advanced C": c/advanced-c/index.md
+          - "Advanced Type System": c/advanced-c/advanced-type-system.md
+          - "C Memory Model And Concurrency": c/advanced-c/c-memory-model-and-concurrency.md
+          - "Compiler Optimization And Undefined Behavior": c/advanced-c/compiler-optimization-and-undefined-behavior.md
+          - "Advanced Data Structures": c/advanced-c/advanced-data-structures.md
+          - "Numerical And Fixed-Point C": c/advanced-c/numerical-and-fixed-point-c.md
+          - "Performance And Code Size": c/advanced-c/performance-and-code-size.md
+          - "Protocols And Serialization": c/advanced-c/protocols-and-serialization.md
+          - "C Library Implementation": c/advanced-c/c-library-implementation.md
+          - "C Interoperability": c/advanced-c/c-interoperability.md
+      - "Professional Practice And Capstones":
+          - "Professional Practice And Capstones": c/professional-and-capstone/index.md
+          - "Code Review And Maintainability": c/professional-and-capstone/code-review-and-maintainability.md
+          - "Product-Quality C Workflow": c/professional-and-capstone/product-quality-c-workflow.md
+          - "Capstone: Portable C Library": c/professional-and-capstone/capstone-portable-library.md
+          - "Capstone: Bounded Protocol Parser": c/professional-and-capstone/capstone-protocol-parser.md
+          - "Capstone: Bare-Metal Firmware": c/professional-and-capstone/capstone-bare-metal-firmware.md
+          - "Capstone: RTOS Component": c/professional-and-capstone/capstone-rtos-component.md
+          - "Capstone: Embedded Linux Service": c/professional-and-capstone/capstone-embedded-linux-service.md
+          - "Senior-Level Outcomes": c/professional-and-capstone/senior-level-outcomes.md
   - Algorithms And Data Models:
       - Overview: algorithms-and-data-structures/index.md
       - Algorithmic Foundations:
