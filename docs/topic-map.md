@@ -766,50 +766,210 @@ Advanced:
 
 ## Linux Userspace And System Programming
 
-Beginner:
+### Environment And Mental Model
 
-- Linux filesystem layout
-- `/etc`, `/proc`, `/sys`, `/dev`, `/run`, `/var`, and `/tmp`
-- users, groups, ownership, and permissions
-- shells, commands, and exit status
-- processes and PIDs
-- environment variables
-- signals
-- sessions, process groups, and controlling terminals
-- package and file deployment concepts
-- logs with `dmesg`, syslog, and journald
-- basic networking commands
-- basic storage and mount inspection
+- hosted C process, libc, dynamic linker, system call, kernel subsystem, driver, and hardware
+- user mode versus kernel mode
+- POSIX interfaces versus Linux extensions versus vendor and product APIs
+- manual-page sections, feature-test macros, `errno`, cancellation, and thread-safety contracts
+- host/target differences in architecture, ABI, libc, rootfs, kernel, and init system
+- repeatable host/target labs, serial access, symbols, logs, and `strace`
 
-Intermediate:
+### Linux Runtime, Filesystem, And Rootfs
 
-- system calls
-- file descriptors
-- pipes, FIFOs, and redirection
-- sockets
-- `poll`, `select`, and `epoll`
-- terminals, TTYs, and PTYs
-- services and daemons
-- systemd units, dependencies, ordering, and restart policy
-- device access through `/dev`, sysfs, udev, and devtmpfs
-- Linux capabilities
-- core dumps
-- userspace diagnostics with `strace`, `lsof`, `ss`, `ip`, `journalctl`, and `gdbserver`
+- filesystem hierarchy and path resolution
+- `/etc`, `/proc`, `/sys`, `/dev`, `/run`, `/var`, `/tmp`, `/usr`, and `/lib`
+- files, directories, inodes, metadata, symlinks, hard links, and mount points
+- `stat`, `lstat`, `fstat`, `readlink`, `realpath`, directory iteration, and directory FDs
+- `openat`, `fstatat`, `renameat`, `unlinkat`, safe temporary files, and TOCTOU resistance
+- `procfs`, `sysfs`, `devtmpfs`, `tmpfs`, `debugfs`, and `configfs`
+- mounts, `fstab`, initramfs, bind mounts, mount namespaces, overlayfs, and read-only rootfs
+- volatile state, persistent data, configuration, caches, logs, sockets, and locks
+- executable interpreters, ELF program headers, dynamic loader, shared-library lookup, and ABI
+- static versus dynamic linking and target deployment
 
-Advanced:
+### Processes And Program Lifetime
 
-- embedded read-only root filesystems
-- `tmpfs`, `overlayfs`, bind mounts, and persistent state
-- userspace hardware APIs
-- service supervision and watchdog integration
-- IPC design
-- update-aware daemon design
-- `rlimit` and cgroup constraints
-- namespaces
-- cross-compiled userspace applications
-- target diagnostics and support bundles
-- production logging
-- failure containment
+- processes, programs, threads, tasks, PIDs, TIDs, process groups, sessions, and process trees
+- `fork`, `vfork`, `clone`, copy-on-write, `execve`, `execveat`, and `posix_spawn`
+- argument and environment vectors, current directory, umask, credentials, and inherited FDs
+- `exit`, `_exit`, `atexit`, `waitpid`, `waitid`, `SIGCHLD`, exit status, zombies, and orphans
+- reparenting, subreapers, PID 1, supervision, crash loops, backoff, and escalation
+- controlling terminals and job control
+- `/proc/PID` observation and process states
+- `ps`, `top`, `pgrep`, `pkill`, `pidof`, `kill`, `nice`, `renice`, and `chrt`
+
+### System Calls, Files, And File Descriptors
+
+- libc wrappers versus direct system calls
+- return values, `errno`, `EINTR`, `EAGAIN`, partial I/O, retries, and cancellation
+- `open`, `openat`, `read`, `write`, `pread`, `pwrite`, `lseek`, `truncate`, and `close`
+- file descriptors, open-file descriptions, offsets, status flags, descriptor flags, and ownership
+- `dup`, `dup2`, `dup3`, `fcntl`, `FD_CLOEXEC`, `O_CLOEXEC`, and `O_NONBLOCK`
+- stdio versus descriptor I/O
+- file creation, metadata, `rename`, `unlink`, advisory locks, and race-resistant operations
+- `fsync`, `fdatasync`, directory sync, disk-full behavior, and durability
+- anonymous pipes, FIFOs, `pipe2`, EOF, `SIGPIPE`, `EPIPE`, buffering, and backpressure
+- optional `sendfile`, `splice`, `copy_file_range`, direct I/O, `close_range`, and `pidfd`
+
+### Process Memory And Mapping
+
+- virtual address spaces, pages, protections, and user/kernel separation
+- text, data, BSS, heap, stack, TLS, shared libraries, and mapped files
+- `mmap`, `munmap`, `mprotect`, anonymous mappings, file-backed mappings, and shared memory
+- copy-on-write, page faults, demand paging, guard pages, and stack limits
+- ASLR, PIE, NX, RELRO, and process memory hardening
+- RSS, virtual size, dirty pages, memory pressure, overcommit, and OOM
+- `mlock` and real-time memory constraints
+- documented device mappings versus unsafe physical-address access
+
+### Time And Signals
+
+- wall-clock, monotonic, boottime, raw, and real-time clocks
+- `clock_gettime`, `clock_nanosleep`, `nanosleep`, POSIX timers, and `timerfd`
+- absolute deadlines, drift, suspend behavior, RTC, NTP, PTP, and timeout design
+- signal disposition, masks, pending signals, `sigaction`, and `SA_RESTART`
+- `SIGTERM`, `SIGINT`, `SIGHUP`, `SIGCHLD`, `SIGPIPE`, and fatal signals
+- async-signal-safe functions, self-pipe, `signalfd`, reload, and graceful shutdown
+
+### Threads And Userspace Concurrency
+
+- POSIX thread creation, joining, detaching, naming, attributes, stacks, and TLS
+- mutexes, robust and recursive mutexes, condition variables, read/write locks, barriers, and semaphores
+- predicates, spurious wakeups, lost wakeups, data races, deadlocks, and lock ordering
+- C atomics versus POSIX synchronization
+- cancellation, cleanup handlers, reentrancy, thread-safe libraries, and thread-local `errno`
+- ownership and lifetime across worker threads
+- bounded queues, producer/consumer designs, backpressure, and shutdown markers
+- priority inversion, priority inheritance, CPU affinity, and real-time scheduling
+- futexes as a conceptual kernel primitive
+
+### IPC And Event-Driven Design
+
+- pipes, FIFOs, Unix-domain sockets, datagrams, stream protocols, and `socketpair`
+- shared memory, `shm_open`, `memfd_create`, and synchronization
+- POSIX message queues, System V IPC, D-Bus, and maintenance tradeoffs
+- `eventfd`, `timerfd`, `signalfd`, and netlink
+- filesystem notifications with `inotify` and the limits of change-notification APIs
+- message framing, size limits, byte order, alignment, serialization, and versioning
+- request/reply, events, cancellation, duplicate requests, retries, and peer death
+- peer credentials such as `SO_PEERCRED`
+- queue bounds, backpressure, overload, reconnection, and failure containment
+- `select`, `poll`, `ppoll`, `pselect`, and `epoll`
+- level-triggered versus edge-triggered readiness, one-shot events, fairness, and close races
+- optional `io_uring` with embedded-kernel support considerations
+
+### Terminals, TTYs, And Serial Userspace
+
+- terminals, TTYs, line disciplines, controlling terminals, and PTYs
+- `termios`, canonical/raw mode, echo, signal generation, and input buffering
+- baud, parity, stop bits, flow control, modem-control lines, `VMIN`, and `VTIME`
+- serial framing, checksums, resynchronization, partial messages, and timeouts
+- console UART versus application serial ports
+- PTY-based testing and `stty`, `setserial`, `screen`, and `minicom`
+
+### Userspace Networking
+
+- socket domains, types, protocols, addresses, and byte order
+- `getaddrinfo`, `socket`, `bind`, `listen`, `accept`, `connect`, `send`, `recv`, and shutdown
+- TCP streams, partial I/O, reset, half-close, keepalive, reconnect, and deadlines
+- UDP boundaries, loss, duplication, ordering, broadcast, and multicast
+- Unix sockets versus loopback TCP
+- IPv4, IPv6, dual-stack behavior, interface binding, and resolver dependencies
+- nonblocking sockets, socket options, ancillary data, and FD passing
+- netlink overview, TLS integration, certificate verification, and offline behavior
+- `ss`, `ip`, `ethtool`, `tcpdump`, and `/proc/net`
+
+### Hardware-Facing Userspace And Kernel UAPI
+
+- kernel driver versus subsystem ABI versus userspace helper versus firmware
+- latency, interrupts, DMA, power, security, sharing, ownership, and recovery at the boundary
+- `/dev`, major/minor numbers, character/block devices, `devtmpfs`, uevents, udev, and persistent names
+- sysfs topology, attributes, modaliases, hotplug races, and deferred availability
+- `read`/`write`, sysfs, `ioctl`, `poll`, `mmap`, vectored I/O, and event records
+- blocking, nonblocking, timeout, cancellation, and close semantics
+- pointer-free UAPI structures, fixed-width types, padding, reserved fields, endianness, and 32/64-bit compatibility
+- ABI versioning, feature discovery, sequence numbers, timestamps, overflow, and lost-event recovery
+- GPIO chardev v2, `i2c-dev`, `spidev`, serial/TTY, evdev, IIO, hwmon, RTC, SocketCAN, watchdog, LEDs, PWM, and power controls
+- V4L2/media, ALSA, DRM, USB, PCIe, UIO, VFIO, remoteproc, and RPMsg as optional branches
+- device discovery, permissions, standard APIs, and product limits of raw bus access
+
+### Services, Init, And systemd
+
+- PID 1, early userspace, BusyBox init, init scripts, and systemd
+- unit types, targets, dependencies, ordering, conditions, conflicts, and device units
+- `ExecStart`, `ExecStop`, `Environment`, `WorkingDirectory`, `User`, `Group`, and runtime directories
+- `Type=simple`, `exec`, `forking`, `notify`, and `oneshot`
+- restart policies, start limits, backoff, kill behavior, and graceful shutdown
+- socket, timer, path, mount, and device activation
+- journald, structured logs, rate limits, persistent logs, and privacy
+- `systemctl`, `journalctl`, `systemd-analyze`, `sd_notify`, readiness, and watchdogs
+- reload protocols, validation, idempotent startup, and update/restart behavior
+- service resource limits, cgroups, capabilities, and filesystem sandboxing
+
+### Identity, Privilege, And Userspace Security
+
+- real, effective, saved, and filesystem IDs
+- supplementary groups, permissions, umask, ACLs, and access checks
+- capabilities and capability sets
+- privilege dropping, `setuid`, `setgid`, `no_new_privs`, securebits, and set-user-ID risks
+- Unix-socket peer authorization
+- mount, PID, network, user, IPC, and UTS namespaces
+- cgroups, seccomp, SELinux, AppArmor, and LSM concepts
+- read-only system files, writable-data boundaries, service sandboxing, and least privilege
+- safe device, sysfs, firmware, key, certificate, calibration, and update-artifact handling
+- path traversal, symlink/TOCTOU attacks, unsafe temporary files, environment attacks, command injection, and parser bugs
+- PIE, RELRO, stack protection, fortify, and production security evidence
+
+### Persistent State, Storage, And Power Loss
+
+- immutable files, configuration, runtime state, user data, caches, logs, and crash artifacts
+- volatile versus persistent storage decisions
+- atomic updates, `fsync`, rename, directory sync, recovery, and schema migration
+- locks, PID files, Unix socket paths, stale state, and single-instance ownership
+- ext4, squashfs, UBI/UBIFS, eMMC/NAND, flash wear, and write amplification
+- log rotation, bounded logging, full/read-only/corrupt storage, and brownout behavior
+- A/B updates, rollback, factory reset, and versioned state
+- retaining diagnostic evidence without exhausting the recovery path
+
+### Diagnostics, Performance, And Resource Limits
+
+- failure classification, first-failure evidence, reproduction, reduction, and hypothesis-driven debugging
+- startup, permission, dependency, device, protocol, hang, crash, corruption, and resource failures
+- `strace`, `ltrace`, GDB, `gdbserver`, core dumps, `coredumpctl`, and symbols
+- `/proc/PID`, `/sys`, `dmesg`, journald, service status, and kernel tracepoints
+- `readelf`, `objdump`, `nm`, `file`, and loader diagnostics
+- `lsof`, `fuser`, `mount`, `findmnt`, `df`, `du`, `ps`, `top`, `vmstat`, `iostat`, `pidstat`, and `/proc/pressure`
+- `perf`, eBPF tools, flame graphs, sanitizers, Valgrind, static analysis, and fuzzing
+- CPU, memory, stack, descriptor, thread, queue, syscall, copy, latency, throughput, jitter, and tail behavior
+- `RLIMIT_*`, cgroup v2 CPU/memory/I/O/PID controls, OOM behavior, and target measurement
+- serial captures, logic analyzers, oscilloscopes, and hardware traces
+
+### Cross-Compilation, Packaging, And Target Integration
+
+- target triples, ABI, endianness, floating-point ABI, CPU features, and sysroots
+- native versus target tools, pkg-config, dynamic loader paths, and accidental host linkage
+- debug symbols, build IDs, hardening, package layout, and runtime dependencies
+- configuration paths, service files, udev rules, tmpfiles rules, users/groups, and permissions
+- offline packages, post-install behavior, image composition, SDKs, and read-only-rootfs constraints
+- Yocto application recipes, service integration, package splitting, and target tests
+- exact kernel/DTB/rootfs/firmware/application identity
+- version reporting, ABI compatibility, rollback behavior, provenance, licenses, SBOMs, and CVE evidence
+
+### Testing And Architecture
+
+- host unit, integration, sanitizer, coverage, fuzz, and reference-model testing
+- dependency injection for files, clocks, sockets, devices, and commands
+- pipes, socketpairs, PTYs, memfd, temporary filesystems, loopback, fake devices, and deterministic clocks
+- target boot, service, device-discovery, peripheral, reset, watchdog, network-loss, storage, and power-cycle tests
+- update, rollback, factory-reset, migration, and interrupted-update tests
+- hardware-in-the-loop, board farms, serial capture, and artifact linking
+- command-line utility versus daemon
+- synchronous versus event-driven design
+- threads versus process isolation
+- polling versus notifications
+- state machines, bounded queues, retry budgets, circuit breakers, readiness, and failure containment
+- ownership, lifetime, compatibility, observability, and design assumptions
 
 ## Debugging And Diagnostics
 
