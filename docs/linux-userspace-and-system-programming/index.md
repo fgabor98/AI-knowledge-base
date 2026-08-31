@@ -50,7 +50,7 @@ Learn to use `man 2` for system calls, `man 3` for libc/POSIX functions, `man 5`
 
 The stages are ordered so that each one produces useful programs. The later stages are more valuable when implemented as extensions of one running embedded service rather than as isolated exercises.
 
-### Stage 0: Environment And Mental Model
+### [Stage 0: Environment And Mental Model](environment-and-mental-model/index.md)
 
 - hosted C process versus freestanding code and kernel code;
 - application, libc, dynamic linker, system-call entry, kernel subsystem, driver, and hardware;
@@ -63,7 +63,7 @@ The stages are ordered so that each one produces useful programs. The later stag
 - compiling with warnings and debug information, running a small program, observing it with `strace`, and inspecting it with `/proc`;
 - learning which operations can block, allocate, fail transiently, be interrupted, or depend on global process state.
 
-### Stage 1: Linux Runtime, Filesystem, And Rootfs
+### [Stage 1: Linux Runtime, Filesystem, And Rootfs](linux-runtime-filesystem-and-rootfs/index.md)
 
 #### Filesystem and path model
 
@@ -95,7 +95,7 @@ The stages are ordered so that each one produces useful programs. The later stag
 - package file ownership, configuration-file policy, service users, and runtime directories;
 - environment variables, `PATH`, `LD_LIBRARY_PATH`, `LD_PRELOAD`, and why environment-based behavior must be controlled in services.
 
-### Stage 2: Processes And Program Lifetime
+### [Stage 2: Processes And Program Lifetime](processes-and-program-lifetime/index.md)
 
 #### Process creation and replacement
 
@@ -126,7 +126,7 @@ The stages are ordered so that each one produces useful programs. The later stag
 - environment, current directory, umask, resource limits, credentials, and inherited descriptors as part of process identity;
 - distinguishing a process that crashed, exited, hung, blocked on I/O, was killed, or was restarted by a supervisor.
 
-### Stage 3: System Calls, Files, And File Descriptors
+### [Stage 3: System Calls, Files, And File Descriptors](system-calls-files-and-file-descriptors/index.md)
 
 #### System-call discipline
 
@@ -168,7 +168,7 @@ The stages are ordered so that each one produces useful programs. The later stag
 - producer/consumer shutdown and avoiding processes waiting forever for an unread or unclosed end;
 - when a pipe is sufficient and when a framed protocol or Unix socket is more appropriate.
 
-### Stage 4: Process Memory And Mapping
+### [Stage 4: Process Memory And Mapping](process-memory-and-mapping/index.md)
 
 - virtual address spaces, pages, page tables, protection bits, and user/kernel address separation;
 - text, read-only data, writable data, BSS, heap, stack, thread-local storage, shared libraries, and mapped files;
@@ -182,7 +182,7 @@ The stages are ordered so that each one produces useful programs. The later stag
 - mapping device memory only through a documented UAPI, never by treating a physical address as an ordinary pointer;
 - cache coherency, DMA, and memory barriers as a boundary to kernel and hardware material rather than a userspace shortcut.
 
-### Stage 5: Time, Clocks, And Signals
+### [Stage 5: Time, Clocks, And Signals](time-clocks-and-signals/index.md)
 
 #### Time and timers
 
@@ -204,7 +204,7 @@ The stages are ordered so that each one produces useful programs. The later stag
 - graceful shutdown and reload protocols;
 - why signals are a poor general-purpose message bus.
 
-### Stage 6: Threads And Userspace Concurrency
+### [Stage 6: Threads And Userspace Concurrency](threads-and-userspace-concurrency/index.md)
 
 - POSIX threads, thread creation, joining, detaching, naming, and lifetime ownership;
 - thread stacks, attributes, guard sizes, thread-local storage, and process-wide versus per-thread state;
@@ -220,7 +220,7 @@ The stages are ordered so that each one produces useful programs. The later stag
 - diagnosing a hung thread, a deadlock, a starvation problem, or a data race;
 - futexes as the kernel primitive behind many userspace locks, for conceptual understanding rather than routine direct use.
 
-### Stage 7: IPC And Event-Driven Design
+### [Stage 7: IPC And Event-Driven Design](ipc-and-event-driven-design/index.md)
 
 #### IPC choices
 
@@ -260,7 +260,7 @@ The stages are ordered so that each one produces useful programs. The later stag
 - timeout, cancellation, shutdown, and error paths in event-driven code;
 - `io_uring` as optional advanced Linux-specific material, with attention to embedded kernel support and operational complexity.
 
-### Stage 8: Terminals, TTYs, And Serial Userspace
+### [Stage 8: Terminals, TTYs, And Serial Userspace](terminals-ttys-and-serial-userspace/index.md)
 
 - terminal devices, TTYs, line disciplines, controlling terminals, and pseudo-terminals;
 - `termios`, canonical versus raw mode, echo, signal generation, special characters, and input buffering;
@@ -271,7 +271,7 @@ The stages are ordered so that each one produces useful programs. The later stag
 - PTYs for terminal emulation, SSH-like testing, and deterministic host-side tests;
 - tools such as `stty`, `setserial` where available, `screen`, and `minicom`, while keeping the protocol logic in testable code.
 
-### Stage 9: Userspace Networking
+### [Stage 9: Userspace Networking](userspace-networking/index.md)
 
 This stage covers socket programming and network behavior. Ethernet MAC/PHY bring-up and board wiring remain in the [Networking](../networking/index.md) track.
 
@@ -289,7 +289,7 @@ This stage covers socket programming and network behavior. Ethernet MAC/PHY brin
 - network service startup ordering, link loss, DHCP changes, time synchronization, and offline operation;
 - diagnosing sockets with `ss`, `ip`, `ethtool`, `tcpdump`, and `/proc/net`.
 
-### Stage 10: Hardware-Facing Userspace And Kernel UAPI
+### [Stage 10: Hardware-Facing Userspace And Kernel UAPI](hardware-facing-userspace-and-kernel-uapi/index.md)
 
 #### Choosing the boundary
 
@@ -342,7 +342,7 @@ This stage covers socket programming and network behavior. Ethernet MAC/PHY brin
 - UIO and VFIO as specialized mechanisms with explicit security and ownership constraints;
 - firmware loading, remoteproc/RPMsg, and heterogeneous-SoC interfaces as an advanced branch.
 
-### Stage 11: Services, Init, And systemd
+### [Stage 11: Services, Init, And systemd](services-init-and-systemd/index.md)
 
 #### Service model
 
@@ -369,7 +369,7 @@ This stage covers socket programming and network behavior. Ethernet MAC/PHY brin
 - service behavior during boot, brownout recovery, update, rollback, and repeated restart;
 - making a service safe to start more than once and safe to stop at any point.
 
-### Stage 12: Identity, Privilege, And Userspace Security
+### [Stage 12: Identity, Privilege, And Userspace Security](identity-privilege-and-userspace-security/index.md)
 
 - real, effective, saved, and filesystem user/group IDs;
 - supplementary groups, ownership, permissions, umask, ACLs, and access checks;
@@ -388,7 +388,7 @@ This stage covers socket programming and network behavior. Ethernet MAC/PHY brin
 - compiler and linker hardening as an application-build concern: PIE, RELRO, stack protection, fortify, and symbols;
 - least privilege, fail-closed behavior, auditability, and security evidence for production images.
 
-### Stage 13: Persistent State, Storage, And Power-Loss Behavior
+### [Stage 13: Persistent State, Storage, And Power-Loss Behavior](persistent-state-storage-and-power-loss/index.md)
 
 - distinguishing immutable application files, configuration, runtime state, user data, caches, logs, and crash artifacts;
 - choosing volatile versus persistent storage for every piece of state;
@@ -403,7 +403,7 @@ This stage covers socket programming and network behavior. Ethernet MAC/PHY brin
 - coordinating state with updates, A/B slots, rollback, factory reset, and version changes;
 - preserving diagnostic evidence without allowing logs to consume the recovery path.
 
-### Stage 14: Diagnostics, Debugging, And Performance
+### [Stage 14: Diagnostics, Debugging, And Performance](diagnostics-debugging-and-performance/index.md)
 
 This stage applies the general [Debugging And Diagnostics](../debugging/index.md) methods to userspace programs. It should teach evidence collection and reasoning, not a memorized tool list.
 
@@ -440,7 +440,7 @@ This stage applies the general [Debugging And Diagnostics](../debugging/index.md
 - measure on the target with a representative workload before optimizing;
 - preserve observability while reducing production overhead.
 
-### Stage 15: Cross-Compilation, Packaging, And Target Integration
+### [Stage 15: Cross-Compilation, Packaging, And Target Integration](cross-compilation-packaging-and-target-integration/index.md)
 
 - target triples, architecture, ABI, endianness, floating-point ABI, and CPU feature selection;
 - sysroots, headers, libraries, pkg-config files, and the dynamic loader path;
@@ -455,7 +455,7 @@ This stage applies the general [Debugging And Diagnostics](../debugging/index.md
 - version reporting, release manifests, ABI compatibility, and rollback-aware application behavior;
 - reproducible builds, source and binary provenance, licenses, SBOMs, and CVE evidence as a boundary with Build Systems and Productization.
 
-### Stage 16: Testing And Verification
+### [Stage 16: Testing And Verification](testing-and-verification/index.md)
 
 #### Host-side testing
 
@@ -478,7 +478,7 @@ This stage applies the general [Debugging And Diagnostics](../debugging/index.md
 - record target identity, software versions, kernel logs, service logs, test results, and failure artifacts;
 - distinguish a test that proves code behavior from a test that proves board integration.
 
-### Stage 17: Design And Architecture Patterns
+### [Stage 17: Design And Architecture Patterns](design-and-architecture-patterns/index.md)
 
 - single-purpose command-line tool versus long-running daemon;
 - synchronous request/response versus event-driven service;
