@@ -1,86 +1,33 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
+# Namespaces And Cgroups
 
-# Namespaces And cgroups
+Namespaces change a process's view of selected kernel objects. Cgroups group processes for resource accounting and control. Neither mechanism, by itself, answers whether a request is authorized.
 
-## What Problem Does This Solve?
+## Namespace dimensions
 
-This page covers how namespaces isolate views and cgroups constrain processes and services. It is part of Stage 12: Identity, Privilege, And Userspace Security and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+- **User:** maps UIDs/GIDs and capability meaning; useful for rootless isolation.
+- **Mount:** gives a private mount topology; it does not automatically make files safe.
+- **PID:** changes visible process IDs; the namespace's init process has special orphan and signal behavior.
+- **Network:** separates interfaces, routes, ports, and firewall context.
+- **IPC:** isolates System V IPC and related objects.
+- **UTS:** separates hostname and domain name.
+- **Cgroup and time:** alter cgroup visibility or selected clocks where supported.
 
-## Core Concepts
+Namespace setup has ordering constraints. A process must retain the authority to create or configure a namespace, and mount/network setup often needs to happen before dropping the corresponding capability. User namespace mappings must be written correctly before relying on the mapped identity.
 
-- the namespaces and cgroups contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+## Cgroup v2
 
-## Learning Outcomes
+Cgroup v2 presents a unified hierarchy. Controllers can enforce or report CPU, memory, I/O, PIDs, and other resources. Important controls include memory limits and protection, CPU weight/max, I/O policy, `pids.max`, and pressure stall information. A limit is a policy decision: define what happens on reclaim, throttling, allocation failure, or OOM termination.
 
-After studying this page, you should be able to:
+Use cgroups to contain blast radius and make resource ownership observable. Do not mistake `pids.max` for a complete fork-bomb defense or a memory limit for protection against all kernel memory use.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Design questions
 
-## Planned Coverage
+For each isolated service, document:
 
-- mental model and vocabulary for namespaces and cgroups;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+- Which objects must be visible and which must be hidden?
+- Who creates the namespace and who owns its setup files?
+- Is the service allowed to create children, mount filesystems, or change networking?
+- What resource is being limited, at what level, and with what failure behavior?
+- How will operators inspect the process from the host and from inside the namespace?
 
-## Practical Exercise
-
-place a test service in controlled namespaces and measure resource-limit behavior.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 12: Identity, Privilege, And Userspace Security](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Debug from both views. `/proc`, `/sys`, device nodes, and paths may have different meanings inside an isolated environment. A diagnostic that works on the host may be unavailable in the service namespace, so preserve host-side evidence as well.

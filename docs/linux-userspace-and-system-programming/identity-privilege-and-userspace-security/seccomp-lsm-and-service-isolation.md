@@ -1,86 +1,27 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
+# Seccomp, LSM, And Service Isolation
 
-# seccomp, LSM, And Service Isolation
+## Seccomp
 
-## What Problem Does This Solve?
+Seccomp filters restrict system calls and can inspect the syscall number and selected arguments. A practical policy starts from observed behavior, then removes unnecessary calls and chooses explicit actions for violations: kill, trap, log, or return an error. `no_new_privs` is commonly required before an unprivileged process installs a filter.
 
-This page covers how seccomp and SELinux/AppArmor-style policies reduce attack surface and enforce policy. It is part of Stage 12: Identity, Privilege, And Userspace Security and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Syscall filtering is not a complete policy language. A permitted syscall may have dangerous argument combinations, and alternate syscalls may reach similar functionality. Keep the filter close to the program's stable runtime contract, and test startup, normal operation, reload, crash reporting, and shutdown.
 
-## Core Concepts
+## LSM policy
 
-- the seccomp, lsm, and service isolation contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Linux Security Modules provide mandatory or path/label/operation-based policy. SELinux uses labels and domains, AppArmor uses profiles and path rules, and Landlock lets an application restrict its own future filesystem/network access where supported. The enforcement decision may be visible through audit logs rather than the application's error alone.
 
-## Learning Outcomes
+When diagnosing denial, collect the application errno, kernel/audit record, effective identity, path labels/profile, namespace, and capability state. “Permission denied” can be a mode-bit, ACL, capability, mount, namespace, or LSM result.
 
-After studying this page, you should be able to:
+## Layering
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+A robust service boundary may combine:
 
-## Planned Coverage
+- a dedicated UID and private groups;
+- read-only or narrowly writable filesystem paths;
+- namespace and cgroup restrictions;
+- a capability bounding set and `no_new_privs`;
+- seccomp after startup requirements are known;
+- an LSM profile for mandatory policy;
+- input validation and a narrow IPC protocol.
 
-- mental model and vocabulary for seccomp, lsm, and service isolation;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-identify required syscalls and resources before applying a restrictive service policy.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 12: Identity, Privilege, And Userspace Security](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Each layer needs a failure-mode test. Verify that an expected denial is logged usefully, does not leave partial state, and does not cause an unsafe fallback. Avoid copying a generic syscall allowlist or sandbox profile without tracing the exact binary, libc, loader, architecture, and optional features.

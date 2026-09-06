@@ -1,86 +1,45 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Linux Credentials, Permissions, And ACLs
 
-## What Problem Does This Solve?
+## What a process identity contains
 
-This page covers how real/effective IDs, groups, umask, permissions, and ACLs control access. It is part of Stage 12: Identity, Privilege, And Userspace Security and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Linux tracks real, effective, and saved-set user and group IDs. The real ID identifies the owner of the process; the effective IDs are normally used by permission checks; the saved IDs support controlled transitions such as a set-user-ID program temporarily dropping and regaining privilege. Supplementary groups add membership used during group permission checks.
 
-## Core Concepts
+Inspect the complete picture rather than only calling `getuid()`:
 
-- the linux credentials, permissions, and acls contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```c
+uid_t r = getuid(), e = geteuid();
+gid_t gr = getgid(), ge = getegid();
+/* getresuid/getresgid and getgroups expose the saved and supplementary sets. */
+```
 
-## Learning Outcomes
+`/proc/self/status` is convenient for diagnostics, but avoid treating its text format as a stable application protocol. Log numeric IDs and the resolved account name separately when identity matters.
 
-After studying this page, you should be able to:
+## Permission checks
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+For a pathname, the kernel walks each directory and checks search (`x`) permission before checking the final object. The final check considers the effective UID, supplementary groups, mode bits, ACLs, mount flags, and security modules. Root-like privilege is not simply “UID zero”: capabilities can grant individual powers, while an LSM may still deny an operation.
 
-## Planned Coverage
+Useful diagnostic commands are:
 
-- mental model and vocabulary for linux credentials, permissions, and acls;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+```sh
+namei -l /srv/example/config.toml
+stat -c '%A %a %U:%G %n' /srv/example/config.toml
+getfacl -p /srv/example/config.toml
+```
 
-## Practical Exercise
+Use a dedicated service account, a private state directory, and explicit ownership. Do not make a whole tree world-writable to solve one access problem.
 
-diagnose an access failure by inspecting credentials, path components, and target policy.
+## Creation policy and transitions
 
-Record:
+`umask` removes permission bits at object creation; it does not fix permissions after creation and does not apply to every metadata operation. Set a deliberate umask early, but still pass explicit modes to `open`, `mkdir`, and temporary-file APIs. Be careful with inherited directory setgid bits, sticky directories, and default ACLs.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Set-user-ID and set-group-ID executables are compatibility mechanisms with a large attack surface. If they are unavoidable, minimize the privileged code path, validate all inherited state, close unexpected descriptors, and make the privilege transition explicit.
 
-## Minimal Example
+## Common mistakes
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+- Checking access with `access()` and opening later creates a time-of-check/time-of-use race.
+- Comparing only `getuid()` misses effective privilege.
+- Assuming a parent directory is safe while an attacker controls a path component is incorrect.
+- Replacing an ACL or mode problem with `chmod -R 777` destroys the security boundary.
+- Logging account names without numeric IDs loses precision when identity databases change.
 
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 12: Identity, Privilege, And Userspace Security](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Use `openat()` relative to a trusted directory, directory file descriptors, and—where available—`openat2()` resolution constraints for security-sensitive path traversal.

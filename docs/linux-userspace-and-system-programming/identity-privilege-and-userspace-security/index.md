@@ -1,59 +1,46 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Stage 12: Identity, Privilege, And Userspace Security
 
-Design userspace components around least privilege, explicit authorization, and safe handling of hostile or corrupted input.
+Userspace security is the set of boundaries that decide who a process is, what it may access, which kernel interfaces it may invoke, and how untrusted data becomes an action. Linux provides many mechanisms, but they are not interchangeable: a UID is an identity, a capability is a permission fragment, a namespace changes what an object means, a cgroup controls resources, and an LSM policy mediates security decisions.
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+## The model
 
-## Learning Materials
+Reason about a request in layers:
 
-1. [Linux Credentials, Permissions, And ACLs](linux-credentials-permissions-and-acls.md)
-2. [Capabilities And Privilege Dropping](capabilities-and-privilege-dropping.md)
-3. [Namespaces And cgroups](namespaces-and-cgroups.md)
-4. [seccomp, LSM, And Service Isolation](seccomp-lsm-and-service-isolation.md)
-5. [Secure Userspace Input And Files](secure-userspace-input-and-files.md)
+1. **Identity:** real/effective/saved IDs, supplementary groups, and service accounts.
+2. **Discretionary access:** mode bits, ownership, umask, ACLs, and filesystem mount options.
+3. **Privilege decomposition:** capabilities, bounding sets, ambient inheritance, and `no_new_privs`.
+4. **Visibility and resources:** namespaces and cgroup v2.
+5. **Mandatory policy:** SELinux, AppArmor, Landlock, seccomp, and audit policy.
+6. **Application correctness:** validation, parsing, path resolution, secret handling, and safe failure.
 
-## Study Pattern
+The strongest design uses several independent layers. A sandbox does not repair a confused-deputy bug, and a capability does not make an unsafe parser safe.
 
-For each page:
+## Practical study loop
 
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
+On a disposable service or test account, inspect:
 
-## Stage Outcomes
+```sh
+id
+cat /proc/self/status | grep -E '^(Uid|Gid|Groups|Cap|NoNewPrivs|Seccomp):'
+namei -l /path/to/a/file
+getfacl /path/to/a/file
+capsh --print 2>/dev/null || true
+```
 
-By the end of this stage, you should be able to:
+For a deployed unit, record the configured identity, namespace options, capability bounding set, syscall policy, writable paths, and cgroup limits. Then test both the intended operation and the denied operation; a security control is only useful when its failure mode is understood.
 
-- explain and demonstrate linux credentials, permissions, and acls;
-- explain and demonstrate capabilities and privilege dropping;
-- explain and demonstrate namespaces and cgroups;
-- explain and demonstrate seccomp, lsm, and service isolation;
-- explain and demonstrate secure userspace input and files;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
+## Completion checklist
 
-## Completion Criteria
+- [ ] Can you explain which credential is used for each access check?
+- [ ] Can you drop privileges without retaining an unintended capability or open descriptor?
+- [ ] Can you distinguish isolation from authorization and accounting?
+- [ ] Can you identify which policy layer produced `EACCES`, `EPERM`, or `SIGSYS`?
+- [ ] Can you accept hostile paths, environment variables, files, and protocol frames safely?
 
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
+## Further reading
 
-## Related Topics
-
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+- [credentials(7)](https://man7.org/linux/man-pages/man7/credentials.7.html)
+- [capabilities(7)](https://man7.org/linux/man-pages/man7/capabilities.7.html)
+- [namespaces(7)](https://man7.org/linux/man-pages/man7/namespaces.7.html)
+- [cgroups v2](https://docs.kernel.org/admin-guide/cgroup-v2.html)
+- [seccomp user-space API](https://docs.kernel.org/userspace-api/seccomp_filter.html)

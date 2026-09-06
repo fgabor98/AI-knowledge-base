@@ -1,86 +1,41 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Capabilities And Privilege Dropping
 
-## What Problem Does This Solve?
+Capabilities split many traditional root powers into named privileges such as `CAP_NET_BIND_SERVICE`, `CAP_CHOWN`, and `CAP_SYS_ADMIN`. The last is intentionally broad and should not be used as a generic escape hatch.
 
-This page covers how capabilities and privilege transitions replace all-powerful root access. It is part of Stage 12: Identity, Privilege, And Userspace Security and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+## Capability sets
 
-## Core Concepts
+A thread has permitted, effective, inheritable, ambient, and bounding sets. The effective set is used for many checks; permitted is the ceiling for effective capabilities; inheritable participates in transitions; ambient capabilities can survive an `execve()` of a non-privileged executable when explicitly arranged; the bounding set limits what can be gained. File capabilities add another input during exec.
 
-- the capabilities and privilege dropping contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Inspect a process and an executable with `capsh`, `getcap`, and `/proc/PID/status`, but remember that a snapshot can change between inspection and use.
 
-## Learning Outcomes
+## A safe transition
 
-After studying this page, you should be able to:
+Privilege reduction should happen as early as practical and be tested as a state transition:
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+1. Open only the resources that genuinely require privilege.
+2. Validate configuration and establish the service identity.
+3. Set `PR_SET_NO_NEW_PRIVS` when compatible with the design.
+4. Clear ambient and unnecessary effective/permitted/inheritable capabilities.
+5. Set the capability bounding set to the smallest required set.
+6. Change UID/GID and supplementary groups in the correct order.
+7. Close or mark all unrelated inherited file descriptors.
+8. Verify the resulting state, then exercise privileged and unprivileged paths.
 
-## Planned Coverage
+Dropping the UID while retaining a powerful capability is not a drop. Conversely, dropping a capability before a required setup operation can make startup fail. Treat the sequence as part of the service contract, not as incidental cleanup.
 
-- mental model and vocabulary for capabilities and privilege dropping;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Exec and supervisor interactions
 
-## Practical Exercise
+An `execve()` can transform capabilities depending on file mode, file capabilities, securebits, `no_new_privs`, and the caller's sets. A service manager may apply capability bounding and ambient settings before exec, so document both the unit configuration and the program's own transition logic.
 
-perform privileged setup, drop unnecessary authority, and test the resulting capability set.
+Avoid passing secrets or privileged handles through the environment. If a privileged helper is needed, keep its IPC protocol narrow, authenticate the peer, validate every request, and return structured errors rather than exposing a general command runner.
 
-Record:
+## Verification
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Capture the intended state in tests:
 
-## Minimal Example
+```sh
+grep -E '^(Uid|Gid|Groups|Cap|NoNewPrivs):' /proc/$PID/status
+getpcaps "$PID" 2>/dev/null || true
+```
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 12: Identity, Privilege, And Userspace Security](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Test file access, raw device access, bind-to-port behavior, signal permissions, and `execve()` transitions independently. A successful privileged operation is evidence only for that operation; it does not prove the whole sandbox is correct.
