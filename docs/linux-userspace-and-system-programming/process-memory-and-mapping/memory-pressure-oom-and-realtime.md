@@ -2,85 +2,119 @@
 status: draft
 reviewed: false
 domain: linux-userspace
-difficulty: intermediate
+difficulty: advanced
 last_reviewed: null
 ---
 
 # Memory Pressure, OOM, And Real-Time Constraints
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how RSS, page faults, overcommit, limits, OOM, and mlock affect target behavior. It is part of Stage 4: Process Memory And Mapping and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+An application can fail because allocation is unavailable, because the kernel reclaims
+memory, because a cgroup limit is reached, or because the OOM killer selects it. A
+latency-sensitive service can also miss a deadline because a page fault, allocator
+lock, filesystem operation, or reclaim path blocks. Correctness and timing require a
+budget, not optimism about free memory.
 
-## Core Concepts
+## Memory measurements
 
-- the memory pressure, oom, and real-time constraints contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+| Measure | Meaning |
+| --- | --- |
+| Virtual size (`VmSize`) | Address space reserved or mapped, not necessarily RAM |
+| RSS (`VmRSS`) | Resident pages currently associated with the process |
+| PSS | RSS weighted across sharing, useful for proportional cost |
+| Anonymous memory | Heap, stacks, and anonymous mappings |
+| File-backed memory | Executable, libraries, and mapped files |
+| Dirty pages | Modified pages needing writeback |
+| Commit/overcommit | Kernel policy about promised virtual memory |
+| cgroup memory | Accounted usage and limits for a resource-control group |
 
-## Learning Outcomes
+```sh
+cat /proc/meminfo
+cat /proc/$pid/status
+cat /proc/$pid/smaps_rollup 2>/dev/null
+cat /sys/fs/cgroup/memory.current 2>/dev/null
+cat /sys/fs/cgroup/memory.events 2>/dev/null
+```
 
-After studying this page, you should be able to:
+Values change while reading. Record timestamps, workload, cgroup, and kernel policy.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Allocation failure and fragmentation
 
-## Planned Coverage
+`malloc` can return `NULL`, but an allocation can also succeed and fault later on
+first touch. Large contiguous allocations can fail despite aggregate free memory.
+Fragmentation, limits, address-space availability, overcommit, and allocator arenas
+all matter. Check size arithmetic before allocation and set upper bounds for queues,
+frames, logs, mappings, and worker counts.
 
-- mental model and vocabulary for memory pressure, oom, and real-time constraints;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Never continue with a null pointer. Define whether a service rejects a request, drops
+optional cache, enters degraded mode, or terminates when a required allocation fails.
 
-## Practical Exercise
+## OOM killer and cgroups
 
-measure memory growth and define a bounded-memory policy for a long-running service.
+When reclaim and policy cannot satisfy memory demand, the kernel may invoke the OOM
+killer. A cgroup can reach its own limit even while the host has free memory. The
+selected process may be a worker rather than the service leader, leaving a partially
+alive service. Capture kernel/cgroup OOM events and design a supervisor response.
 
-Record:
+Avoid relying on `oom_score_adj` as a substitute for a complete resource policy. Set
+limits and priorities only with an explicit product decision; overly protected
+processes can starve the rest of the system.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Real-time memory concerns
 
-## Minimal Example
+Latency-sensitive code should avoid unbounded allocation, page faults, blocking
+filesystem operations, and unexpected library work in its critical path. Possible
+tools include:
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+- pre-allocation and bounded pools;
+- prefaulting and `mlockall` where allowed;
+- explicit thread stacks and guard pages;
+- controlled allocator behavior;
+- cgroups and resource limits;
+- measuring worst-case, not just average, latency.
 
-## Common Mistakes
+`mlock`/`mlockall` consume a limited locked-memory budget and can fail with `EPERM`
+or `ENOMEM`. Locking memory does not make code nonblocking: mutexes, drivers,
+interrupts, CPU contention, and I/O can still delay it.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Memory pressure tests
 
-## Debugging Checklist
+Use a disposable cgroup or controlled stress workload, not an unbounded command on a
+production device. Test allocation failure, reclaim, cgroup limit, worker death,
+recovery, and logging under pressure. Keep enough memory and storage for the failure
+diagnostic path.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+## Common mistakes
 
-## Related Topics
+- Treating free memory as a guaranteed allocation budget.
+- Confusing virtual size with resident cost.
+- Ignoring cgroup limits and OOM events.
+- Allocating in a real-time callback without a bound.
+- Calling `mlockall` without checking limits and privilege.
+- Assuming page faults are impossible after `malloc`.
+- Letting memory pressure consume all logging and recovery capacity.
+
+## Debugging checklist
+
+- Record process/cgroup memory, limits, workload, and kernel version.
+- Inspect `/proc/meminfo`, status, smaps, cgroup events, and kernel logs.
+- Check allocation sizes, overflow, fragmentation, and lifetime leaks.
+- Correlate latency spikes with page faults, reclaim, writeback, and scheduler events.
+- Test required versus optional allocation policy.
+- Verify supervisor behavior when a worker or service is OOM-killed.
+
+## Related topics
 
 - [Stage 4: Process Memory And Mapping](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Process Address Space](process-address-space.md)
+- [Memory Protection And Process Hardening](memory-protection-and-hardening.md)
+- [Memory Pressure And Realtime Scheduling](../threads-and-userspace-concurrency/cancellation-priority-and-realtime-scheduling.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`malloc(3)`](https://man7.org/linux/man-pages/man3/malloc.3.html)
+- [`proc(5)`](https://man7.org/linux/man-pages/man5/proc.5.html)
+- [`proc_pid_status(5)`](https://man7.org/linux/man-pages/man5/proc_pid_status.5.html)
+- [`mlock(2)`](https://man7.org/linux/man-pages/man2/mlock.2.html)
+- [Linux kernel cgroup v2 memory controller](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html)

@@ -8,79 +8,113 @@ last_reviewed: null
 
 # Process Address Space
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how text, data, BSS, heap, stack, TLS, shared objects, and mapped files form a process. It is part of Stage 4: Process Memory And Mapping and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Virtual memory makes each process appear to have a private, contiguous address space,
+but the visible layout is assembled from mappings with different backing, protection,
+sharing, and lifetime. Confusing virtual size with physical use, or assuming a pointer
+is globally meaningful, causes crashes and misleading memory diagnoses.
 
-## Core Concepts
+## Mapping categories
 
-- the process address space contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+| Region | Contents | Typical properties |
+| --- | --- | --- |
+| Text | Instructions and PLT/GOT code | Read/execute, often file-backed and shareable |
+| Read-only data | Constants, strings, relocation data | Read-only, sometimes non-executable |
+| Writable data/BSS | Globals and zero-initialized state | Private initially, copy-on-write after `fork` |
+| Heap | Allocator-managed dynamic storage | Writable, allocator metadata and fragmentation |
+| Main stack | Automatic objects and call frames | Writable, bounded by `RLIMIT_STACK`, often guard-protected |
+| Thread stacks/TLS | Per-thread stack and thread-local variables | Per-thread lifetime and limits |
+| Shared libraries | libc and other DSOs | File-backed, shared clean pages and private relocations |
+| Anonymous mappings | Allocator arenas, `mmap`, stacks | No ordinary file backing; can be private or shared |
+| File mappings | Mapped file contents | Shared/private write semantics and page faults |
+| VDSO/VVAR | Kernel-provided user mappings | Architecture/kernel implementation detail |
 
-## Learning Outcomes
+ASLR, PIE, loader choices, compiler options, and environment alter addresses. Code
+must use symbols and valid pointers, never address literals inferred from one run.
 
-After studying this page, you should be able to:
+## Pages and page faults
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+The kernel manages memory in pages. A virtual page can be unmapped, mapped but not yet
+resident, read-only, copy-on-write, swapped, or backed by a file. Accessing a valid
+but nonresident page can trigger a page fault and block while storage or reclaim work
+completes. Accessing an unmapped or forbidden page delivers `SIGSEGV`/`SIGBUS`.
 
-## Planned Coverage
+The first touch of an allocation is therefore not necessarily free or deterministic.
+Real-time or latency-sensitive code may need bounded allocation, pre-faulting, locked
+memory, and a tested memory budget—but each adds resource and privilege requirements.
 
-- mental model and vocabulary for process address space;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## `fork` and copy-on-write
 
-## Practical Exercise
+After `fork`, private pages are shared read-only until either process writes. The
+writer receives a private copy. Large resident heaps can therefore make a fork cheap
+at first and expensive at an unpredictable later point. A child that calls `exec`
+soon can benefit; a child that modifies the whole heap may duplicate it.
 
-inspect proc/PID/maps and relate regions to the executable and libraries.
+Mappings shared with `MAP_SHARED` have different semantics and require an explicit
+cross-process synchronization protocol. Copy-on-write is not synchronization.
 
-Record:
+## Inspecting memory
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+```sh
+pid=1234
+cat /proc/$pid/maps
+cat /proc/$pid/smaps_rollup 2>/dev/null || cat /proc/$pid/smaps
+pmap -x "$pid" 2>/dev/null || true
+cat /proc/$pid/limits | grep -E 'Max stack|Max address|Max locked'
+```
 
-## Minimal Example
+`VmSize` is virtual address space; `VmRSS` is resident memory; proportional set size
+(PSS) accounts shared pages more fairly. The numbers are snapshots and can change
+during collection.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Stack lifetime and safety
 
-## Common Mistakes
+Automatic objects cease to exist when their scope ends; returning a pointer to a local
+object is a lifetime error. A thread’s stack ceases to be valid after the thread
+terminates and is joined/detached according to its contract. Deep recursion, large
+automatic arrays, and unbounded call paths can exhaust a stack even when heap memory
+is available.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+Use explicit size bounds, guard pages, and stack attributes for worker threads. Do not
+assume the main-thread stack size applies to every pthread.
 
-## Debugging Checklist
+## Physical addresses are not pointers
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+Userspace virtual addresses are translated by the MMU. A physical register or DMA
+buffer address cannot be dereferenced as an ordinary pointer. Mapping device memory
+requires a documented driver UAPI that establishes permissions, cache behavior,
+lifetimes, and synchronization. `/dev/mem` is not a general substitute for a driver.
 
-## Related Topics
+## Common mistakes
+
+- Treating a virtual address as a physical address or stable interprocess handle.
+- Assuming `malloc` commits all physical memory immediately.
+- Treating `VmSize` as actual RAM consumption.
+- Assuming a page fault is always a fatal bug.
+- Returning pointers to stack, unmapped, or freed storage.
+- Assuming `fork` produces independent file-backed or shared mappings.
+- Mapping device memory without a driver-defined UAPI and cache protocol.
+
+## Debugging checklist
+
+- Capture `/proc/<pid>/maps`, `status`, `limits`, and thread count.
+- Compare virtual, RSS, PSS, dirty, anonymous, and file-backed memory.
+- Check stack limits, guard pages, recursion, and large automatic objects.
+- Correlate faults with `SIGSEGV`/`SIGBUS`, core dumps, and fault addresses.
+- Identify mapping ownership and whether another thread can unmap it.
+- Check `fork`/COW and shared-memory behavior separately.
+
+## Related topics
 
 - [Stage 4: Process Memory And Mapping](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [mmap, Files, And Shared Memory](mmap-files-and-shared-memory.md)
+- [Memory Pressure, OOM, And Real-Time Constraints](memory-pressure-oom-and-realtime.md)
+- [C Memory Safety And Lifetime](../../c/semantics-and-memory/memory-safety-and-lifetime.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`proc_pid_maps(5)`](https://man7.org/linux/man-pages/man5/proc_pid_maps.5.html)
+- [`proc_pid_status(5)`](https://man7.org/linux/man-pages/man5/proc_pid_status.5.html)
+- [`getrlimit(2)`](https://man7.org/linux/man-pages/man2/getrlimit.2.html)
+- [`fork(2)`](https://man7.org/linux/man-pages/man2/fork.2.html)

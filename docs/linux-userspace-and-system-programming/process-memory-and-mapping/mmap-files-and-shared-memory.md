@@ -8,79 +8,117 @@ last_reviewed: null
 
 # mmap, Files, And Shared Memory
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how anonymous and file-backed mappings support sharing, persistence, and zero-copy designs. It is part of Stage 4: Process Memory And Mapping and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+`mmap` can expose file bytes or anonymous pages as memory and can share storage
+between processes. It also introduces page faults, offset/alignment constraints,
+coherence questions, SIGBUS hazards, and explicit unmapping/lifetime obligations.
 
-## Core Concepts
+## Mapping a file
 
-- the mmap, files, and shared memory contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```c
+int fd = open(path, O_RDONLY | O_CLOEXEC);
+struct stat st;
+if (fd == -1 || fstat(fd, &st) == -1 || st.st_size == 0) {
+    /* handle error and close fd */
+}
 
-## Learning Outcomes
+void *view = mmap(NULL, (size_t)st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+if (view == MAP_FAILED) {
+    /* inspect errno */
+}
+/* use only the mapped range; munmap(view, length) when finished */
+```
 
-After studying this page, you should be able to:
+The offset must meet the page-alignment requirement. The mapping length can be
+rounded internally, but the application may access only the requested valid range.
+Do not close the FD too early in a design that needs the FD for identity or lifetime
+bookkeeping; on Linux the mapping can remain after close, but its backing and
+ownership policy still need to be clear.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+`MAP_PRIVATE` writes use copy-on-write and do not update the file. `MAP_SHARED` writes
+can update the underlying file and require synchronization/durability policy. Mapping
+a file larger than its current size and then truncating it can cause SIGBUS on access
+to pages beyond the new end.
 
-## Planned Coverage
+## Anonymous and shared memory
 
-- mental model and vocabulary for mmap, files, and shared memory;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+For related processes, an anonymous `MAP_SHARED` mapping inherited across `fork` can
+hold shared state. For unrelated processes, use a named shared-memory object (`shm_open`),
+an ordinary file, or a Linux `memfd_create` object, then map it into both processes.
 
-## Practical Exercise
+The mapping supplies bytes, not synchronization. Use process-shared pthread objects,
+POSIX semaphores, atomics with a proven protocol, eventfds, or another explicit
+mechanism. Define initialization, version, size, producer/consumer ownership,
+shutdown, and peer-death behavior.
 
-map a file and a shared region, then add synchronization and cleanup.
+## Lifetime and resizing
 
-Record:
+`munmap` invalidates every pointer into the unmapped range. A concurrent user must stop
+before unmapping; reference counting alone is insufficient if a thread can acquire a
+new pointer without synchronization. Resizing a shared mapping requires a generation
+or replacement protocol, not an in-place `ftruncate` while readers access it.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+For a shared-memory header, include:
 
-## Minimal Example
+```text
+magic and version
+mapping size / layout size
+generation or sequence
+initialization state
+alignment and endian policy
+producer/consumer ownership
+```
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+Validate all values before deriving pointers. Never place raw process-private pointers
+in shared memory; address-space layouts differ between processes.
 
-## Common Mistakes
+## Coherence and persistence
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+`MAP_SHARED` provides a sharing mechanism, not an automatic message protocol or power-
+loss commit. Use synchronization for visibility and `msync`/file synchronization only
+according to the filesystem durability requirement. A mapped device region has
+additional cache and ordering rules defined by its driver; ordinary atomics do not
+automatically make DMA coherent.
 
-## Debugging Checklist
+## Anonymous allocation alternatives
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+`malloc` is usually the right choice for ordinary private dynamic storage. `mmap`
+is useful for large allocations, explicit protection, shared backing, file windows,
+guard pages, or lifetime isolation. `shm_open` and `memfd_create` are useful for
+cross-process or descriptor-transfer designs. Choose based on ownership and protocol,
+not because “zero-copy” sounds faster.
 
-## Related Topics
+## Common mistakes
+
+- Using `MAP_PRIVATE` while expecting file updates.
+- Accessing beyond the file’s current size and receiving SIGBUS.
+- Sharing pointers instead of offsets in shared memory.
+- Unmapping while another thread still uses a pointer.
+- Assuming `mmap` removes synchronization or copy costs everywhere.
+- Using `msync` as a substitute for a complete durable transaction.
+- Resizing a live shared object without a generation protocol.
+
+## Debugging checklist
+
+- Record FD, offset, length, protection, flags, and mapping owner.
+- Inspect `/proc/<pid>/maps` and `smaps` for the actual region.
+- Test zero-length, truncated, permission-denied, and unmap paths.
+- Test peer crash, stale initialization, version mismatch, and full shared storage.
+- Check synchronization, cache/DMA boundary, and durability assumptions separately.
+- Use sanitizers and guard pages to catch lifetime and bounds errors.
+
+## Related topics
 
 - [Stage 4: Process Memory And Mapping](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Process Address Space](process-address-space.md)
+- [Memory Protection And Process Hardening](memory-protection-and-hardening.md)
+- [Shared Memory And Zero-Copy IPC](../ipc-and-event-driven-design/shared-memory-and-zero-copy-ipc.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`mmap(2)`](https://man7.org/linux/man-pages/man2/mmap.2.html)
+- [`munmap(2)`](https://man7.org/linux/man-pages/man2/munmap.2.html)
+- [`shm_open(3)`](https://man7.org/linux/man-pages/man3/shm_open.3.html)
+- [`memfd_create(2)`](https://man7.org/linux/man-pages/man2/memfd_create.2.html)
+- [`msync(2)`](https://man7.org/linux/man-pages/man2/msync.2.html)

@@ -8,50 +8,83 @@ last_reviewed: null
 
 # Stage 4: Process Memory And Mapping
 
-Learn the process address space, mappings, protection, sharing, and resource failures that affect low-level programs.
+This stage explains how Linux gives each process a virtual address space and how
+programs use mappings, protection, sharing, and allocation without confusing virtual
+addresses with physical memory. The central rule is simple: a pointer is meaningful
+only inside its process and lifetime; a mapping is a resource with permissions,
+backing, ownership, and failure behavior.
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+## The address-space model
 
-## Learning Materials
+```text
+high addresses
+  shared libraries / dynamic loader / mmap regions
+  thread stacks and guard pages
+  main stack
+  -----------------------------
+  heap (brk and anonymous mappings)
+  BSS / writable data
+  read-only data / text / PIE
+low addresses
+```
+
+The exact layout is architecture-, kernel-, loader-, ASLR-, and workload-dependent.
+Do not encode assumptions about addresses. `/proc/<pid>/maps` is an observation of
+one process, not an ABI for another.
+
+## Learning materials
 
 1. [Process Address Space](process-address-space.md)
 2. [mmap, Files, And Shared Memory](mmap-files-and-shared-memory.md)
 3. [Memory Protection And Process Hardening](memory-protection-and-hardening.md)
 4. [Memory Pressure, OOM, And Real-Time Constraints](memory-pressure-oom-and-realtime.md)
 
-## Study Pattern
+## Memory is several contracts
 
-For each page:
+| Question | Contract to identify |
+| --- | --- |
+| Is the address valid? | Mapping exists, range is within the object, and lifetime is active |
+| May code read/write/execute? | Page protection and file permissions |
+| Who backs it? | ELF file, heap allocator, anonymous pages, shared memory, or device UAPI |
+| Who owns the bytes? | One thread/process, a shared protocol, kernel, DMA-capable subsystem |
+| When is it resident? | Allocation, page fault, reclaim, locking, or pre-touch policy |
+| What happens under pressure? | Allocation failure, reclaim, cgroup limit, or OOM kill |
+| Does it survive a process? | Private mapping, shared backing object, or persistent file |
 
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
+## Observation lab
 
-## Stage Outcomes
+```sh
+cc -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -g \
+    examples/c/linux-userspace-memory-map.c -o /tmp/memory-map
+/tmp/memory-map
+cat /proc/$$/maps | sed -n '1,20p'
+```
 
-By the end of this stage, you should be able to:
+Inspect the probe while it runs with `/proc/<pid>/maps`, `smaps_rollup`, and
+`pmap` if available. Compare a debug and release build; addresses and mappings may
+change because of PIE, optimization, and loader behavior.
 
-- explain and demonstrate process address space;
-- explain and demonstrate mmap, files, and shared memory;
-- explain and demonstrate memory protection and process hardening;
-- explain and demonstrate memory pressure, oom, and real-time constraints;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
+## Completion criteria
 
-## Completion Criteria
+You can complete this stage when you can:
 
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
+- describe mappings without assuming a fixed address layout;
+- distinguish virtual size, resident memory, shared pages, and private dirty pages;
+- use `mmap`/`munmap` with correct length, offset, alignment, and ownership rules;
+- build a shared-memory protocol with explicit synchronization and lifetime;
+- explain `mprotect`, guard pages, ASLR, PIE, NX, RELRO, and stack limits;
+- diagnose allocation failure, page faults, memory pressure, and OOM policy;
+- explain why userspace must not map physical addresses without a documented UAPI.
 
-## Related Topics
+## Related topics
 
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+- [Stage 3: System Calls, Files, And File Descriptors](../system-calls-files-and-file-descriptors/index.md)
+- [C Memory Safety And Lifetime](../../c/semantics-and-memory/memory-safety-and-lifetime.md)
+- [C Memory Model And Concurrency](../../c/advanced-c/c-memory-model-and-concurrency.md)
+- [Memory, DMA, And Cache Boundaries](../../c/embedded-c-and-hardware/dma-cache-and-memory-barriers.md)
+
+## References
+
+- [`mmap(2)`](https://man7.org/linux/man-pages/man2/mmap.2.html)
+- [`proc_pid_maps(5)`](https://man7.org/linux/man-pages/man5/proc_pid_maps.5.html)
+- [Linux kernel memory management documentation](https://www.kernel.org/doc/html/latest/admin-guide/mm/index.html)
