@@ -8,79 +8,142 @@ last_reviewed: null
 
 # Durability, Locking, And Power Loss
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers what advisory locks, fsync, directory sync, and atomic replacement actually guarantee. It is part of Stage 3: System Calls, Files, And File Descriptors and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Returning from `write` means bytes were accepted by the interface, not necessarily
+that they reached nonvolatile media. Multiple processes can also update the same
+state unless their coordination protocol is explicit. This page separates ordering,
+visibility, locking, and durability so a product can define what survives a crash or
+power interruption.
 
-## Core Concepts
+## The durability ladder
 
-- the durability, locking, and power loss contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+application buffer
+      |
+write returned
+      |
+kernel page cache / filesystem journal
+      |
+fsync or fdatasync returned
+      |
+device cache / storage controller
+      |
+power-loss-safe nonvolatile media
+```
 
-## Learning Outcomes
+Each step is a different guarantee. `fflush` moves libc-buffered bytes to the FD; it
+does not request storage durability. `fsync` requests synchronization for a file FD;
+`fdatasync` can omit metadata not needed to read the data. Neither promise can exceed
+the filesystem, device, mount, and hardware power-loss behavior. A storage device
+with volatile write cache may require a flush/FUA policy outside the application.
 
-After studying this page, you should be able to:
+## Durable replacement
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+For a small named state file:
 
-## Planned Coverage
+```text
+write complete bytes to a new file in the same directory
+validate and close application-level content
+fsync(new_fd)
+rename(new_name, final_name)
+fsync(directory_fd)
+```
 
-- mental model and vocabulary for durability, locking, and power loss;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+The directory synchronization matters because the rename is a directory metadata
+change. On filesystems and products with weaker or different guarantees, verify the
+policy experimentally. If any step fails, classify the state as unchanged, new,
+unknown, or requiring recovery; do not claim success because the write returned.
 
-## Practical Exercise
+## Journals and schemas
 
-design and test a persistent record update under interruption, full storage, and restart.
+For frequent or larger state, use a journal or generation protocol:
 
-Record:
+```text
+header: magic, schema, generation, length, checksum
+payload
+commit marker / valid generation
+```
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+On startup, validate length, checksum, schema, generation, and semantic ranges. Choose
+the newest complete generation and ignore an incomplete tail. Bound replay time and
+record count. Schema migration must be atomic and recoverable if power fails midway.
 
-## Minimal Example
+## Advisory locks
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+`flock` and POSIX `fcntl` record locks are advisory: they coordinate only with
+cooperating processes using the same convention. They do not make a regular file
+safe against a process that ignores the lock or replaces the pathname.
 
-## Common Mistakes
+Document:
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+- lock file or data FD and the scope it protects;
+- shared versus exclusive mode;
+- blocking versus nonblocking acquisition;
+- owner death and stale lock behavior;
+- whether lock lifetime follows an FD, an open-file description, or a process;
+- whether the lock survives `fork`, `exec`, and descriptor duplication;
+- what happens when a filesystem is remote, read-only, or unavailable.
 
-## Debugging Checklist
+Use a directory-relative, securely created lock object. A PID written into a lock
+file is not proof that the owner is alive because PIDs are reused; use a PIDFD or
+another verified identity where appropriate.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+## Power-loss test matrix
 
-## Related Topics
+Test interruption at each boundary:
+
+| Point of interruption | Expected recovery question |
+| --- | --- |
+| Before temp creation | Old state remains valid |
+| During temp write | Partial temp is ignored or cleaned |
+| After file sync | Temp is complete but may not be named |
+| During rename | Old or new generation is selected safely |
+| Before directory sync | Recovery policy handles uncertain namespace durability |
+| During migration | Old schema or complete new schema remains usable |
+| During log append | Parser rejects incomplete record and continues |
+
+Use actual target storage and representative power interruption or fault injection.
+A desktop ext4 test is evidence for that setup only, not for every flash device,
+filesystem, controller, or mount option.
+
+## Full and read-only storage
+
+Handle `ENOSPC`, `EDQUOT`, `EROFS`, `EIO`, and directory-entry failures. Reserve space
+for recovery metadata and logs; do not let normal logging consume the only space in
+which a service can commit state. Define whether the service degrades, sheds cache,
+or stops accepting configuration when durable storage is unavailable.
+
+## Common mistakes
+
+- Treating `write`, `fflush`, or `close` as a power-loss commit.
+- Syncing a file but not the directory after rename.
+- Calling advisory locking mandatory enforcement.
+- Using a PID file as a robust lock or owner identity.
+- Migrating a file in place without an interrupted-migration format.
+- Ignoring storage-device caches, wear, quotas, and read-only remounts.
+- Testing only clean shutdown instead of abrupt power loss.
+
+## Debugging checklist
+
+- State the exact durability guarantee the product requires.
+- Record filesystem, mount options, storage device, and sync calls.
+- Inspect file and directory generations after induced interruption.
+- Check locks using the actual owner and cooperation protocol.
+- Test full, read-only, I/O-error, and absent-storage behavior.
+- Preserve recovery logs and distinguish confirmed commit from unknown outcome.
+
+## Related topics
 
 - [Stage 3: System Calls, Files, And File Descriptors](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Regular-File I/O And Metadata](regular-file-io-and-metadata.md)
+- [Read-Only Rootfs, Overlayfs, And Persistent State](../linux-runtime-filesystem-and-rootfs/read-only-rootfs-overlayfs-and-persistent-state.md)
+- [Atomic Persistence And Schema Migration](../persistent-state-storage-and-power-loss/atomic-persistence-and-schema-migration.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`fsync(2)`](https://man7.org/linux/man-pages/man2/fsync.2.html)
+- [`open(2)`](https://man7.org/linux/man-pages/man2/open.2.html)
+- [`flock(2)`](https://man7.org/linux/man-pages/man2/flock.2.html)
+- [`fcntl(2)` record locks](https://man7.org/linux/man-pages/man2/fcntl.2.html)
+- [Linux kernel filesystems documentation](https://www.kernel.org/doc/html/latest/filesystems/index.html)

@@ -8,79 +8,163 @@ last_reviewed: null
 
 # System-Call Contracts And Errors
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how return values, errno, EINTR, transient errors, and feature-test macros affect correctness. It is part of Stage 3: System Calls, Files, And File Descriptors and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+System calls are not ordinary Boolean functions. They can make partial progress,
+block, be interrupted, leave side effects, or fail because the target’s kernel,
+credentials, resources, or device state differ. Correct code checks the documented
+return shape and turns the result into a deliberate state transition.
 
-## Core Concepts
+## libc wrappers versus direct system calls
 
-- the system-call contracts and errors contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Most applications call libc functions such as `open`, `read`, `clock_gettime`, and
+`pthread_create`. libc may translate arguments, select an implementation, maintain
+thread-local state, or use a vDSO fast path. A direct `syscall(2)` bypasses higher-level
+wrappers and is generally appropriate only when a Linux interface has no libc wrapper
+or a low-level ABI is explicitly required.
 
-## Learning Outcomes
+Direct system calls are difficult to make portable: argument types, structure layout,
+architecture calling conventions, time64 transitions, restart behavior, and libc
+bookkeeping matter. Do not replace a wrapper with `syscall` merely because its name
+looks closer to the kernel.
 
-After studying this page, you should be able to:
+## Return-value discipline
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+```c
+ssize_t count = read(fd, buffer, capacity);
+if (count > 0) {
+    /* count bytes are valid */
+} else if (count == 0) {
+    /* EOF or interface-specific empty result */
+} else {
+    int saved_errno = errno;
+    /* classify saved_errno before calling another function */
+}
+```
 
-## Planned Coverage
+Common shapes include `-1`/`errno`, `NULL`, zero/nonzero, a positive count, a PID,
+or a value with output fields. Read the RETURN VALUE section for each function. A
+successful call may leave `errno` unchanged; `errno` is meaningful only after the
+documented failure indication.
 
-- mental model and vocabulary for system-call contracts and errors;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Error categories
 
-## Practical Exercise
+| Error | Meaning to investigate |
+| --- | --- |
+| `EINTR` | A signal interrupted the call; progress/side effects depend on the interface |
+| `EAGAIN` / `EWOULDBLOCK` | Nonblocking operation cannot progress now |
+| `ETIMEDOUT` | A specified wait or protocol deadline expired |
+| `ECONNRESET` / `EPIPE` | Peer or stream lifecycle ended |
+| `ENODEV` / `ENXIO` | Device or requested hardware resource is unavailable |
+| `EIO` | Lower-level I/O error; preserve context and consider recovery |
+| `ENOSPC` / `EDQUOT` | Storage, quota, or filesystem capacity exhausted |
+| `EMFILE` / `ENFILE` | Per-process or system-wide FD limit exhausted |
+| `ENOMEM` | Allocation or kernel resource unavailable |
+| `EINVAL` | Invalid argument or state; usually a programming/contract error |
+| `EACCES` / `EPERM` | Permission, credential, capability, or policy failure |
+| `ENOSYS` | Kernel/libc interface is unavailable in the deployed environment |
+| `EOPNOTSUPP` / `ENOTTY` | Object or implementation does not support the requested operation |
 
-write wrappers that preserve error context and correctly handle interruption and retry.
+An error category is a policy input. Retrying `EINVAL` is not recovery; retrying
+`EAGAIN` without readiness or a bound can create a busy loop.
 
-Record:
+## `EINTR` and restart policy
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Some blocking calls may return `EINTR`, some may be transparently restarted depending
+on signal disposition and flags, and some interfaces have side effects before the
+interruption. A safe loop preserves the operation’s state and deadline:
 
-## Minimal Example
+```text
+deadline = monotonic_now + budget
+while incomplete:
+    result = operation(remaining(deadline))
+    if EINTR: retry only if the contract permits
+    if short success: advance by the returned amount
+    if timeout: transition to timed-out state
+    otherwise: classify and stop
+```
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+Do not restart blindly after a partially completed write, device command, or
+transaction. Make retries idempotent or include a request ID/sequence number.
 
-## Common Mistakes
+## Feature visibility and ABI types
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+Headers may hide declarations behind feature-test macros. Use the target headers and
+compiler mode, and compile with warnings that reject implicit declarations. Use
+`size_t` for object sizes, `ssize_t` for signed byte counts, `off_t` for file offsets,
+and the UAPI’s fixed-width types where specified. Never cast away a width mismatch to
+silence a warning.
 
-## Debugging Checklist
+Time interfaces have 32/64-bit and clock-domain considerations. Use the interface
+and types supported by the target libc/kernel, and do not serialize an internal
+`struct timespec` layout as a product protocol without defining widths and encoding.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+## Cleanup errors
 
-## Related Topics
+The primary operation and cleanup both have contracts. `close` can report an earlier
+write error on some filesystems; `fsync` can fail after data was accepted; `munmap`
+and `pthread_*` functions have their own return conventions. Preserve the first
+failure, report material cleanup failures, and do not retry `close` on an FD that may
+have been reused.
+
+```c
+int saved_errno = errno;
+if (close(fd) == -1) {
+    fprintf(stderr, "close failed: %s\n", strerror(errno));
+}
+errno = saved_errno;
+```
+
+## Contract table
+
+```text
+Call and object:
+Success shape:
+Failure sentinel:
+Meaning of zero:
+Can block:
+Can return partial progress:
+May be interrupted/cancelled:
+Side effects before failure:
+Retryable errors and bound:
+Deadline source:
+Owner before/after:
+Cleanup and cleanup errors:
+Evidence to log:
+```
+
+Fill this out for every hardware, file, process, and IPC boundary rather than only
+for the most obvious call.
+
+## Common mistakes
+
+- Treating all system calls as `0` success or `-1` failure.
+- Reading `errno` after logging or cleanup.
+- Retrying every `EINTR` without considering side effects or deadlines.
+- Using `int` for byte counts, offsets, or sizes.
+- Calling raw `syscall` when a libc wrapper supplies ABI adaptation.
+- Ignoring errors from `close`, `fsync`, `pthread_*`, and `munmap`.
+- Returning a generic error without preserving the operation and target context.
+
+## Debugging checklist
+
+- Capture call, arguments, return value, saved `errno`, duration, and process identity.
+- Check short counts, EOF, interruption, and side effects.
+- Check target kernel/libc versions and feature macros.
+- Reproduce capacity, permission, missing-device, timeout, and peer-death cases.
+- Verify retry bounds and monotonic deadlines.
+- Preserve the first failure when cleanup produces a second failure.
+
+## Related topics
 
 - [Stage 3: System Calls, Files, And File Descriptors](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Blocking, Nonblocking, And Partial I/O](blocking-nonblocking-and-partial-io.md)
+- [File Descriptors And Open-File Descriptions](file-descriptors-and-open-file-descriptions.md)
+- [POSIX, Linux, libc, And Manual Pages](../environment-and-mental-model/posix-linux-libc-and-manual-pages.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`syscall(2)`](https://man7.org/linux/man-pages/man2/syscall.2.html)
+- [`errno(3)`](https://man7.org/linux/man-pages/man3/errno.3.html)
+- [`intro(2)`](https://man7.org/linux/man-pages/man2/intro.2.html)
+- [`signal(7)`](https://man7.org/linux/man-pages/man7/signal.7.html)

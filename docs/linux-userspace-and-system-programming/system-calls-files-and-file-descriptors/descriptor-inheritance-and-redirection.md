@@ -8,79 +8,111 @@ last_reviewed: null
 
 # Descriptor Inheritance And Redirection
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how dup2, close-on-exec, standard streams, and child processes form pipelines. It is part of Stage 3: System Calls, Files, And File Descriptors and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+A child process inherits open descriptors unless they are close-on-exec. One leaked
+write end can prevent a reader from seeing EOF; one leaked secret FD can expose data
+to a helper; one inherited device FD can keep hardware active after the parent thinks
+it shut down. Redirection is therefore resource policy, not just shell syntax.
 
-## Core Concepts
+## Shell redirection as descriptor operations
 
-- the descriptor inheritance and redirection contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```sh
+command >out 2>err
+command >combined 2>&1
+```
 
-## Learning Outcomes
+The shell opens files, duplicates descriptors, and then executes the command. The
+order matters: `2>&1` duplicates the current stdout, while `>combined 2>&1` sends
+both streams to the file. Programmatic launchers must reproduce the intended graph
+with `open`, `dup2`/`dup3`, and closes.
 
-After studying this page, you should be able to:
+## Pipeline construction
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+For `producer | consumer`:
 
-## Planned Coverage
+```text
+pipe read end --> consumer stdin
+pipe write end --> producer stdout
+parent closes both ends
+producer closes read end and execs
+consumer closes write end and execs
+```
 
-- mental model and vocabulary for descriptor inheritance and redirection;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Every process must close ends it does not use. If any process retains a write end,
+the consumer may wait forever for EOF. The parent must also wait for both children and
+define which exit status represents pipeline failure.
 
-## Practical Exercise
+## Safe launch sequence
 
-construct a child process with deliberate stdin/stdout/stderr and no unintended inherited FDs.
+```text
+create all pipes with pipe2(O_CLOEXEC)
+fork child
+  dup intended descriptors onto 0/1/2
+  close all original and unused pipe descriptors
+  exec absolute helper path
+  _exit on setup/exec failure
+parent closes child-side descriptors
+parent reads an exec-error channel if needed
+parent supervises/reaps the child
+```
 
-Record:
+The error channel is a pipe whose write end is close-on-exec. The child writes a
+small error record on setup failure; successful `exec` closes it automatically and
+the parent observes EOF. This distinguishes “child exited 127” from “exec failed with
+`ENOENT`.”
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Activation and intentional inheritance
 
-## Minimal Example
+Some supervisors intentionally pass listening sockets or other activation FDs. The
+contract must specify descriptor numbers, `FD_CLOEXEC`, object type, ownership, and
+what happens on restart. Do not accept arbitrary inherited descriptors from the
+environment; enumerate and validate them.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Security boundary
 
-## Common Mistakes
+Inherited descriptors can bypass pathname permissions and expose already-open files,
+device nodes, sockets, and directories. Set close-on-exec by default, use an explicit
+allow-list for helpers, and inspect `/proc/<pid>/fd` in tests. A descriptor leak can
+also keep a mount busy, keep a pipe alive, prevent a socket from closing, or retain a
+deleted file’s storage.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Standard streams
 
-## Debugging Checklist
+Services should define what happens to stdin, stdout, and stderr. Redirecting them to
+`/dev/null`, a supervisor journal, or an application log is a deployment decision.
+Do not depend on a terminal, shell expansion, current directory, or interactive
+environment. Flush or use an appropriate logging design when a child exits.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+## Common mistakes
 
-## Related Topics
+- Creating descriptors without `O_CLOEXEC` in a multithreaded launcher.
+- Closing only the parent’s copy of a pipe and forgetting child copies.
+- Assuming `2>&1` means “merge later” rather than duplicate the current FD.
+- Using `system()` where explicit argv/FD/environment control is required.
+- Passing all inherited descriptors to a less-trusted helper.
+- Treating exit 127 as a precise `exec` diagnosis.
+- Closing a descriptor in a parent before a child has duplicated it.
+
+## Debugging checklist
+
+- Draw the descriptor graph for parent, each child, and post-exec program.
+- Inspect `/proc/<pid>/fd` before and after exec.
+- Test EOF, SIGPIPE, exec failure, child setup failure, and helper crash.
+- Verify standard streams, activation FDs, and close-on-exec flags.
+- Check mounts and deleted files held open by descendants.
+- Reap every launched child and record its decoded status.
+
+## Related topics
 
 - [Stage 3: System Calls, Files, And File Descriptors](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [File Descriptors And Open-File Descriptions](file-descriptors-and-open-file-descriptions.md)
+- [fork, exec, And posix_spawn](../processes-and-program-lifetime/fork-exec-and-spawn.md)
+- [Pipes, FIFOs, And Backpressure](pipes-fifos-and-backpressure.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`pipe2(2)`](https://man7.org/linux/man-pages/man2/pipe.2.html)
+- [`dup2(2)`](https://man7.org/linux/man-pages/man2/dup.2.html)
+- [`exec(3)`](https://man7.org/linux/man-pages/man3/exec.3.html)
+- [`systemd.socket(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.socket.html)

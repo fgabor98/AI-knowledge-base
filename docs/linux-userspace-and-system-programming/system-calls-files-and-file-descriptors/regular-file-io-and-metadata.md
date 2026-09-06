@@ -8,79 +8,133 @@ last_reviewed: null
 
 # Regular-File I/O And Metadata
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how to read, write, seek, create, rename, unlink, and inspect regular files. It is part of Stage 3: System Calls, Files, And File Descriptors and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Regular files look simple but involve buffering, offsets, permissions, metadata,
+partial I/O, filesystem limits, and durability. A reliable program chooses between
+stdio and descriptors deliberately and validates the object and result at every
+boundary.
 
-## Core Concepts
+## `FILE *` versus file descriptors
 
-- the regular-file i/o and metadata contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+`FILE *` provides libc buffering, formatted I/O, and line-oriented operations. A raw
+FD provides descriptor-level control needed for `poll`, `fcntl`, `fsync`, `ioctl`,
+`mmap`, and precise ownership. Do not mix them casually:
 
-## Learning Outcomes
+```c
+FILE *stream = fdopen(fd, "r");
+/* stream now owns the FD: fclose(stream) closes it. */
+```
 
-After studying this page, you should be able to:
+If both stdio and raw `read`/`write` operate on the same underlying object, buffered
+data and offsets can disagree. Flush with `fflush` before switching in a carefully
+controlled design, and define who owns closure. For binary or exact-offset I/O, raw
+descriptors are usually clearer.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Open and validate
 
-## Planned Coverage
+```c
+int fd = open(path, O_RDONLY | O_CLOEXEC);
+if (fd == -1) {
+    /* save errno */
+}
 
-- mental model and vocabulary for regular-file i/o and metadata;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+struct stat st;
+if (fstat(fd, &st) == -1 || !S_ISREG(st.st_mode)) {
+    /* close fd and reject the object */
+}
+```
 
-## Practical Exercise
+Creation mode is filtered by umask. Use `O_CREAT|O_EXCL` for exclusive creation,
+`O_TRUNC` only when destruction of old contents is intended, and `O_APPEND` when
+each write must be positioned at end. Do not use `O_TRUNC` as a substitute for
+atomic replacement of configuration.
 
-implement a bounded file-copy or configuration-reader utility with short-I/O handling.
+## Read and write loops
 
-Record:
+```c
+for (;;) {
+    ssize_t n = read(fd, buffer, sizeof buffer);
+    if (n > 0) {
+        consume(buffer, (size_t)n);
+    } else if (n == 0) {
+        break;
+    } else if (errno == EINTR) {
+        continue;
+    } else {
+        /* classify the saved errno */
+        break;
+    }
+}
+```
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Writes need an offset and short-write loop. `pread`/`pwrite` avoid changing a shared
+open-file offset. Check for overflow when converting sizes and offsets, and reject
+files too large for the parser before allocating based on their size.
 
-## Minimal Example
+## Metadata operations
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+Useful interfaces include `stat`/`fstat`, `chmod`, `fchmod`, `chown`, `fchown`,
+`utimensat`, `rename`, `unlink`, `link`, `mkdir`, and directory iteration. Metadata
+updates have their own permissions and failure paths. An application should not
+assume it can preserve ownership or timestamps after replacement unless install and
+runtime policy grants it.
 
-## Common Mistakes
+Directory FDs and `*at` interfaces keep operations anchored and reduce path races.
+After replacing a file, check the resulting object through a fresh FD when the
+consumer needs to know exactly what it opened.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Atomic replacement
 
-## Debugging Checklist
+```text
+create temp in destination directory
+write complete validated bytes
+fsync temp if required
+rename temp over destination
+fsync destination directory if required
+```
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+This prevents readers from seeing an incompletely written named file. It does not
+automatically preserve hard links, extended attributes, ownership, or power-loss
+durability. Cross-filesystem replacement is not atomic.
 
-## Related Topics
+## Direct and zero-copy I/O
+
+`sendfile`, `splice`, `copy_file_range`, direct I/O, and memory mapping can reduce
+copies or alter caching, but they add alignment, filesystem, fallback, and partial
+progress rules. Use them only after measuring and documenting the target filesystem
+and workload. A performance shortcut must retain the same error and durability proof.
+
+## Common mistakes
+
+- Mixing stdio buffering and raw descriptors without synchronization.
+- Assuming one `read` or `write` transfers the requested length.
+- Using `stat(path)` instead of validating the opened FD.
+- Truncating a live configuration file before the replacement is ready.
+- Treating metadata timestamps as a reliable transaction marker.
+- Ignoring `ENOSPC`, `EDQUOT`, `EROFS`, and `EIO` during persistence.
+- Introducing direct I/O or mmap without alignment and fallback tests.
+
+## Debugging checklist
+
+- Record path, FD, object type, mount, flags, offset, owner, and mode.
+- Check short counts, EOF, `EINTR`, and conversion overflows.
+- Inspect `/proc/<pid>/fdinfo` for offset and flags.
+- Compare stdio and raw I/O ownership and buffering.
+- Test concurrent readers, replacement, crash, read-only filesystems, and full disks.
+- Check metadata and directory synchronization for durable replacement.
+
+## Related topics
 
 - [Stage 3: System Calls, Files, And File Descriptors](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [File Descriptors And Open-File Descriptions](file-descriptors-and-open-file-descriptions.md)
+- [Durability, Locking, And Power Loss](durability-locking-and-power-loss.md)
+- [Safe Paths And Temporary File Operations](../linux-runtime-filesystem-and-rootfs/safe-path-and-temporary-file-operations.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`open(2)`](https://man7.org/linux/man-pages/man2/open.2.html)
+- [`read(2)`](https://man7.org/linux/man-pages/man2/read.2.html)
+- [`write(2)`](https://man7.org/linux/man-pages/man2/write.2.html)
+- [`stat(2)`](https://man7.org/linux/man-pages/man2/stat.2.html)
+- [`stdio(3)`](https://man7.org/linux/man-pages/man3/stdio.3.html)

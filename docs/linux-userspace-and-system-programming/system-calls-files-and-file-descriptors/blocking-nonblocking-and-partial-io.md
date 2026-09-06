@@ -8,79 +8,125 @@ last_reviewed: null
 
 # Blocking, Nonblocking, And Partial I/O
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how I/O mode changes control flow and why readiness never guarantees complete transfer. It is part of Stage 3: System Calls, Files, And File Descriptors and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+An I/O call can wait, return fewer bytes than requested, be interrupted, or report
+that it cannot progress now. Event-driven code is correct only when it treats
+readiness as a hint to attempt I/O and handles every result without losing framing,
+deadlines, or ownership.
 
-## Core Concepts
+## Blocking versus nonblocking
 
-- the blocking, nonblocking, and partial i/o contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+A blocking descriptor waits inside an operation until progress, end-of-stream, an
+error, or an event-specific condition occurs. A nonblocking descriptor returns
+immediately when it cannot progress, commonly with `EAGAIN` or `EWOULDBLOCK`.
 
-## Learning Outcomes
+Nonblocking does not mean asynchronous completion. It means the calling thread is not
+held by that operation. The program still needs a readiness mechanism, a retry policy,
+and a deadline.
 
-After studying this page, you should be able to:
+## Partial I/O
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+```c
+size_t sent = 0U;
+while (sent < length) {
+    ssize_t n = write(fd, data + sent, length - sent);
+    if (n > 0) {
+        sent += (size_t)n;
+        continue;
+    }
+    if (n == -1 && errno == EINTR) {
+        continue;
+    }
+    if (n == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        /* Wait for writable readiness, preserving sent and the deadline. */
+        break;
+    }
+    /* The operation is incomplete or failed. */
+    break;
+}
+```
 
-## Planned Coverage
+A stream reader must preserve incomplete frames across calls. `read == 0` generally
+means EOF for a stream, but a device or special file may define another meaning.
+Use the object’s contract. Never process uninitialized bytes beyond the returned count.
 
-- mental model and vocabulary for blocking, nonblocking, and partial i/o;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Readiness APIs
 
-## Practical Exercise
+`select`, `poll`, `ppoll`, and `epoll` report that descriptors have an event worth
+trying. Readiness can be invalidated by another thread, another consumer, a peer
+close, or a state change before the I/O call. Always handle `EAGAIN`, short counts,
+EOF, and errors after readiness.
 
-convert a blocking reader into a timeout-aware nonblocking state machine.
+Level-triggered loops process until `EAGAIN` or a bounded work budget. Edge-triggered
+loops must drain the source or risk missing another notification. `EPOLLERR` and
+`EPOLLHUP` are reported as conditions to inspect; they do not replace reading the
+pending error or data.
 
-Record:
+## Timeouts and signals
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Use an absolute monotonic deadline across all retries:
 
-## Minimal Example
+```text
+deadline = clock_gettime(CLOCK_MONOTONIC) + budget
+while incomplete:
+    remaining = deadline - now
+    if remaining <= 0: timeout
+    wait(remaining)
+    if EINTR: recompute remaining; do not reset deadline
+    attempt I/O; preserve partial count
+```
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+`poll`/`ppoll` timeout units and rounding matter. A timeout usually means the caller
+stopped waiting; an in-flight lower-layer operation may still exist. Pair timeout
+with cancellation, request IDs, or a state transition that prevents late data from
+being accepted.
 
-## Common Mistakes
+## Fairness and backpressure
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+An event loop that drains one busy FD forever can starve all others. Bound bytes,
+messages, or time spent per readiness event, then return to the wait set. For output,
+enable writable interest only while data is queued; always-writable descriptors can
+otherwise cause a wakeup storm.
 
-## Debugging Checklist
+## Nonblocking connect and accept
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+Nonblocking `connect` can return `EINPROGRESS`; wait for writability and inspect
+`SO_ERROR` to determine whether it completed. A writable event alone is not success.
+Nonblocking `accept` can race with another consumer or a connection disappearing;
+handle `EAGAIN`, `EINTR`, and resource exhaustion. Apply the same rules to device and
+FIFO descriptors after confirming that the object supports readiness.
 
-## Related Topics
+## Common mistakes
+
+- Assuming readiness means the full requested operation will complete.
+- Treating `EAGAIN` as a fatal error or spinning without a wait.
+- Resetting the timeout after every interruption or short transfer.
+- Losing partial frame bytes between event-loop iterations.
+- Using edge-triggered epoll without draining until `EAGAIN`.
+- Leaving writable interest enabled with an empty output queue.
+- Treating timeout as proof that a device or peer stopped processing.
+
+## Debugging checklist
+
+- Log FD, event mask, requested bytes, returned bytes, errno, and remaining deadline.
+- Test short reads/writes with a deliberately small pipe/socket buffer.
+- Test `EINTR`, `EAGAIN`, EOF, peer reset, full queue, and descriptor closure.
+- Check level/edge-trigger mode and drain behavior.
+- Check event-loop fairness and CPU use under a permanently ready FD.
+- Verify shutdown wakes every blocked wait and does not reuse an FD accidentally.
+
+## Related topics
 
 - [Stage 3: System Calls, Files, And File Descriptors](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [System-Call Contracts And Errors](system-call-contracts-and-errors.md)
+- [Pipes, FIFOs, And Backpressure](pipes-fifos-and-backpressure.md)
+- [Event Loops, select, poll, And epoll](../ipc-and-event-driven-design/event-loops-select-poll-and-epoll.md)
+- [Clocks, Time Bases, And Deadlines](../time-clocks-and-signals/clocks-time-bases-and-deadlines.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`poll(2)`](https://man7.org/linux/man-pages/man2/poll.2.html)
+- [`epoll(7)`](https://man7.org/linux/man-pages/man7/epoll.7.html)
+- [`read(2)`](https://man7.org/linux/man-pages/man2/read.2.html)
+- [`write(2)`](https://man7.org/linux/man-pages/man2/write.2.html)

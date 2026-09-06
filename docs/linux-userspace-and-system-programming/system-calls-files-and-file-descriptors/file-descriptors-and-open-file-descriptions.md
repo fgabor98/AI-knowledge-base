@@ -8,79 +8,138 @@ last_reviewed: null
 
 # File Descriptors And Open-File Descriptions
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how descriptor references, open-file state, offsets, flags, and sharing behave. It is part of Stage 3: System Calls, Files, And File Descriptors and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Descriptor bugs come from confusing a process-local integer with the kernel state it
+references. `dup`, `fork`, and `exec` make sharing and inheritance explicit concerns;
+concurrent close/reuse makes stale descriptor integers dangerous.
 
-## Core Concepts
+## Two levels of state
 
-- the file descriptors and open-file descriptions contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+FD table entry:       open-file-description pointer + descriptor flags
+open-file description: current offset + file status flags + object reference
+object:                inode, pipe, socket, terminal, device, event source, ...
+```
 
-## Learning Outcomes
+Descriptor flags include `FD_CLOEXEC`. File status flags include `O_APPEND` and
+`O_NONBLOCK`; they belong to the open-file description and can be shared. The current
+offset is also shared by descriptors referencing that description. `dup` creates a
+new descriptor entry pointing to the same description. A separate `open` normally
+creates a different description even for the same pathname.
 
-After studying this page, you should be able to:
+## Creation and ownership
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+```c
+int fd = open(path, O_RDONLY | O_CLOEXEC);
+if (fd == -1) {
+    /* save errno */
+}
+/* caller owns fd and must close it exactly once */
+```
 
-## Planned Coverage
+Prefer atomic creation flags: `O_CLOEXEC`, `O_NONBLOCK`, and `O_DIRECTORY` where
+needed. The creator owns the FD until an explicit transfer. Use wrapper names such
+as `take_fd`, `borrow_fd`, and `close_fd` to make ownership visible.
 
-- mental model and vocabulary for file descriptors and open-file descriptions;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Offsets and concurrent I/O
 
-## Practical Exercise
+`read`, `write`, and `lseek` use the open-file description’s offset. Two threads or
+processes sharing it can interfere with sequential operations. Use `pread`/`pwrite`
+for position-specific operations that must not modify the shared offset. `O_APPEND`
+requests that each write be positioned at the end as part of the write operation,
+but does not make an arbitrary multi-write record protocol atomic.
 
-demonstrate shared offsets after dup and fork, then document ownership.
+For regular files, concurrent offset and append behavior also depends on kernel and
+filesystem semantics. Define record boundaries, locking, or a single writer rather
+than assuming “one write equals one log line” across all users.
 
-Record:
+## `dup`, `dup2`, and `dup3`
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+```c
+if (dup2(input_fd, STDIN_FILENO) == -1) {
+    /* child setup failed */
+}
+if (dup3(output_fd, STDERR_FILENO, O_CLOEXEC) == -1) {
+    /* Linux-specific; check desired close-on-exec semantics */
+}
+```
 
-## Minimal Example
+`dup2` atomically closes the destination if needed and makes it refer to the source.
+`dup3` rejects equal descriptors and can set `O_CLOEXEC`. After redirection, close
+the original descriptor if it is no longer needed. In a child before `exec`, use
+`_exit` on failure.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Blocking status
 
-## Common Mistakes
+`O_NONBLOCK` changes how operations report lack of immediate progress. It does not
+make regular file access universally asynchronous and does not guarantee that a
+device, socket, or pipe can complete a request. `fcntl(F_SETFL)` changes file status
+flags on the shared open-file description, so changing flags in one owner can affect
+another owner after `dup`/`fork`.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+Readiness means an operation should not block at that instant. It does not guarantee
+that a subsequent read/write succeeds, returns the requested size, or remains valid
+after another thread consumes the data.
 
-## Debugging Checklist
+## Descriptor limits and leaks
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+```sh
+ulimit -n
+cat /proc/$$/limits
+ls -l /proc/$$/fd
+ls -l /proc/$$/fdinfo
+```
 
-## Related Topics
+`EMFILE` is the per-process limit; `ENFILE` is a system-wide limit. Leaks commonly
+occur on retry paths, failed initialization, and children that inherit descriptors.
+Track FD ownership in code review and test repeated start/stop cycles.
+
+## Close-on-exec discipline
+
+Set close-on-exec at creation time. A separate `fcntl(F_SETFD, FD_CLOEXEC)` can race
+with another thread’s `fork`/`exec`. Deliberately clear it only for descriptors that
+must cross `exec`, such as standard streams or a documented activation FD.
+
+At process startup, validate standard FDs and decide whether missing 0/1/2 should be
+opened to `/dev/null`, rejected, or supplied by the supervisor. Do not let accidental
+descriptor numbers become an API.
+
+## Modern handles
+
+Linux offers `close_range` for bounded cleanup and pidfds for process references. They
+are useful in carefully versioned Linux code, but do not replace ownership. A pidfd
+avoids PID reuse; a descriptor still needs one owner and a close policy.
+
+## Common mistakes
+
+- Storing an FD after its owner closed it and assuming the integer remains valid.
+- Assuming `dup` creates an independent offset or status flags.
+- Changing `O_NONBLOCK` without realizing another owner shares the description.
+- Setting close-on-exec after `open` in a multithreaded launcher.
+- Assuming readiness means full successful I/O.
+- Closing an FD from one thread while another thread may be using or waiting on it.
+- Retrying `close` after failure and accidentally closing a reused descriptor.
+
+## Debugging checklist
+
+- Record FD number, creation site, owner, object type, flags, and transfer points.
+- Inspect `/proc/<pid>/fd` and `fdinfo` before the process changes state.
+- Check offsets and status flags after `dup`/`fork`.
+- Test exec inheritance, repeated initialization, and FD-limit exhaustion.
+- Check concurrent close/reuse and event-loop ownership rules.
+- Use `fstat` to validate the object reached by a descriptor.
+
+## Related topics
 
 - [Stage 3: System Calls, Files, And File Descriptors](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Descriptor Inheritance And Redirection](descriptor-inheritance-and-redirection.md)
+- [System-Call Contracts And Errors](system-call-contracts-and-errors.md)
+- [Blocking, Nonblocking, And Partial I/O](blocking-nonblocking-and-partial-io.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`open(2)`](https://man7.org/linux/man-pages/man2/open.2.html)
+- [`dup(2)`](https://man7.org/linux/man-pages/man2/dup.2.html)
+- [`fcntl(2)`](https://man7.org/linux/man-pages/man2/fcntl.2.html)
+- [`close_range(2)`](https://man7.org/linux/man-pages/man2/close_range.2.html)
