@@ -1,86 +1,34 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # GDB, Core Dumps, And Symbols
 
-## What Problem Does This Solve?
+## Build for diagnosis
 
-This page covers how to preserve, transfer, inspect, and symbolize a target crash. It is part of Stage 14: Diagnostics, Debugging, And Performance and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Keep optimization appropriate for production, but preserve a separate unstripped binary and matching debug information. Record the compiler, flags, source revision, build ID, and library symbols. Split DWARF or a symbol server can keep deployed images small while retaining postmortem analysis.
 
-## Core Concepts
+## Live debugging
 
-- the gdb, core dumps, and symbols contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Start with:
 
-## Learning Outcomes
+```gdb
+set pagination off
+run
+thread apply all bt full
+info registers
+info proc mappings
+```
 
-After studying this page, you should be able to:
+Inspect ownership and synchronization around the first suspicious frame. For a crash, identify the signal and fault address, then examine all threads; the crashing thread is not always the thread that caused the corruption.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Core dumps
 
-## Planned Coverage
+Configure core collection through the target's service manager and storage policy. Ensure the dump is large enough, retained securely, and associated with the exact executable and libraries. A missing core may be caused by `RLIMIT_CORE`, `core_pattern`, privilege transitions, a read-only/full filesystem, service sandboxing, or deliberate dump suppression.
 
-- mental model and vocabulary for gdb, core dumps, and symbols;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Load with matching artifacts:
 
-## Practical Exercise
+```sh
+gdb /path/to/unstripped/app /path/to/core
+(gdb) thread apply all bt full
+(gdb) info sharedlibrary
+(gdb) x/16gx $sp
+```
 
-configure a cross-debug workflow and explain a crash from registers, stack, and source.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 14: Diagnostics, Debugging, And Performance](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Optimized code can show unavailable variables, inlined frames, or misleading source lines. Treat a backtrace as evidence, not proof; heap corruption often surfaces long after the original overwrite. Use sanitizers and targeted logging to narrow the cause.

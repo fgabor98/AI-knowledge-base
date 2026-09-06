@@ -1,86 +1,17 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # ELF, ABI, And Loader Diagnostics
 
-## What Problem Does This Solve?
+When a program fails before `main`, inspect the ELF and dynamic loader before debugging application logic.
 
-This page covers how executable format, interpreter, symbols, relocations, and libraries cause startup or runtime failures. It is part of Stage 14: Diagnostics, Debugging, And Performance and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+```sh
+file ./app
+readelf -h ./app
+readelf -l ./app | grep 'Requesting program interpreter'
+readelf -d ./app
+readelf --version-info ./app
+```
 
-## Core Concepts
+Check architecture, endianness, ABI, ELF class, interpreter path, needed libraries, RPATH/RUNPATH, symbol versions, and executable stack/text-relocation properties. A binary built for the wrong target can produce `Exec format error`; a missing interpreter or library commonly produces `No such file or directory` even when the application path exists.
 
-- the elf, abi, and loader diagnostics contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+`ldd` may execute code for untrusted binaries on some systems; prefer `readelf` and the loader's diagnostic mode for unknown artifacts. Use `LD_DEBUG` only in a controlled environment because it is verbose and may expose paths or secrets.
 
-## Learning Outcomes
-
-After studying this page, you should be able to:
-
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
-
-## Planned Coverage
-
-- mental model and vocabulary for elf, abi, and loader diagnostics;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-investigate an ABI mismatch or missing symbol with ELF tools and target artifacts.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 14: Diagnostics, Debugging, And Performance](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Compare the target's loader and library set with the build sysroot. ABI compatibility includes calling convention, data-model widths, structure layout, symbol versions, thread-local storage, and kernel/libc assumptions—not just CPU architecture. Record the exact package provenance so a loader failure is reproducible.

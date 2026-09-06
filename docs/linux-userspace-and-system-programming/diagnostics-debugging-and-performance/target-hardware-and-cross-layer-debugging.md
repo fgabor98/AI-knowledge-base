@@ -1,86 +1,17 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Target Hardware And Cross-Layer Debugging
 
-## What Problem Does This Solve?
+## Preserve the target story
 
-This page covers how serial logs, kernel evidence, logic traces, and userspace observations separate application, driver, board, and hardware causes. It is part of Stage 14: Diagnostics, Debugging, And Performance and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Record board revision, bootloader, kernel, device tree/firmware, root filesystem, application build ID, configuration generation, power/network state, and connected peripherals. “Same software” is not a useful statement when the hardware revision or firmware differs.
 
-## Core Concepts
+Use a monotonic timestamp for event ordering and a synchronized wall clock for correlation with external systems. Capture userspace logs, service-manager state, kernel messages, device discovery, bus errors, watchdog events, thermal/power signals, and relevant hardware counters in one evidence bundle.
 
-- the target hardware and cross-layer debugging contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+## Narrow the layer
 
-## Learning Outcomes
+Reproduce with a known-good peripheral or a loopback where possible. Compare raw device reads, ioctl results, sysfs attributes, and kernel logs before changing application logic. If the kernel reports a transport error, userspace should preserve that errno and context rather than replacing it with a generic timeout.
 
-After studying this page, you should be able to:
+Serial consoles, controlled reboot/power-cycle equipment, trace probes, logic analyzers, and fault-injection fixtures are valuable when used with a written experiment. Make recovery safe: preserve logs before reset, bound retry storms, and avoid an experiment that can corrupt persistent state without a recovery image.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Close the loop
 
-## Planned Coverage
-
-- mental model and vocabulary for target hardware and cross-layer debugging;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-diagnose a failure that crosses service, kernel, Device Tree, bus, and physical signal boundaries.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 14: Diagnostics, Debugging, And Performance](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Once the cause is known, add the missing observability at the boundary: a device identity, request ID, generation, errno, latency, state transition, or firmware status. Convert the field procedure into an automated test or runbook so the next failure produces evidence without ad hoc access.
