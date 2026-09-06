@@ -1,86 +1,17 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Installation Layout And Package Integration
 
-## What Problem Does This Solve?
+## Stage before installing
 
-This page covers how prefixes, configuration, service files, udev rules, tmpfiles rules, users, and dependencies become an installable component. It is part of Stage 15: Cross-Compilation, Packaging, And Target Integration and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Install into a staging root such as `DESTDIR`, then inspect the complete file list. Separate immutable program files from configuration, mutable state, cache, logs, sockets, and runtime directories. Make the ownership and lifecycle of each path explicit.
 
-## Core Concepts
+Typical policy questions are:
 
-- the installation layout and package integration contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+- Which files are replaced on upgrade and which persist?
+- Who owns the service user, group, socket, and state directory?
+- Which paths are writable, and with what modes or ACLs?
+- Are configuration changes preserved, merged, or replaced?
+- What happens when a directory is missing, read-only, or full?
 
-## Learning Outcomes
+Packages should declare dependencies rather than assuming a development host's contents. Include service units, tmpfiles rules, sysusers definitions, capabilities, default configuration, migration hooks, and uninstall behavior only when they are required and auditable.
 
-After studying this page, you should be able to:
-
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
-
-## Planned Coverage
-
-- mental model and vocabulary for installation layout and package integration;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-package a utility and service with correct ownership, paths, and offline installation behavior.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 15: Cross-Compilation, Packaging, And Target Integration](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Validate the staged package for duplicate ownership, unexpected setuid bits, world-writable paths, broken symlinks, missing interpreters, and files outside the intended prefix. Then install it into a clean target image and exercise boot, upgrade, removal, and rollback paths.

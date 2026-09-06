@@ -1,86 +1,17 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Target Triples, Sysroots, And ABI
 
-## What Problem Does This Solve?
+## Build roles
 
-This page covers how architecture, ABI, endianness, floating-point rules, sysroots, and pkg-config control cross-builds. It is part of Stage 15: Cross-Compilation, Packaging, And Target Integration and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+The **build** machine executes the compiler. The **host** is where a generated tool runs; for a normal application this may be the target. The **target** is where a compiler-generated tool emits code. Confusing these terms causes native tools to be linked against target libraries or target binaries to be run during the build.
 
-## Core Concepts
+A target triple captures architecture, vendor, operating system, and ABI conventions, but it is not the complete contract. Record CPU baseline and extensions, endianness, floating-point ABI, data model, threading model, libc, loader, kernel minimum, and C++ ABI where applicable.
 
-- the target triples, sysroots, and abi contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+## Sysroot discipline
 
-## Learning Outcomes
+A sysroot is the target's view of headers, startup objects, libraries, and metadata. Compile and link with the intended sysroot; ensure `pkg-config` uses target `.pc` files and does not return host include or library paths. Keep generated tools and target libraries in separate prefixes.
 
-After studying this page, you should be able to:
+Do not “fix” a missing target dependency by adding `/usr/include` or `/usr/lib` from the build host. That may produce a binary that links but fails on the target or silently uses the wrong structure layout.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## ABI checks
 
-## Planned Coverage
-
-- mental model and vocabulary for target triples, sysroots, and abi;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-prove that a binary was built and linked against the intended target environment.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 15: Cross-Compilation, Packaging, And Target Integration](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Check `sizeof` assumptions, alignment, signedness, time/off_t widths, structure packing, symbol versions, exception/RTTI policy, and syscall calling conventions. Compile a small ABI probe as part of the toolchain validation and inspect the final ELF with `file` and `readelf`. The ABI is a compatibility promise across every library boundary, not merely a compiler flag.
