@@ -8,79 +8,97 @@ last_reviewed: null
 
 # IPv4, IPv6, DNS, And Interface Binding
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how address selection, dual-stack behavior, resolver configuration, and interface choice affect deployment. It is part of Stage 9: Userspace Networking and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Embedded network environments change: interfaces appear late, addresses rotate,
+DNS is unavailable at boot, and a hostname can resolve to several families. Code that
+assumes one IPv4 address or one default interface becomes fragile during boot,
+roaming, updates, and recovery.
 
-## Core Concepts
+## Address families
 
-- the ipv4, ipv6, dns, and interface binding contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Use `AF_UNSPEC` with `getaddrinfo` when both IPv4 and IPv6 are valid. Store addresses
+in `sockaddr_storage`, use the returned `ai_addrlen`, and format with `getnameinfo`
+or `inet_ntop`. IPv6 link-local addresses require a scope/interface for correct use.
 
-## Learning Outcomes
+```c
+struct addrinfo hints = {
+    .ai_family = AF_UNSPEC,
+    .ai_socktype = SOCK_STREAM,
+};
+struct addrinfo *list;
+int error = getaddrinfo(host, service, &hints, &list);
+```
 
-After studying this page, you should be able to:
+Try candidates with a bounded overall deadline. “Happy Eyeballs”-style parallel or
+staggered attempts can reduce family/address delay, but add sockets and cancellation
+complexity; use a target-supported implementation and measure it.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## DNS is a runtime dependency
 
-## Planned Coverage
+Name resolution can block, fail due to missing configuration, return stale results,
+or depend on a network that is not ready. Do not perform unbounded synchronous DNS
+on an event loop. Cache with a defined TTL and refresh policy, but re-resolve after
+network change or connection failure. Never treat a cached IP as permanent identity
+without certificate/authentication validation.
 
-- mental model and vocabulary for ipv4, ipv6, dns, and interface binding;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Interface and route selection
 
-## Practical Exercise
+Binding a local address or using `SO_BINDTODEVICE`/`IP_UNICAST_IF` is a policy choice.
+It can restrict a service to management, cellular, or a private interface, but may
+fail when the interface is absent or renamed. Prefer routing policy and explicit
+configuration where possible; interface binding often requires privilege and is
+Linux-specific.
 
-test the service with IPv4, IPv6, unavailable DNS, and changing interfaces.
+Inspect:
 
-Record:
+```sh
+ip addr
+ip route
+ip -6 route
+getent ahosts example.com
+resolvectl status 2>/dev/null || true
+```
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Network namespaces can have different interfaces, routes, and DNS configuration.
+Inspect from the service’s namespace.
 
-## Minimal Example
+## Link-local, dual-stack, and address changes
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+IPv6 link-local addresses are scoped. Dual-stack sockets have `IPV6_V6ONLY` policy;
+do not assume one IPv6 listener accepts IPv4. A DHCP/RA renewal can invalidate local
+addresses and existing connections. Rebind/reconnect through an explicit network
+state machine.
 
-## Common Mistakes
+## Common mistakes
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+- Assuming `getaddrinfo` returns one IPv4 address.
+- Treating DNS resolution as instant, reliable, or nonblocking.
+- Forgetting IPv6 scope IDs for link-local addresses.
+- Binding to an interface name that is not stable on the target.
+- Confusing address reachability with peer authentication.
+- Ignoring network namespace and route differences.
+- Failing to reconnect after DHCP/RA/address changes.
 
-## Debugging Checklist
+## Debugging checklist
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+- Record hostname, resolved addresses, family, scope/interface, route, and namespace.
+- Capture DNS status, response timing, TTL/cache, and connection attempt order.
+- Inspect addresses/routes/firewall from the service context.
+- Test DNS absence, delayed readiness, dual-stack failure, address rotation, and
+  interface disappearance.
+- Verify TLS identity independent of DNS/IP address.
 
-## Related Topics
+## Related topics
 
 - [Stage 9: Userspace Networking](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Socket Lifecycle And Addresses](socket-lifecycle-and-addresses.md)
+- [TCP Streams And Reconnect](tcp-streams-and-reconnect.md)
+- [Socket Options, TLS, And Network Diagnostics](socket-options-tls-and-network-diagnostics.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`getaddrinfo(3)`](https://man7.org/linux/man-pages/man3/getaddrinfo.3.html)
+- [`getnameinfo(3)`](https://man7.org/linux/man-pages/man3/getnameinfo.3.html)
+- [`ipv6(7)`](https://man7.org/linux/man-pages/man7/ipv6.7.html)
+- [`ip(8)`](https://man7.org/linux/man-pages/man8/ip.8.html)

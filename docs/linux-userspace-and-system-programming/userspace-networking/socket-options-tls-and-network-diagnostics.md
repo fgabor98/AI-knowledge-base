@@ -2,85 +2,98 @@
 status: draft
 reviewed: false
 domain: linux-userspace
-difficulty: intermediate
+difficulty: advanced
 last_reviewed: null
 ---
 
 # Socket Options, TLS, And Network Diagnostics
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how socket options, credentials, ancillary data, certificate checks, and runtime tools support a product. It is part of Stage 9: Userspace Networking and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Socket defaults are not a product protocol. Buffer sizes, timeouts, keepalive,
+reuse, and error reporting affect failure behavior. TLS adds certificate, hostname,
+clock, trust-store, and renegotiation/record-layer concerns. Diagnostics must identify
+whether failure occurred before transport, in transport, or in the secure protocol.
 
-## Core Concepts
+## Useful socket options
 
-- the socket options, tls, and network diagnostics contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+| Option/facility | Purpose | Caveat |
+| --- | --- | --- |
+| `SO_RCVBUF` / `SO_SNDBUF` | Kernel queue sizing | Effective size may be adjusted; does not bound application queues |
+| `SO_RCVTIMEO` / `SO_SNDTIMEO` | Socket call wait limit | Not an end-to-end transaction deadline |
+| `SO_KEEPALIVE` and TCP keepalive options | Detect idle peer failure | Often too slow for application health |
+| `SO_REUSEADDR` | Rebinding policy | Semantics vary; not a universal sharing permission |
+| `SO_ERROR` | Read pending asynchronous socket error | Required after nonblocking connect completion |
+| `IP_TOS`/traffic policy | Packet marking | Requires network policy and may be ignored |
+| `TCP_NODELAY` | Disable Nagle coalescing | Can increase packet rate; measure |
+| `SO_BINDTODEVICE` | Interface restriction | Linux-specific and privileged in many contexts |
 
-## Learning Outcomes
+Set options immediately after creating/accepting the socket and check every return.
+Record effective policy in diagnostics. Application queues need independent bounds.
 
-After studying this page, you should be able to:
+## TLS boundary
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+TLS authenticates and encrypts a byte stream; it does not define application framing,
+retry idempotence, peer lifecycle, or device semantics. Use a maintained TLS library
+and its documented API. Configure protocol versions, trust store, hostname/identity
+verification, certificate rotation, client authentication, and entropy policy.
 
-## Planned Coverage
+The system clock affects certificate validity. A device without a trusted time source
+needs a bootstrap trust design that does not silently disable verification. Never ship
+“accept any certificate” as a recovery shortcut.
 
-- mental model and vocabulary for socket options, tls, and network diagnostics;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+TLS reads/writes can also be partial and can request the opposite direction due to
+record processing. Integrate the library’s WANT_READ/WANT_WRITE and shutdown rules
+with the event loop.
 
-## Practical Exercise
+## Diagnostic layers
 
-diagnose a failing connection with ss, ip, tcpdump, and service logs.
+```text
+name resolution -> route/interface -> TCP/UDP -> TLS -> application protocol -> peer action
+```
 
-Record:
+Use evidence at the first failing layer:
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+```sh
+getent ahosts host
+ip route get address
+ss -tanp
+tcpdump -ni any host address
+openssl s_client -connect host:443 -servername host  # controlled diagnostic
+```
 
-## Minimal Example
+On production targets, tools may be absent and packet captures may expose secrets.
+Use a support policy, redaction, and least-invasive diagnostics.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Common mistakes
 
-## Common Mistakes
+- Treating socket buffers as application queue bounds.
+- Relying only on keepalive for request deadlines.
+- Disabling TLS verification when the clock or trust store is wrong.
+- Assuming TLS write/read calls map one-to-one to application messages.
+- Diagnosing TLS before checking DNS, routes, interface, and namespace.
+- Capturing credentials or payloads in unrestricted packet/log bundles.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Debugging checklist
 
-## Debugging Checklist
+- Record family, endpoint, interface, options, queue sizes, and namespace.
+- Capture DNS, route, socket state, TCP errors, TLS verification result, and protocol
+  frame state separately.
+- Test timeout, keepalive, peer reset, certificate expiry, trust-store update, and
+  clock-not-set cases.
+- Check partial TLS I/O and event-loop read/write interest.
+- Redact packet captures and preserve exact library/certificate configuration.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 9: Userspace Networking](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Socket Lifecycle And Addresses](socket-lifecycle-and-addresses.md)
+- [TCP Streams And Reconnect](tcp-streams-and-reconnect.md)
+- [IPv4, IPv6, DNS, And Interface Binding](ipv4-ipv6-dns-and-interface-binding.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`socket(7)`](https://man7.org/linux/man-pages/man7/socket.7.html)
+- [`tcp(7)`](https://man7.org/linux/man-pages/man7/tcp.7.html)
+- [`ss(8)`](https://man7.org/linux/man-pages/man8/ss.8.html)
+- [OpenSSL documentation](https://docs.openssl.org/)

@@ -8,79 +8,98 @@ last_reviewed: null
 
 # Socket Lifecycle And Addresses
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how domains, types, protocols, addresses, byte order, and socket lifecycle fit together. It is part of Stage 9: Userspace Networking and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Sockets combine a descriptor lifecycle with address families, protocol state, queues,
+and peer behavior. Errors such as `EAFNOSUPPORT`, `EADDRINUSE`, `ECONNREFUSED`, and
+`ENETUNREACH` are useful only when the program records which lifecycle step failed.
 
-## Core Concepts
+## Lifecycle
 
-- the socket lifecycle and addresses contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+socket -> bind (optional) -> listen -> accept      server stream
+socket -> connect                              client stream
+socket -> bind/sendto/recvfrom                 datagram
+any endpoint -> shutdown -> close
+```
 
-## Learning Outcomes
+Use `SOCK_CLOEXEC` and `SOCK_NONBLOCK` at creation when supported. The creator owns
+the FD. `accept4` can apply the same flags to the accepted socket atomically.
 
-After studying this page, you should be able to:
+## Address structures
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+Prefer `getaddrinfo` and `getnameinfo` over hand-built family-specific assumptions.
+Use `sockaddr_storage` for storage and inspect the returned family and length. Never
+cast an IPv4 structure to an IPv6 structure or assume `sizeof(sockaddr_in)` applies
+to every call.
 
-## Planned Coverage
+```c
+struct addrinfo hints = {
+    .ai_socktype = SOCK_STREAM,
+    .ai_family = AF_UNSPEC,
+};
+struct addrinfo *results;
+int error = getaddrinfo(host, service, &hints, &results);
+if (error != 0) {
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(error));
+}
+```
 
-- mental model and vocabulary for socket lifecycle and addresses;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+`getaddrinfo` errors are not necessarily in `errno`. Free results with
+`freeaddrinfo` on every path. Numeric conversion functions such as `inet_pton` and
+`inet_ntop` have their own return contracts.
 
-## Practical Exercise
+## Server binding
 
-write a small client and server with explicit address and error handling.
+A server should bind an explicit address and port policy. `INADDR_ANY`/`in6addr_any`
+accepts traffic on all eligible interfaces; that may be wrong for a management-only
+service. Port `0` asks the kernel for an ephemeral port, useful in tests. `SO_REUSEADDR`
+has platform-specific details and is not a universal permission to share a live port.
 
-Record:
+Check bind/listen backlog, namespace, interface, firewall, and service identity.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Client connection
 
-## Minimal Example
+A client may try multiple `getaddrinfo` results. Bound each attempt and the overall
+operation with a monotonic deadline. Do not retry an address forever before trying a
+healthy alternative. For nonblocking connect, wait for writability and inspect
+`SO_ERROR`; writable is not proof of connection success.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Shutdown and ownership
 
-## Common Mistakes
+`shutdown(SHUT_WR)` sends an orderly half-close; `shutdown(SHUT_RDWR)` prevents
+further communication according to socket semantics. EOF from a stream is peer
+half-close, not necessarily a protocol error. Close only after queued output and
+outstanding request policy is settled.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Common mistakes
 
-## Debugging Checklist
+- Assuming all endpoints are IPv4 or all hostnames resolve to one address.
+- Using `sizeof(sockaddr_in)` for every family.
+- Treating `getaddrinfo` errors as `errno` values.
+- Binding all interfaces unintentionally.
+- Treating nonblocking connect writability as success without `SO_ERROR`.
+- Retrying indefinitely without a total deadline or backoff.
+- Sharing one socket FD across components without ownership rules.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+## Debugging checklist
 
-## Related Topics
+- Record family, numeric/local/remote endpoint, interface, namespace, and FD.
+- Capture socket/bind/connect/listen/accept errors and durations.
+- Inspect `ss -lntup`, `ip addr`, `ip route`, firewall, and namespace context.
+- Test absent route, refused port, delayed connect, dual-stack, and address change.
+- Verify close/shutdown, accepted-FD flags, and descriptor inheritance.
+
+## Related topics
 
 - [Stage 9: Userspace Networking](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [TCP Streams And Reconnect](tcp-streams-and-reconnect.md)
+- [IPv4, IPv6, DNS, And Interface Binding](ipv4-ipv6-dns-and-interface-binding.md)
+- [File Descriptors And Open-File Descriptions](../system-calls-files-and-file-descriptors/file-descriptors-and-open-file-descriptions.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`socket(2)`](https://man7.org/linux/man-pages/man2/socket.2.html)
+- [`bind(2)`](https://man7.org/linux/man-pages/man2/bind.2.html)
+- [`accept4(2)`](https://man7.org/linux/man-pages/man2/accept4.2.html)
+- [`getaddrinfo(3)`](https://man7.org/linux/man-pages/man3/getaddrinfo.3.html)

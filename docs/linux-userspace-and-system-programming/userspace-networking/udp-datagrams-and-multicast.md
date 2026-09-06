@@ -8,79 +8,83 @@ last_reviewed: null
 
 # UDP Datagrams And Multicast
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how message boundaries, loss, duplication, ordering, broadcast, and multicast affect a protocol. It is part of Stage 9: Userspace Networking and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+UDP preserves datagram boundaries but does not provide reliable delivery, ordering,
+deduplication, congestion control, or a connected peer contract. It is useful for
+bounded telemetry, discovery, and protocols that implement their own loss policy.
 
-## Core Concepts
+## Datagram contract
 
-- the udp datagrams and multicast contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+send one bounded datagram -> receive one datagram or loss/truncation/error
+```
 
-## Learning Outcomes
+Keep each message below the application and path MTU policy. Fragmentation can make
+loss more likely; an application protocol should prefer bounded messages or provide
+its own fragmentation/reassembly with expiry and memory limits. `recvmsg` can report
+truncation; do not process a truncated payload as complete.
 
-After studying this page, you should be able to:
+Include sequence, timestamp/domain, source identity, and checksum/authentication as
+needed. Define duplicate, reorder, loss, and stale-data behavior. A telemetry stream
+may drop old samples; a command protocol should usually use a reliable transport or
+an explicit acknowledgement/retry design.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Connected UDP
 
-## Planned Coverage
+`connect` on a UDP socket selects a default peer and filters received packets by peer;
+it does not create a TCP-style connection or reliability. It can also make asynchronous
+error reporting and write calls more convenient. Treat peer absence and route changes
+as normal failures.
 
-- mental model and vocabulary for udp datagrams and multicast;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Multicast
 
-## Practical Exercise
+Multicast requires group address, port, interface, TTL/hop limit, loopback, and group
+join/leave policy. A group membership is interface-specific and can disappear when
+the link or namespace changes. Receivers must authenticate and validate datagrams;
+network locality is not authorization.
 
-design a UDP receiver that reports loss and rejects oversized or malformed datagrams.
+```text
+sender -> multicast group -> zero or more receivers
+```
 
-Record:
+Do not assume every network, router, Wi-Fi link, or embedded kernel forwards multicast.
+Test IGMP/MLD, firewall, route, interface, and power-mode behavior on the target.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Overload and rate limits
 
-## Minimal Example
+Bound receive buffers and application queues. A fast sender can fill kernel buffers,
+cause drops, and consume CPU in parsing. Report drops and sequence gaps. Use sampling,
+coalescing, rate limits, or backpressure at a higher layer; UDP itself will not slow
+the sender for you.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Common mistakes
 
-## Common Mistakes
+- Treating UDP as reliable because a send succeeded.
+- Ignoring datagram truncation, sequence gaps, and duplicate packets.
+- Sending oversized messages and relying on IP fragmentation.
+- Assuming multicast is available on every interface/path.
+- Authorizing packets by source address alone.
+- Leaving unbounded reassembly buffers or retry state.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Debugging checklist
 
-## Debugging Checklist
+- Log family, local/remote/group endpoint, interface, TTL, sequence, and length.
+- Inspect `ip addr`, `ip route`, multicast memberships, firewall, and namespace.
+- Capture packets with `tcpdump` and compare application drop counters.
+- Test loss, reorder, duplication, truncation, interface change, and receiver restart.
+- Verify authentication and stale-data expiry.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 9: Userspace Networking](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Socket Lifecycle And Addresses](socket-lifecycle-and-addresses.md)
+- [IPv4, IPv6, DNS, And Interface Binding](ipv4-ipv6-dns-and-interface-binding.md)
+- [Socket Options, TLS, And Network Diagnostics](socket-options-tls-and-network-diagnostics.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`udp(7)`](https://man7.org/linux/man-pages/man7/udp.7.html)
+- [`ip(7)`](https://man7.org/linux/man-pages/man7/ip.7.html)
+- [`ip-maddress(8)`](https://man7.org/linux/man-pages/man8/ip-maddress.8.html)
+- [`recvmsg(2)`](https://man7.org/linux/man-pages/man2/recvmsg.2.html)
