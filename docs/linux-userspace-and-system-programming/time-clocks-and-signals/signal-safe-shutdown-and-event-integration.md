@@ -8,79 +8,118 @@ last_reviewed: null
 
 # Signal-Safe Shutdown And Event Integration
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how to integrate signals with an event loop without unsafe handler work. It is part of Stage 5: Time, Clocks, And Signals and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+A process must stop safely while it may be blocked in I/O, holding resources, or
+processing a protocol message. Calling ordinary shutdown code from a signal handler
+is unsafe. The solution is to convert asynchronous notification into ordinary,
+serialized control flow.
 
-## Core Concepts
+## The flag pattern
 
-- the signal-safe shutdown and event integration contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+signal handler: stop_requested = 1
+main loop:      wake -> observe flag -> stop accepting work -> drain/cancel -> cleanup
+```
 
-## Learning Outcomes
+The flag is sufficient only if the main loop wakes promptly. A thread blocked forever
+in `read` will not observe it. Use a timeout, self-pipe, eventfd, `signalfd`, or a
+descriptor that the shutdown owner can safely close according to the I/O contract.
 
-After studying this page, you should be able to:
+## Self-pipe and `signalfd`
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+A self-pipe handler writes one byte to a pre-created nonblocking pipe; the event loop
+reads and handles the signal in normal context. The write must be bounded and
+async-signal-safe, and a full pipe needs a policy because multiple standard signals
+can coalesce.
 
-## Planned Coverage
+Linux `signalfd` turns blocked signals into records read through an FD:
 
-- mental model and vocabulary for signal-safe shutdown and event integration;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+```text
+block signals in all relevant threads
+create signalfd for the blocked set
+add it to poll/epoll
+read signalfd_siginfo records in the event loop
+perform shutdown/reload/reap work outside a handler
+```
 
-## Practical Exercise
+The signal mask must be set before creating worker threads so signals do not race to
+an unexpected handler thread. `signalfd` is Linux-specific and its FD has normal
+ownership, nonblocking, close-on-exec, and namespace considerations.
 
-use a self-pipe or signalfd to implement graceful service shutdown and reload.
+## Shutdown state machine
 
-Record:
+```text
+RUNNING
+  | SIGTERM / operator request
+  v
+QUIESCING -- stop intake --> DRAINING -- all work complete --> CLEANUP --> EXIT
+     |                              |
+     +-- deadline ------------------+-- cancel/close --> FORCED_EXIT
+```
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Define what happens to in-flight device commands, queued requests, child processes,
+temporary files, locks, sockets, and persistent transactions. A graceful shutdown
+that waits forever is not graceful; it is a hang.
 
-## Minimal Example
+## Reload versus shutdown
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+Reload is a transaction, not “reread the file in a handler.” Parse and validate new
+configuration off to the side, apply changes in a defined order, and retain the old
+valid configuration if application fails. Assign a generation so requests can record
+which configuration they used.
 
-## Common Mistakes
+## Signals and threads
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+Centralize signal handling. One event-loop thread can own signal FDs while workers
+receive commands through a queue or eventfd. Do not have every worker install a
+handler and mutate shared state. Join workers after intake stops and before destroying
+the state they access.
 
-## Debugging Checklist
+## Testing matrix
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+Inject shutdown:
 
-## Related Topics
+- while blocked in each I/O source;
+- during partial read/write or protocol parsing;
+- while a child is being launched or waited for;
+- while a worker owns a resource or queue item;
+- during configuration reload and persistence commit;
+- repeatedly and at the exact shutdown deadline.
+
+Verify no FD, thread, child, lock, temporary file, or stale socket remains beyond its
+documented lifetime. Test SIGKILL separately as an unclean path requiring startup
+recovery.
+
+## Common mistakes
+
+- Calling `printf`, malloc, locks, or `close` indiscriminately from a handler.
+- Setting a flag without waking an indefinitely blocked loop.
+- Handling signals in arbitrary worker threads.
+- Treating signalfd records as durable queued commands without a bound.
+- Reloading configuration in place before validation completes.
+- Destroying shared state before workers have joined.
+- Assuming graceful cleanup occurs after SIGKILL or power loss.
+
+## Debugging checklist
+
+- Record signal source, thread, state, deadline, and shutdown transition.
+- Inspect masks and signalfd/self-pipe ownership.
+- Trace the event loop’s wakeup and drain behavior.
+- Test every blocking source, partial operation, child, and persistence boundary.
+- Check worker join, descriptor closure, child reaping, and final exit status.
+- Preserve crash and forced-shutdown evidence before restart.
+
+## Related topics
 
 - [Stage 5: Time, Clocks, And Signals](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Signal Model And sigaction](signal-model-and-sigaction.md)
+- [Event Loops, select, poll, And epoll](../ipc-and-event-driven-design/event-loops-select-poll-and-epoll.md)
+- [Service Lifecycle, Readiness, And Restart](../services-init-and-systemd/service-lifecycle-readiness-and-restart.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`signalfd(2)`](https://man7.org/linux/man-pages/man2/signalfd.2.html)
+- [`signal-safety(7)`](https://man7.org/linux/man-pages/man7/signal-safety.7.html)
+- [`sigwaitinfo(2)`](https://man7.org/linux/man-pages/man2/sigwaitinfo.2.html)
+- [`eventfd(2)`](https://man7.org/linux/man-pages/man2/eventfd.2.html)

@@ -8,50 +8,88 @@ last_reviewed: null
 
 # Stage 5: Time, Clocks, And Signals
 
-Use time and asynchronous events correctly in systems where deadlines, suspend, shutdown, and recovery matter.
+Time is not one global number, and a signal is not a general-purpose message queue.
+Reliable userspace code chooses the right clock for the question, expresses waits as
+bounded deadlines, and turns asynchronous signals into controlled state transitions.
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+## Two axes of time
 
-## Learning Materials
+```text
+REALTIME       calendar / externally synchronized / can jump
+MONOTONIC      elapsed time since a kernel-defined point / does not go backward
+BOOTTIME       monotonic-style elapsed time including suspend
+RAW            hardware-derived monotonic measurement, without NTP adjustments
+```
+
+Use `CLOCK_REALTIME` for timestamps that humans or protocols interpret as calendar
+time. Use `CLOCK_MONOTONIC` for ordinary timeouts. Use `CLOCK_BOOTTIME` when a timeout
+must include system suspend. State the clock domain in every timestamped interface.
+
+## Learning materials
 
 1. [Clocks, Time Bases, And Deadlines](clocks-time-bases-and-deadlines.md)
 2. [Timers And Periodic Work](timers-and-periodic-work.md)
 3. [Signal Model And sigaction](signal-model-and-sigaction.md)
 4. [Signal-Safe Shutdown And Event Integration](signal-safe-shutdown-and-event-integration.md)
 
-## Study Pattern
+## The event model
 
-For each page:
+```text
+clock/deadline --> wait --> event/signal --> inspect state --> bounded work
+                                      \--> recompute deadline
+```
 
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
+Signals can interrupt a wait, but they do not carry a reliable application payload by
+default. Timers can produce expirations faster than a consumer handles them. A
+correct loop records state and counts, drains pending events, and remains bounded.
 
-## Stage Outcomes
+## Timing contract
 
-By the end of this stage, you should be able to:
+For each time-sensitive operation record:
 
-- explain and demonstrate clocks, time bases, and deadlines;
-- explain and demonstrate timers and periodic work;
-- explain and demonstrate signal model and sigaction;
-- explain and demonstrate signal-safe shutdown and event integration;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
+| Field | Decision |
+| --- | --- |
+| Clock | Which clock and why? |
+| Domain | Calendar timestamp, elapsed timeout, device timestamp, or CPU time? |
+| Deadline | Absolute deadline and behavior after expiry |
+| Suspend | Does suspend consume the budget? |
+| Adjustment | Can synchronization or manual changes move the clock? |
+| Resolution | What precision is meaningful and what jitter is acceptable? |
+| Overrun | What happens when periodic work misses one or more periods? |
+| Shutdown | How is a blocked wait interrupted safely? |
 
-## Completion Criteria
+## Stage lab
 
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
+```sh
+cc -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -g \
+    examples/c/linux-userspace-time-signal.c -o /tmp/time-signal
+/tmp/time-signal
+```
 
-## Related Topics
+Send SIGINT during the run and observe that the handler only records a flag while
+the main loop performs shutdown work.
 
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+## Completion criteria
+
+You can complete this stage when you can:
+
+- choose wall-clock, monotonic, boottime, raw, CPU, and device time correctly;
+- implement an absolute deadline that survives `EINTR` without extending the budget;
+- design periodic work without accumulating drift or hiding overruns;
+- install signal dispositions with `sigaction` and respect async-signal safety;
+- integrate signals through a self-pipe or `signalfd` without unsafe handlers;
+- define signal, timer, shutdown, reload, and fatal-error ownership.
+
+## Related topics
+
+- [Stage 3: System Calls, Files, And File Descriptors](../system-calls-files-and-file-descriptors/index.md)
+- [Stage 6: Threads And Userspace Concurrency](../threads-and-userspace-concurrency/index.md)
+- [Stage 7: IPC And Event-Driven Design](../ipc-and-event-driven-design/index.md)
+- [Timers And Periodic Work](timers-and-periodic-work.md)
+
+## References
+
+- [`time(7)`](https://man7.org/linux/man-pages/man7/time.7.html)
+- [`clock_gettime(2)`](https://man7.org/linux/man-pages/man2/clock_gettime.2.html)
+- [`signal(7)`](https://man7.org/linux/man-pages/man7/signal.7.html)
+- [POSIX signal concepts](https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap03.html)

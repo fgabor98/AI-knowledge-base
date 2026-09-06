@@ -8,79 +8,117 @@ last_reviewed: null
 
 # Signal Model And sigaction
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how dispositions, masks, pending signals, SIGCHLD, termination, reload, and broken pipes work. It is part of Stage 5: Time, Clocks, And Signals and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Signals interrupt normal control flow and can arrive at inconvenient points. Their
+default actions range from ignore to stop to process termination and core dump. A
+reliable service defines dispositions and masks explicitly and keeps handlers tiny.
 
-## Core Concepts
+## Signal state
 
-- the signal model and sigaction contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Each signal has:
 
-## Learning Outcomes
+- a disposition: default, ignore, or installed handler;
+- a blocked mask, generally per-thread;
+- pending state, with standard signals coalescing rather than forming an unbounded
+  queue;
+- a delivery target: process, thread, process group, or supervisor;
+- default action and possibly an accompanying `siginfo_t` for realtime signals.
 
-After studying this page, you should be able to:
+Signals do not provide a general durable message queue. If multiple ordinary signals
+arrive before delivery, the application may observe one pending instance. Realtime
+signals queue under limits and carry values, but still need a defined ownership and
+backpressure policy.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Install with `sigaction`
 
-## Planned Coverage
+```c
+static volatile sig_atomic_t stop_requested;
 
-- mental model and vocabulary for signal model and sigaction;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+static void on_term(int signal_number)
+{
+    (void)signal_number;
+    stop_requested = 1;
+}
 
-## Practical Exercise
+struct sigaction action = {
+    .sa_handler = on_term,
+};
+sigemptyset(&action.sa_mask);
+action.sa_flags = 0;
+if (sigaction(SIGTERM, &action, NULL) == -1) {
+    /* report failure before entering service state */
+}
+```
 
-replace a fragile signal handler with a controlled sigaction design.
+Use `sigaction`, not obsolete `signal`, so restart and mask semantics are explicit.
+`SA_RESTART` can restart some interrupted calls, but not every interface and not
+necessarily the behavior a deadline-sensitive service wants. Test the actual calls.
 
-Record:
+## Async-signal safety
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Inside a handler, use only async-signal-safe operations. Setting a
+`volatile sig_atomic_t` flag is a common pattern. Do not call `malloc`, `free`,
+`printf`, most logging APIs, pthread locks, or non-reentrant library code. A handler
+can interrupt code while it holds libc or application locks.
 
-## Minimal Example
+For fatal signals, a minimal handler may write a fixed diagnostic to a pre-opened FD
+and restore/default-terminate; complex recovery in a corrupt process is unsafe. Let
+the supervisor and core-dump system preserve evidence.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Masks and delivery
 
-## Common Mistakes
+`sigprocmask` is for single-threaded processes; use `pthread_sigmask` in threaded
+programs. A common architecture blocks selected signals in all worker threads and
+dedicates one thread or event loop to `sigwaitinfo`/`signalfd`.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+Process-directed signals may be delivered to any eligible thread. Thread-directed
+signals target a specific thread. A blocked signal remains pending until unblocked,
+waited for, or handled according to its disposition.
 
-## Debugging Checklist
+Important service signals:
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+| Signal | Typical policy |
+| --- | --- |
+| `SIGTERM` | Graceful supervisor shutdown |
+| `SIGINT` | Interactive shutdown; often same state transition as SIGTERM |
+| `SIGHUP` | Reload only if the service defines safe reload semantics |
+| `SIGCHLD` | Child lifecycle notification; reap through one owner |
+| `SIGPIPE` | Ignore/block and handle `EPIPE`, or use a scoped socket option |
+| `SIGALRM` | Avoid as a hidden global timer in complex services |
+| `SIGSEGV`, `SIGBUS` | Fatal evidence path, not ordinary recovery |
 
-## Related Topics
+`SIGKILL` and `SIGSTOP` cannot be caught, blocked, or ignored.
+
+## Common mistakes
+
+- Performing stdio, allocation, locking, or complex logging in a handler.
+- Assuming standard signals queue one notification per event.
+- Installing dispositions in one thread and assuming masks are process-wide.
+- Using `SA_RESTART` without testing deadline and shutdown behavior.
+- Treating SIGHUP as a universal reload protocol.
+- Handling fatal signals by attempting to continue with corrupted state.
+- Competing signal handlers or child reapers in different modules.
+
+## Debugging checklist
+
+- Inspect `/proc/<pid>/status` signal masks, pending, and caught/ignored sets.
+- Record signal sender, target PID/TID/PGID, disposition, and process state.
+- Test SIGTERM during every blocking call and state transition.
+- Test SIGPIPE, SIGCHLD, SIGHUP, parent death, and fatal-signal evidence paths.
+- Check `SA_RESTART`, masks, realtime signal limits, and supervisor policy.
+- Keep handler work auditable and async-signal-safe.
+
+## Related topics
 
 - [Stage 5: Time, Clocks, And Signals](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Signal-Safe Shutdown And Event Integration](signal-safe-shutdown-and-event-integration.md)
+- [Exit, Waiting, And Zombies](../processes-and-program-lifetime/exit-waiting-and-zombies.md)
+- [Eventfd, timerfd, signalfd, And inotify](../ipc-and-event-driven-design/eventfd-timerfd-signalfd-and-inotify.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`signal(7)`](https://man7.org/linux/man-pages/man7/signal.7.html)
+- [`sigaction(2)`](https://man7.org/linux/man-pages/man2/sigaction.2.html)
+- [`signal-safety(7)`](https://man7.org/linux/man-pages/man7/signal-safety.7.html)
+- [`sigprocmask(2)`](https://man7.org/linux/man-pages/man2/sigprocmask.2.html)
