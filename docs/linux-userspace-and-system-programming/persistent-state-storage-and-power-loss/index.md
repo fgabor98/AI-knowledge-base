@@ -1,57 +1,28 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
+# Stage 13: Persistent State, Storage, And Power Loss
 
-# Stage 13: Persistent State, Storage, And Power-Loss Behavior
+Persistent state is an interface between software versions, hardware lifetime, and failure timing. A design must say what data is authoritative, what can be rebuilt, what must survive reboot, and what happens when power disappears halfway through a write.
 
-Make configuration, runtime state, logs, and update metadata survive interruption without destroying the target’s recovery path.
+## Persistence ladder
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+Classify every datum as configuration, identity/credential, calibration, operational state, cache, log, update metadata, or diagnostic evidence. Then choose the least durable store that satisfies the requirement. Reconstructible cache belongs on a different path from irreplaceable calibration; logs should not consume the same quota as boot-critical state.
 
-## Learning Materials
+For each record define owner, format version, size bound, update rate, retention, confidentiality, integrity, recovery behavior, and migration policy. Include the storage medium and filesystem in the threat model.
 
-1. [State Classes And Storage Policy](state-classes-and-storage-policy.md)
-2. [Atomic Persistence And Schema Migration](atomic-persistence-and-schema-migration.md)
-3. [Embedded Filesystems, Wear, And Durability](embedded-filesystems-wear-and-durability.md)
-4. [Updates, Rollback, And Recovery State](updates-rollback-and-recovery-state.md)
+## Failure model
 
-## Study Pattern
+Power loss can occur during data write, metadata update, rename, filesystem journal commit, erase/program operation, or a bootloader state transition. “The write returned” only means the kernel accepted the request. Durability requires the correct synchronization operation and a medium/filesystem that honors it.
 
-For each page:
+## Completion checklist
 
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
+- [ ] Every persistent datum has an owner, schema, and recovery policy.
+- [ ] Updates are atomic with respect to readers and power loss.
+- [ ] Corruption is detected and a safe fallback exists.
+- [ ] Wear, quota, and write amplification are measured.
+- [ ] Update metadata cannot select an unverified or incomplete image.
 
-## Stage Outcomes
+## Further reading
 
-By the end of this stage, you should be able to:
-
-- explain and demonstrate state classes and storage policy;
-- explain and demonstrate atomic persistence and schema migration;
-- explain and demonstrate embedded filesystems, wear, and durability;
-- explain and demonstrate updates, rollback, and recovery state;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
-
-## Completion Criteria
-
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
-
-## Related Topics
-
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+- [`fsync(2)`](https://man7.org/linux/man-pages/man2/fsync.2.html)
+- [`rename(2)`](https://man7.org/linux/man-pages/man2/rename.2.html)
+- [ext4 journaling](https://docs.kernel.org/filesystems/ext4/journal.html)
+- [UBI documentation](https://docs.kernel.org/filesystems/ubifs.html)

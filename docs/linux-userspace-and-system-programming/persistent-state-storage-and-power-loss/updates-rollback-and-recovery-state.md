@@ -1,86 +1,17 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Updates, Rollback, And Recovery State
 
-## What Problem Does This Solve?
+## A/B and generation-based updates
 
-This page covers how A/B updates, rollback, factory reset, and compatibility metadata interact with applications. It is part of Stage 13: Persistent State, Storage, And Power-Loss Behavior and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+A resilient update keeps a known-good bootable image while preparing a new one. The update manager writes the inactive slot, verifies its contents and metadata, then performs one atomic boot-selection transition. The bootloader should try the new slot only a bounded number of times and revert when userspace fails to report health.
 
-## Core Concepts
+The health signal must mean more than “the process started.” It should include filesystem availability, required services, essential hardware, configuration migration, and—where appropriate—a controlled functional check. Keep the old slot usable until the new slot has passed the acceptance window.
 
-- the updates, rollback, and recovery state contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+## Metadata contract
 
-## Learning Outcomes
+Boot selection metadata should include slot identity, image version, integrity/authenticity result, attempt count, confirmation state, and rollback reason. Protect it from partial writes with redundant records or a transactional mechanism. Validate all fields before acting; a corrupt attempt counter must not disable the recovery path.
 
-After studying this page, you should be able to:
+## Recovery behavior
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+Define behavior for interrupted download, interrupted installation, power loss during metadata commit, failed migration, incompatible configuration, repeated watchdog resets, and a full data partition. Recovery must leave a diagnosable artifact and preserve enough logs to explain the decision. A rollback that restores binaries but leaves an incompatible persistent schema is not a complete rollback.
 
-## Planned Coverage
-
-- mental model and vocabulary for updates, rollback, and recovery state;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-make a service detect an incompatible update and preserve recovery evidence.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 13: Persistent State, Storage, And Power-Loss Behavior](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Treat factory reset and rescue mode as explicit, authenticated operations. They should not accidentally erase evidence or calibration data that the recovery procedure needs.

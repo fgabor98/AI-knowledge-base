@@ -1,86 +1,29 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # State Classes And Storage Policy
 
-## What Problem Does This Solve?
+## Classify before choosing a file
 
-This page covers how immutable files, configuration, runtime data, caches, logs, and crash artifacts should be separated. It is part of Stage 13: Persistent State, Storage, And Power-Loss Behavior and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+- **Factory identity and calibration:** authoritative, protected from casual reset, often signed or checksummed, and written rarely.
+- **User configuration:** editable, versioned, validated, and recoverable to defaults.
+- **Operational state:** useful across restart but not necessarily across replacement; bound its size and update rate.
+- **Cache:** disposable and rebuildable; keep it away from boot-critical state.
+- **Logs and crash evidence:** append or rotate with quotas; preserve enough context without filling the root filesystem.
+- **Update state:** small, transactional, and understandable by both userspace and boot firmware.
 
-## Core Concepts
+## Policy fields
 
-- the state classes and storage policy contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Record for each item:
 
-## Learning Outcomes
+| Field | Question |
+| --- | --- |
+| Owner | Which component may write it? |
+| Authority | Is it the source of truth or a derived copy? |
+| Lifetime | Does it survive restart, firmware update, factory reset, or replacement? |
+| Integrity | How are truncation, stale data, and tampering detected? |
+| Budget | What are the maximum bytes and writes per hour? |
+| Recovery | What safe value applies when missing or invalid? |
 
-After studying this page, you should be able to:
+Use separate directories, quotas, and permissions for unrelated classes. A service should not be able to overwrite boot selection merely because it can write its runtime state. If two components need the same value, define one owner and an explicit read interface rather than allowing competing writers.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Operational discipline
 
-## Planned Coverage
-
-- mental model and vocabulary for state classes and storage policy;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-create a storage policy for one service and identify every writable path.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 13: Persistent State, Storage, And Power-Loss Behavior](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Never assume storage is infinite or healthy. Monitor free space, write failures, filesystem read-only transitions, and accumulated update generations. Expose a clear state such as `valid`, `defaulted`, `migrating`, or `degraded`; silent fallback makes field diagnosis much harder.
