@@ -8,79 +8,72 @@ last_reviewed: null
 
 # PID 1, Init, And Early Userspace
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how early userspace, BusyBox init, systemd, and the transition to application services work. It is part of Stage 11: Services, Init, And systemd and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+The kernel does not start an ordinary application directly. PID 1 establishes early
+userspace, mounts, credentials, reaping, and service supervision. If it lacks signal
+and child-reaping behavior, the system can fail even when individual programs are
+correct.
 
-## Core Concepts
+## Boot sequence
 
-- the pid 1, init, and early userspace contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+firmware -> kernel -> initramfs /init -> real root -> PID 1
+        -> pseudo-filesystems -> devices/mounts -> services
+```
 
-## Learning Outcomes
+Early userspace may load modules, unlock storage, select a root slot, mount `/proc`,
+`/sys`, and `/dev`, and hand off to the final init. Files available in initramfs may
+not exist after handoff.
 
-After studying this page, you should be able to:
+## PID 1 obligations
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+PID 1 must reap orphaned children and establish signal/service policy. It should
+propagate shutdown, stop descendants, preserve logs, and provide a bounded restart
+policy. In a container, the container’s PID 1 has these local obligations even if the
+host has another init.
 
-## Planned Coverage
+## Service readiness
 
-- mental model and vocabulary for pid 1, init, and early userspace;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Starting a process is not readiness. A service should report readiness only after
+required configuration, mounts, devices, threads, and listeners are valid. Dependents
+must wait for that contract rather than sleep for an arbitrary time.
 
-## Practical Exercise
+## Debugging
 
-trace boot to service start and identify which component owns each transition.
+```sh
+ps -p 1 -o pid,ppid,stat,cmd
+cat /proc/1/status
+cat /proc/1/mountinfo
+dmesg | sed -n '1,100p'
+```
 
-Record:
+Compare initramfs logs, kernel command line, final-root mount state, PID 1 logs, and
+the service environment. A missing runtime path may be a handoff or mount-order bug.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Common mistakes
 
-## Minimal Example
+- Treating PID 1 as an ordinary process.
+- Forgetting child reaping in a minimal init/container.
+- Starting services before mounts/devices/configuration are ready.
+- Assuming initramfs files survive root handoff.
+- Using arbitrary sleeps instead of readiness signals.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Debugging checklist
 
-## Common Mistakes
+- Record kernel/initramfs/PID 1 versions and command line.
+- Identify root handoff, mounts, namespaces, service user, and child ownership.
+- Test delayed storage/device, failed root selection, orphan children, and shutdown.
+- Verify readiness and restart evidence survives a service crash.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 11: Services, Init, And systemd](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Mounts, Initramfs, And Rootfs Layout](../linux-runtime-filesystem-and-rootfs/mounts-initramfs-and-rootfs-layout.md)
+- [Exit, Waiting, And Zombies](../processes-and-program-lifetime/exit-waiting-and-zombies.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`bootup(7)`](https://www.freedesktop.org/software/systemd/man/latest/bootup.html)
+- [`pid_namespaces(7)`](https://man7.org/linux/man-pages/man7/pid_namespaces.7.html)
+- [Linux early userspace](https://www.kernel.org/doc/html/latest/driver-api/early-userspace/early_userspace_support.html)

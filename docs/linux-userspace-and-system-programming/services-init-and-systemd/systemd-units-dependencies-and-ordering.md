@@ -8,79 +8,79 @@ last_reviewed: null
 
 # systemd Units, Dependencies, And Ordering
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how unit types, targets, conditions, conflicts, requires, and after relationships affect startup. It is part of Stage 11: Services, Init, And systemd and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Systemd separates “pulled in” dependencies from ordering. A unit can be ordered
+after another without requiring it, or required without being ordered. Correct units
+express both resource availability and start/stop ordering.
 
-## Core Concepts
+## Unit concepts
 
-- the systemd units, dependencies, and ordering contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```ini
+[Unit]
+Description=Example service
+Wants=network-online.target
+After=network-online.target local-fs.target
 
-## Learning Outcomes
+[Service]
+ExecStart=/usr/bin/example
+User=example
+Restart=on-failure
 
-After studying this page, you should be able to:
+[Install]
+WantedBy=multi-user.target
+```
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+`Requires`/`Wants` express dependency; `After`/`Before` express order. `BindsTo` and
+`PartOf` add lifecycle coupling. Choose the weakest relationship that matches the
+product; overusing `Requires` can turn an optional device into a boot failure.
 
-## Planned Coverage
+## Readiness and conditions
 
-- mental model and vocabulary for systemd units, dependencies, and ordering;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Use path/device conditions only when they reflect a real contract. A path condition
+can pass before a filesystem is mounted. Prefer explicit mount/device/service units,
+activation, or a service’s own capability/readiness check. Network-online is only as
+strong as the network manager’s implementation and should not replace reconnect logic.
 
-## Practical Exercise
+## Exec and environment
 
-write a service unit and prove readiness, dependency, and failure ordering.
+Specify absolute `ExecStart`, `WorkingDirectory`, `EnvironmentFile` policy, user,
+groups, standard streams, limits, and restart behavior. Do not assume an interactive
+shell, PATH, home directory, or inherited descriptors. Use `ExecStartPre` for bounded
+validation, not long-lived application logic.
 
-Record:
+## Verification
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+```sh
+systemd-analyze verify ./example.service
+systemctl list-dependencies example.service
+systemctl show example.service
+journalctl -u example.service -b
+```
 
-## Minimal Example
+## Common mistakes
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+- Using `After=` without `Requires=`/`Wants=` when availability is required.
+- Assuming `network-online.target` proves a usable application route.
+- Relying on PATH, cwd, shell syntax, or user login environment.
+- Making optional hardware a hard boot dependency.
+- Omitting restart/backoff and resource limits.
 
-## Common Mistakes
+## Debugging checklist
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+- Inspect the rendered unit, drop-ins, dependencies, environment, user, and limits.
+- Compare `After` ordering with actual readiness evidence.
+- Capture `systemctl status`, journal, exit status, and cgroup state.
+- Test missing mount/device, delayed network, config failure, restart, and shutdown.
 
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 11: Services, Init, And systemd](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Service Lifecycle, Readiness, And Restart](service-lifecycle-readiness-and-restart.md)
+- [Service Sandboxing And Resource Controls](service-sandboxing-and-resource-controls.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`systemd.unit(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html)
+- [`systemd.service(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html)
+- [`systemd.target(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.target.html)

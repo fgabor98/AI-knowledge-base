@@ -8,79 +8,59 @@ last_reviewed: null
 
 # Logging, tmpfiles, And Watchdogs
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how journald, runtime directories, sd_notify, and watchdogs preserve service health evidence. It is part of Stage 11: Services, Init, And systemd and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Logs and runtime directories are operational resources. They must remain useful when
+storage is full, services restart, and the watchdog or supervisor needs evidence.
 
-## Core Concepts
+## Logging contract
 
-- the logging, tmpfiles, and watchdogs contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Each high-value message should include monotonic or event time, service instance,
+state, operation/request ID, peer/device, result, errno, duration, and generation as
+appropriate. Separate expected retry noise from actionable failure. Bound rate and
+size; redact credentials, tokens, and sensitive payloads.
 
-## Learning Outcomes
+Use stdout/stderr to the supervisor or a deliberate logging API. Do not assume `/var`
+is writable or that a log file survives reboot. Define rotation, retention, remote
+export, and behavior when logging fails.
 
-After studying this page, you should be able to:
+## tmpfiles and runtime directories
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+Runtime paths under `/run` should be created with ownership/mode and cleaned at boot.
+Use tmpfiles policy or an equivalent init mechanism for directories, sockets, and
+volatile files. Do not put persistent configuration or identity there.
 
-## Planned Coverage
+## Watchdogs
 
-- mental model and vocabulary for logging, tmpfiles, and watchdogs;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Feed a watchdog only after health criteria prove meaningful progress: event loop,
+required workers, dependencies, and device communication. A heartbeat thread alone
+can mask a deadlocked main service. Record feed and pretimeout evidence without
+filling storage.
 
-## Practical Exercise
+## Common mistakes
 
-add structured logs, readiness, watchdog notification, and bounded persistent state.
+- Logging secrets or unbounded payloads.
+- Writing logs to a read-only/full partition without fallback.
+- Treating `/run` as persistent.
+- Feeding watchdog from code that does not prove service health.
+- Allowing diagnostic logging to alter timing or flash endurance.
 
-Record:
+## Debugging checklist
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+- Inspect journal/log sink, rotation, disk/inode use, and service identity.
+- Check runtime directory owner/mode and stale socket/lock cleanup.
+- Record watchdog owner, interval, feed criteria, pretimeout, and reset cause.
+- Test full storage, missing log sink, restart, crash, and watchdog expiry.
 
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 11: Services, Init, And systemd](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Service Lifecycle, Readiness, And Restart](service-lifecycle-readiness-and-restart.md)
+- [Read-Only Rootfs, Overlayfs, And Persistent State](../linux-runtime-filesystem-and-rootfs/read-only-rootfs-overlayfs-and-persistent-state.md)
+- [CAN, Watchdog, And Control Interfaces](../hardware-facing-userspace-and-kernel-uapi/can-watchdog-and-control-interfaces.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`systemd-journald.service(8)`](https://www.freedesktop.org/software/systemd/man/latest/systemd-journald.service.html)
+- [`tmpfiles.d(5)`](https://www.freedesktop.org/software/systemd/man/latest/tmpfiles.d.html)
+- [`systemd.service(5)` watchdog](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html#WatchdogSec=)

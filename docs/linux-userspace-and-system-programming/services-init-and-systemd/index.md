@@ -8,11 +8,22 @@ last_reviewed: null
 
 # Stage 11: Services, Init, And systemd
 
-Turn a userspace program into a correctly supervised, observable, restartable embedded service.
+A production userspace program needs a lifecycle owner. Init starts it in the right
+environment, supervises it, supplies logs and limits, and reacts when it exits. This
+stage explains that contract without confusing “process exists” with “service is
+ready.”
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+## Service model
 
-## Learning Materials
+```text
+boot -> PID 1 -> mounts/dependencies -> service start
+                              |
+                  readiness / health / watchdog
+                              |
+             stop -> deadline -> kill -> reap/restart
+```
+
+## Learning materials
 
 1. [PID 1, Init, And Early Userspace](pid1-init-and-early-userspace.md)
 2. [systemd Units, Dependencies, And Ordering](systemd-units-dependencies-and-ordering.md)
@@ -20,40 +31,46 @@ This stage is a collection of focused draft pages. Read the overview first, then
 4. [Logging, tmpfiles, And Watchdogs](logging-tmpfiles-and-watchdogs.md)
 5. [Service Sandboxing And Resource Controls](service-sandboxing-and-resource-controls.md)
 
-## Study Pattern
+## The service contract
 
-For each page:
+| Area | Decision |
+| --- | --- |
+| Start | Executable, argv, environment, cwd, user, mounts, dependencies |
+| Ready | What health evidence allows clients to proceed? |
+| Stop | Signal, quiesce, deadline, escalation, child scope |
+| Failure | Exit status, crash evidence, restart/backoff, degraded mode |
+| State | Runtime directory, sockets, persistent data, stale artifacts |
+| Observability | Logs, status, watchdog, metrics, core/symbol identity |
+| Security | User, capabilities, namespaces, syscall/device/filesystem access |
+| Resources | CPU, memory, FDs, tasks, time, I/O, storage |
 
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
+## Stage lab
 
-## Stage Outcomes
+Inspect an installed unit or service, even if the target uses another init:
 
-By the end of this stage, you should be able to:
+```sh
+systemctl cat example.service 2>/dev/null || true
+systemctl show example.service -p ExecStart -p User -p Restart 2>/dev/null || true
+systemd-analyze verify example.service 2>/dev/null || true
+```
 
-- explain and demonstrate pid 1, init, and early userspace;
-- explain and demonstrate systemd units, dependencies, and ordering;
-- explain and demonstrate service lifecycle, readiness, and restart;
-- explain and demonstrate logging, tmpfiles, and watchdogs;
-- explain and demonstrate service sandboxing and resource controls;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
+Always compare the actual target init and version. BusyBox init, OpenRC, and a custom
+supervisor use different readiness and restart contracts.
 
-## Completion Criteria
+## Completion criteria
 
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
+You can explain who owns PID 1 responsibilities, express dependency ordering, define
+readiness and shutdown, preserve failure evidence, and apply least-privilege resource
+controls without making the service impossible to debug.
 
-## Related Topics
+## Related topics
 
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+- [Stage 10: Hardware-Facing Userspace And Kernel UAPI](../hardware-facing-userspace-and-kernel-uapi/index.md)
+- [Stage 12: Identity, Privilege, And Userspace Security](../identity-privilege-and-userspace-security/index.md)
+- [Stage 14: Diagnostics, Debugging, And Performance](../diagnostics-debugging-and-performance/index.md)
+
+## References
+
+- [systemd documentation](https://www.freedesktop.org/wiki/Software/systemd/)
+- [`systemd.service(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html)
+- [`systemd.exec(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html)

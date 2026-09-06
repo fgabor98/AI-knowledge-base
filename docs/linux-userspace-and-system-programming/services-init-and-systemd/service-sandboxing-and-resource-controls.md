@@ -8,79 +8,66 @@ last_reviewed: null
 
 # Service Sandboxing And Resource Controls
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how service users, capabilities, cgroups, filesystem protection, and private paths reduce blast radius. It is part of Stage 11: Services, Init, And systemd and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+A service should have only the filesystem, devices, privileges, syscalls, and
+resources required for its job. Sandboxing reduces blast radius, while limits prevent
+one component from exhausting the target. Both can also break hidden assumptions and
+must be tested with the production policy.
 
-## Core Concepts
+## Control categories
 
-- the service sandboxing and resource controls contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+| Control | Examples | Failure to expect |
+| --- | --- | --- |
+| Identity | `User`, groups, capabilities, `NoNewPrivileges` | `EACCES`, `EPERM` |
+| Filesystem | `ProtectSystem`, read-only paths, private `/tmp` | Missing/write-protected paths |
+| Devices | `DeviceAllow`, private `/dev` | `ENODEV`, permission failure |
+| Namespaces | mount, network, IPC, PID | Different paths, routes, PIDs |
+| Syscalls | seccomp allow/deny policy | `SIGSYS`, `EPERM` |
+| Resources | memory/tasks/FD/CPU/time limits | `ENOMEM`, `EMFILE`, throttling, OOM |
+| Network | address family/interface restrictions | bind/connect failure |
 
-## Learning Outcomes
+Apply controls incrementally, verify the service still has required observability,
+and document every exception. A sandbox is part of the deployment ABI.
 
-After studying this page, you should be able to:
+## Resource budgeting
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+Bound descriptors, threads, mappings, memory, queue depth, CPU, log rate, and startup
+time. Set cgroup limits according to measured peaks plus recovery headroom. A limit
+without a graceful application policy turns overload into an abrupt kill.
 
-## Planned Coverage
+## Debugging restricted services
 
-- mental model and vocabulary for service sandboxing and resource controls;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Inspect rendered unit properties and audit logs. Compare interactive and service
+identity, namespace, environment, cwd, mounts, capabilities, and limits. Temporarily
+relax one control in a controlled test to confirm a hypothesis, then restore the
+policy and add a targeted allow rule.
 
-## Practical Exercise
+## Common mistakes
 
-harden a service unit and verify that required hardware access still works.
+- Running as root because a sandbox was not designed.
+- Granting all devices or capabilities for convenience.
+- Hiding `/proc` and then removing all diagnosis paths.
+- Setting limits below normal bursts or without recovery headroom.
+- Treating an `EPERM` as an application bug without checking policy.
 
-Record:
+## Debugging checklist
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+- Capture unit, UID/GIDs, capabilities, namespaces, mounts, cgroup, and seccomp/LSM
+  evidence.
+- Test startup, device access, reload, logging, crash, and recovery under limits.
+- Verify core dumps/debugging are available through a controlled support path.
+- Check that failed writes/calls are handled and not retried into a storm.
 
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 11: Services, Init, And systemd](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Capabilities And Privilege Dropping](../identity-privilege-and-userspace-security/capabilities-and-privilege-dropping.md)
+- [seccomp, LSM, And Service Isolation](../identity-privilege-and-userspace-security/seccomp-lsm-and-service-isolation.md)
+- [Namespaces And cgroups](../identity-privilege-and-userspace-security/namespaces-and-cgroups.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`systemd.exec(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html)
+- [`systemd.resource-control(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html)
+- [`systemd.directives(7)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.directives.html)

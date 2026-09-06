@@ -8,79 +8,63 @@ last_reviewed: null
 
 # Service Lifecycle, Readiness, And Restart
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how ExecStart/Stop, service types, signals, deadlines, restart policy, and crash backoff create operational behavior. It is part of Stage 11: Services, Init, And systemd and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Supervisors can restart a process, but restart is not recovery. A service needs
+defined startup, readiness, quiesce, shutdown, crash, and repeated-failure states.
 
-## Core Concepts
+## Lifecycle states
 
-- the service lifecycle, readiness, and restart contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+STARTING -> READY -> QUIESCING -> STOPPED
+    |         |          |
+  failure   degraded   deadline -> forced stop
+    v         v
+ RESTARTING <- supervisor
+```
 
-## Learning Outcomes
+Readiness should follow successful configuration, dependency checks, device capability
+query, listener setup, and worker startup. Report degraded state separately when the
+service is alive but cannot provide all functionality.
 
-After studying this page, you should be able to:
+## Restart policy
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+Classify exits: clean administrative stop, configuration failure, transient dependency,
+crash, watchdog timeout, resource kill. Use bounded restart rate and backoff. Preserve
+the first failure’s core/log/status evidence; otherwise a restart loop overwrites the
+useful cause with repetitive “started” messages.
 
-## Planned Coverage
+## Shutdown
 
-- mental model and vocabulary for service lifecycle, readiness, and restart;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Stop intake, cancel/drain work, stop children, close hardware safely, commit or mark
+unknown persistent operations, and exit before the deadline. The supervisor may then
+escalate to SIGKILL. Startup must handle all unclean remnants.
 
-## Practical Exercise
+## Common mistakes
 
-make a daemon restart-safe and test graceful stop, timeout, crash, and restart storms.
+- Advertising ready before device/configuration health exists.
+- Restarting instantly forever.
+- Treating a clean process exit as service success.
+- Forgetting descendants and in-flight work during stop.
+- Losing first-crash evidence under repeated restarts.
 
-Record:
+## Debugging checklist
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+- Record state transitions, readiness reason, exit status/signal, restart count, and
+  supervisor deadline.
+- Test dependency absence/delay, config failure, crash, watchdog, SIGTERM, SIGKILL,
+  and repeated restart.
+- Verify stale sockets, locks, devices, temp files, and persistent state recovery.
 
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 11: Services, Init, And systemd](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [systemd Units, Dependencies, And Ordering](systemd-units-dependencies-and-ordering.md)
+- [Logging, tmpfiles, And Watchdogs](logging-tmpfiles-and-watchdogs.md)
+- [Hardware Service State Machines And Recovery](../design-and-architecture-patterns/hardware-service-state-machines-and-recovery.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`systemd.service(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html)
+- [`systemd.kill(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.kill.html)
+- [`Restart=`](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html#Restart=)
