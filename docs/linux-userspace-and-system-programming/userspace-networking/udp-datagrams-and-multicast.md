@@ -58,6 +58,21 @@ cause drops, and consume CPU in parsing. Report drops and sequence gaps. Use sam
 coalescing, rate limits, or backpressure at a higher layer; UDP itself will not slow
 the sender for you.
 
+## Zero-length datagrams and truncation
+
+A successful zero-byte `recv` on UDP can mean an empty datagram. It does not
+mean stream EOF. A receive buffer that is too small loses the rest of that
+datagram; the next receive starts another message. Use `recvmsg` and inspect
+`msg_flags & MSG_TRUNC` before parsing. With Linux's input `MSG_TRUNC`
+behavior, the reported original length can exceed buffer capacity: never use
+that length as permission to read beyond the supplied buffer.
+
+A useful fixture sends, in order, an empty datagram, an oversized datagram, and
+a valid bounded message. The receiver should classify each independently and
+remain synchronized. Capture truncation and socket-drop counters separately
+from application sequence gaps; they describe different failure locations.
+See [recvmsg(2)](https://man7.org/linux/man-pages/man2/recvmsg.2.html).
+
 ## Common mistakes
 
 - Treating UDP as reliable because a send succeeded.

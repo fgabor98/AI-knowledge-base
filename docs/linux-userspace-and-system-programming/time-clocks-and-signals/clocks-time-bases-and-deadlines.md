@@ -59,9 +59,10 @@ data is dangerous.
 
 ## Suspend and clock adjustment
 
-If the system suspends, a monotonic timeout may or may not include suspend according
-to the chosen clock and platform behavior. Choose `BOOTTIME` when “five seconds after
-request” includes suspend. Use `REALTIME` only when the requirement is calendar based.
+On Linux, `CLOCK_MONOTONIC` excludes suspend and `CLOCK_BOOTTIME` includes it.
+A boottime deadline can therefore already be expired on resume. Waking the system
+at the deadline is a separate requirement involving an alarm-capable clock and
+platform support. Use `REALTIME` when the requirement is calendar based.
 
 NTP can slew or step realtime. A backwards wall-clock jump can make a relative loop
 wait too long; a forward jump can make certificates or scheduled jobs appear expired.

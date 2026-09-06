@@ -19,7 +19,7 @@ is globally meaningful, causes crashes and misleading memory diagnoses.
 
 | Region | Contents | Typical properties |
 | --- | --- | --- |
-| Text | Instructions and PLT/GOT code | Read/execute, often file-backed and shareable |
+| Text | Instructions, including PLT stubs where used | Read/execute, often file-backed and shareable |
 | Read-only data | Constants, strings, relocation data | Read-only, sometimes non-executable |
 | Writable data/BSS | Globals and zero-initialized state | Private initially, copy-on-write after `fork` |
 | Heap | Allocator-managed dynamic storage | Writable, allocator metadata and fragmentation |
@@ -29,6 +29,9 @@ is globally meaningful, causes crashes and misleading memory diagnoses.
 | Anonymous mappings | Allocator arenas, `mmap`, stacks | No ordinary file backing; can be private or shared |
 | File mappings | Mapped file contents | Shared/private write semantics and page faults |
 | VDSO/VVAR | Kernel-provided user mappings | Architecture/kernel implementation detail |
+
+The GOT contains address data rather than executable instructions; relocations may
+write it during loading, and RELRO can protect applicable regions afterward.
 
 ASLR, PIE, loader choices, compiler options, and environment alter addresses. Code
 must use symbols and valid pointers, never address literals inferred from one run.

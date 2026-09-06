@@ -69,6 +69,24 @@ be reused for a different object. The stale event can then be applied to the wro
 connection. Centralize close/unregister/reuse, use generation tokens in user data,
 and ensure the event loop owns descriptor lifetime.
 
+## Combining edge triggering with a work budget
+
+Stopping after a fixed byte budget before reaching `EAGAIN` leaves unread data.
+With edge triggering, sleeping for a new edge can then stall indefinitely.
+Keep an application ready queue: when a handler exhausts its budget, put its
+connection at the queue's tail and service it again without waiting for a new
+kernel notification. Remove it only after `EAGAIN`, EOF, or a terminal error.
+
+For example, if two sockets are busy, process 64 KiB from A, then 64 KiB from B,
+then check timers and shutdown before revisiting A. The exact budget is a measured
+policy. Level triggering is simpler when this additional ready queue is unnecessary.
+See [epoll(7)](https://man7.org/linux/man-pages/man7/epoll.7.html).
+
+A hangup may accompany readable buffered bytes. If the protocol needs those bytes,
+consume them before treating the stream as finished. A zero-length stream read
+establishes EOF; an event mask alone does not establish that the receive buffer
+is empty.
+
 ## Common mistakes
 
 - Using edge-triggered epoll without draining to `EAGAIN`.

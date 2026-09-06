@@ -61,6 +61,29 @@ that need one.
 driver. A close may drop modem control lines and reset the attached equipment. Treat
 open/close as a hardware state transition and document it.
 
+## The four noncanonical read modes
+
+For a blocking descriptor, `VTIME` is measured in tenths of a second:
+
+| VMIN | VTIME | Read behavior |
+| --- | --- | --- |
+| 0 | 0 | Return available bytes immediately; zero is possible without EOF |
+| > 0 | 0 | Wait for the minimum byte count |
+| 0 | > 0 | Timer starts at read; return on first byte or expiry |
+| > 0 | > 0 | Wait indefinitely for the first byte, then use an inter-byte timer |
+
+The last mode is a common trap: the timer does not bound silence before the
+first byte. Count limits and implementation details also affect when a read
+returns. With `O_NONBLOCK`, do not rely on VMIN/VTIME to enforce waits;
+use the platform's documented behavior and readiness with an explicit deadline.
+See [termios(3)](https://man7.org/linux/man-pages/man3/termios.3.html).
+
+For a binary protocol, read existing settings, apply raw mode, explicitly set
+baud, parity, stop bits, `CREAD`, `CLOCAL`, and hardware/software flow
+control, then read the effective settings back. `TCSANOW` changes settings
+immediately; `TCSADRAIN` waits for queued output; `TCSAFLUSH` also discards
+unread input. A flush loses real bytes and belongs at a defined protocol boundary.
+
 ## Common mistakes
 
 - Configuring only baud and ignoring line discipline/flow control.

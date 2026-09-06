@@ -77,6 +77,24 @@ Pthread mutexes and condition variables are process-private by default. A proces
 shared attribute requires shared backing, correct initialization exactly once, and a
 peer-death/recovery protocol. Never place a process-private pointer in a shared queue.
 
+## Robust owner-death recovery
+
+For a robust mutex, `pthread_mutex_lock` returning `EOWNERDEAD` means the
+caller **acquired** the lock but the protected state may be inconsistent.
+Repair the invariant before calling `pthread_mutex_consistent`, then unlock.
+Unlocking without marking it consistent makes subsequent acquisition report
+`ENOTRECOVERABLE`. These are direct error values, not `errno`.
+
+Suppose a shared queue owner died after advancing its tail but before publishing
+the item length. Recovery needs enough metadata to identify complete items and
+discard the partial update. Merely calling `pthread_mutex_consistent` declares
+repair; it does not perform repair. If reconstruction cannot be proven, retire
+the entire shared generation through a coordinated protocol.
+
+See [POSIX mutex acquisition](https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html).
+Test owner death at each mutation boundary in a separate process. Destroying and
+reinitializing a lock while old waiters exist is not a recovery protocol.
+
 ## Common mistakes
 
 - Using `if` instead of `while` around `pthread_cond_wait`.

@@ -99,6 +99,26 @@ inspect `EPIPE`. A service can ignore or block SIGPIPE and handle `EPIPE`, or us
 socket options such as `MSG_NOSIGNAL` where applicable. The policy must be consistent
 with other libraries in the process.
 
+## Atomic writes and FIFO open behavior
+
+`PIPE_BUF` is an atomicity bound, not the pipe's storage capacity. On Linux,
+a single write of at most `PIPE_BUF` bytes is protected from interleaving with
+other writers. With `O_NONBLOCK`, it either writes the entire small record or
+returns `EAGAIN` when there is insufficient space. Larger writes may be partial
+and interleaved. Readers still need framing: two atomic writes can arrive in one
+read, or one write can be split across reads.
+
+A multiwriter logger should build a complete bounded record before issuing one
+write. Increasing pipe capacity does not increase the atomic record guarantee.
+Consult [pipe(7)](https://man7.org/linux/man-pages/man7/pipe.7.html).
+
+For a FIFO opened nonblocking, a read-only open can succeed without a writer;
+a write-only open fails with `ENXIO` until a reader exists. With no writers,
+a read can return zero; that does not promise a future writer will never open
+the FIFO. Define whether zero terminates this reader session or causes a later
+reopen. Linux permits opening a FIFO read/write, but this keeps both sides alive
+and can mask EOF and broken-pipe detection.
+
 ## Common mistakes
 
 - Forgetting one inherited write end and waiting forever for EOF.

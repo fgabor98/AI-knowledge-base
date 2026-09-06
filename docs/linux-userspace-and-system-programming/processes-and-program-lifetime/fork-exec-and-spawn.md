@@ -57,8 +57,10 @@ parent reads setup result and waits or supervises child
 ```
 
 An error pipe solves the ambiguity where the child exits before `exec`: the parent can
-receive `errno` from child setup, while EOF caused by close-on-exec proves `exec`
-succeeded far enough to close the pipe.
+receive `errno` from child setup. EOF means no error record was received: successful
+`exec` closes the descriptor, but abrupt child death also does. Combine the channel
+with wait status, and require an application readiness handshake when startup success
+must be known. EOF alone cannot prove that the new program ran.
 
 ## `posix_spawn`
 
@@ -88,6 +90,7 @@ if (child == -1) {
     /* parent: save errno and report */
 }
 if (child == 0) {
+    /* Precondition for this abbreviated example: output_fd > STDERR_FILENO. */
     if (dup2(output_fd, STDOUT_FILENO) == -1) {
         _exit(127);
     }

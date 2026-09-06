@@ -37,9 +37,12 @@ accepted -> authenticate -> negotiate -> active
                          reconnect/new generation
 ```
 
-Capture credentials and protocol generation at accept/authentication. Recheck state
-when a privileged or destructive request arrives if credentials can change or the
-protocol permits delegation.
+Capture credentials and protocol generation at accept/authentication. `SO_PEERCRED`
+reports credentials captured at connection establishment (or socketpair creation),
+not a live identity lookup on each request. Repeating it does not detect later UID
+changes or descriptor delegation. If current message credentials are required,
+design around `SO_PASSCRED`/`SCM_CREDENTIALS` and the socket type's documented
+semantics. Apply request authorization even after connection authentication.
 
 ## Peer death and unknown outcomes
 

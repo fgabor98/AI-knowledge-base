@@ -56,10 +56,12 @@ buffer. Never allocate `payload_length` before checking its range.
 
 ## Datagrams
 
-Unix datagrams preserve message boundaries, but messages can be rejected, truncated,
-or lost according to queue and socket behavior. Design each datagram to stand alone
-or include a request ID and retry policy. Do not assume a datagram is authenticated
-just because it is local.
+Linux Unix-domain datagram sockets preserve message boundaries and provide reliable,
+ordered transport; they do not have UDP's network-loss model. Sending can block or
+fail under queue pressure, and receiving into an undersized buffer can truncate a
+message. Application death or rejection can still leave an unacknowledged operation.
+Define bounded messages, check `MSG_TRUNC`, and distinguish transport delivery from
+application commit. Local transport does not itself authorize the sender.
 
 ## Passing descriptors
 

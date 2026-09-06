@@ -84,6 +84,34 @@ Services should define what happens to stdin, stdout, and stderr. Redirecting th
 Do not depend on a terminal, shell expansion, current directory, or interactive
 environment. Flush or use an appropriate logging design when a child exits.
 
+## The equal-descriptor trap
+
+If stdin or stdout was initially closed, `open` or `pipe2` may allocate that
+number. `dup2(fd, fd)` is a no-op: it does not clear `FD_CLOEXEC`. Closing
+the supposed “original” afterward closes the intended standard stream too.
+
+An illustrative child-side redirection handles both branches:
+
+```c
+/* source is valid; failures terminate the post-fork child. */
+if (source != STDOUT_FILENO) {
+    if (dup2(source, STDOUT_FILENO) == -1)
+        _exit(127);
+    close(source);
+} else {
+    int flags = fcntl(source, F_GETFD);
+    if (flags == -1 ||
+        fcntl(source, F_SETFD, flags & ~FD_CLOEXEC) == -1)
+        _exit(127);
+}
+```
+
+For multiple redirections, plan the entire graph before modifying it: moving
+one descriptor can overwrite the source for another. Test with 0, 1, and 2
+individually closed before launch. Parent and child have independent descriptor
+table entries after `fork`, so closing the parent's entry then does not close
+the child's copy.
+
 ## Common mistakes
 
 - Creating descriptors without `O_CLOEXEC` in a multithreaded launcher.
@@ -92,7 +120,8 @@ environment. Flush or use an appropriate logging design when a child exits.
 - Using `system()` where explicit argv/FD/environment control is required.
 - Passing all inherited descriptors to a less-trusted helper.
 - Treating exit 127 as a precise `exec` diagnosis.
-- Closing a descriptor in a parent before a child has duplicated it.
+- Closing a needed descriptor before `fork`, or closing the child's intended
+  standard stream when the source already has that descriptor number.
 
 ## Debugging checklist
 

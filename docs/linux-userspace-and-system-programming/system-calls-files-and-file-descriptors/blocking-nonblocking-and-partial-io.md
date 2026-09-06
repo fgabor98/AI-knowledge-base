@@ -21,9 +21,11 @@ A blocking descriptor waits inside an operation until progress, end-of-stream, a
 error, or an event-specific condition occurs. A nonblocking descriptor returns
 immediately when it cannot progress, commonly with `EAGAIN` or `EWOULDBLOCK`.
 
-Nonblocking does not mean asynchronous completion. It means the calling thread is not
-held by that operation. The program still needs a readiness mechanism, a retry policy,
-and a deadline.
+Nonblocking does not mean asynchronous completion or a hard execution-time bound.
+For interfaces that implement it, the operation avoids waiting for ordinary data
+readiness. Regular-file I/O generally ignores `O_NONBLOCK`; page faults, internal
+locks, and driver behavior may still delay a call. The program needs a readiness
+mechanism, a retry policy, and a deadline appropriate to the actual object.
 
 ## Partial I/O
 
