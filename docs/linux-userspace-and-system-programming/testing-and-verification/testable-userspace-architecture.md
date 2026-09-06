@@ -1,86 +1,24 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Testable Userspace Architecture
 
-## What Problem Does This Solve?
+Separate policy from mechanisms and pure decisions from effects. A useful structure is a deterministic core that accepts events and returns commands, surrounded by adapters for clocks, files, sockets, processes, devices, and persistence.
 
-This page covers how dependency injection and explicit boundaries make files, clocks, sockets, devices, and commands testable. It is part of Stage 16: Testing And Verification and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+## Dependency boundaries
 
-## Core Concepts
+Inject interfaces rather than calling global state throughout the core. Useful seams include:
 
-- the testable userspace architecture contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+- monotonic clock and timer scheduling;
+- filesystem and durable-record operations;
+- transport read/write and reconnect behavior;
+- process supervision and signal delivery;
+- device/UAPI access;
+- randomness and identity providers.
 
-## Learning Outcomes
+The production adapter must still be tested against the real boundary. A fake that only returns success can make a design appear reliable while hiding partial writes, `EINTR`, `EPIPE`, delayed readiness, clock jumps, and resource exhaustion.
 
-After studying this page, you should be able to:
+## Determinism
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+Pass time explicitly, control event ordering, seed randomness, bound retries, and make cleanup idempotent. Tests should be able to inspect emitted commands and state transitions without sleeping for real time. Use a virtual clock to test deadlines, backoff, and watchdog behavior.
 
-## Planned Coverage
+## Contract ownership
 
-- mental model and vocabulary for testable userspace architecture;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-refactor a hardware-facing component so policy can be tested without hardware.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 16: Testing And Verification](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Define which layer owns memory, descriptors, threads, cancellation, and retries. Assert ownership at API boundaries. A small number of clear adapters is easier to fake and review than a large abstraction that hides the actual kernel or device contract.

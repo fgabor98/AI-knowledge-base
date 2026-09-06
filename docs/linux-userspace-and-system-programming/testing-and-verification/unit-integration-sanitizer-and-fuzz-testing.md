@@ -1,86 +1,11 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Unit, Integration, Sanitizer, And Fuzz Testing
 
-## What Problem Does This Solve?
+## Test layers
 
-This page covers how tests, sanitizers, static analysis, coverage, fuzzing, and reference models expose different classes of defects. It is part of Stage 16: Testing And Verification and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Unit tests should make one decision or invariant fail clearly. Integration tests should cross a real boundary such as a file descriptor, socket, process, loader, or service unit. End-to-end tests should assert observable behavior and recovery, not implementation details.
 
-## Core Concepts
+Run AddressSanitizer and UndefinedBehaviorSanitizer regularly; use ThreadSanitizer where its platform and workload support it. Treat sanitizer findings as defects even when production has not reproduced them. Keep symbolized stack traces, compiler flags, and the exact input.
 
-- the unit, integration, sanitizer, and fuzz testing contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Fuzz parsers and state machines with structure-aware generators, bounded inputs, and persistent corpora. Define a useful oracle: no crash, no sanitizer report, no hang beyond a budget, and invariants preserved. Seed with real protocol samples only after removing secrets. Minimize and retain every reproducer.
 
-## Learning Outcomes
-
-After studying this page, you should be able to:
-
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
-
-## Planned Coverage
-
-- mental model and vocabulary for unit, integration, sanitizer, and fuzz testing;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-add a quality gate for a parser, state machine, and IPC protocol.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 16: Testing And Verification](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Coverage is a guide to unexplored code, not a correctness proof. Add targeted cases for overflow, truncation, duplicate fields, unknown versions, cancellation, reconnects, resource limits, and power-loss recovery. Run tests under multiple optimization levels and architectures when ABI-sensitive code is involved.

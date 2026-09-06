@@ -1,86 +1,17 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
+# Lifecycle, Update, And Hardware-In-The-Loop Tests
 
-# Lifecycle, Update, And Hardware-in-the-Loop Tests
+Long-lived failures appear only across restarts, updates, resource pressure, and physical disturbances. Build tests around events, not only steady-state success.
 
-## What Problem Does This Solve?
+## Lifecycle scenarios
 
-This page covers how restart, watchdog, network loss, storage failure, power cycle, update, rollback, and factory reset affect a product. It is part of Stage 16: Testing And Verification and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Test start, readiness, reload, dependency loss, reconnect, graceful stop, forced termination, watchdog expiry, crash loop limits, log rotation, full storage, clock changes, and repeated restart. Assert no orphaned process, descriptor, mount, lock, or stale socket remains.
 
-## Core Concepts
+## Update and power scenarios
 
-- the lifecycle, update, and hardware-in-the-loop tests contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Interrupt download, verification, installation, migration, boot selection, first boot, and confirmation. Power-cycle at each durable transition. Verify old-valid, new-valid, fallback, and safe-recovery outcomes; inspect that configuration and state remain compatible with the selected image.
 
-## Learning Outcomes
+## HIL discipline
 
-After studying this page, you should be able to:
+Automate power, reset, network, thermal, sensor, and peripheral faults with explicit safety limits. Use controlled repetition and record board identity, firmware, image digest, stimulus timeline, serial/kernel logs, telemetry, and final state. Separate flaky infrastructure from product failures by validating the fixture itself and rerunning a minimized scenario.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
-
-## Planned Coverage
-
-- mental model and vocabulary for lifecycle, update, and hardware-in-the-loop tests;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-run a repeatable board test sequence and retain serial, service, kernel, and artifact evidence.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 16: Testing And Verification](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Soak tests should have a resource budget and an end condition: monitor memory, descriptors, threads, CPU, storage, latency tails, and error counters. A test passes only when the artifact bundle makes the result independently reviewable.

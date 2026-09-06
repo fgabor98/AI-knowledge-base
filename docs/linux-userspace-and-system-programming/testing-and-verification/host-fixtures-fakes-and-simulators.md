@@ -1,86 +1,17 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Host Fixtures, Fakes, And Simulators
 
-## What Problem Does This Solve?
+Host tests should exercise real OS primitives where that improves confidence without requiring privileged hardware. Temporary directories test permissions and atomic replacement; `socketpair()` tests IPC; PTYs test serial-like framing; subprocesses test signals, exit status, and descriptor inheritance.
 
-This page covers how pipes, socketpairs, PTYs, memfd, temporary filesystems, loopback, and fake devices model target behavior. It is part of Stage 16: Testing And Verification and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+## Model failure, not just success
 
-## Core Concepts
+Fakes should be able to produce short reads/writes, `EINTR`, `EAGAIN`, disconnects, malformed frames, delayed events, clock jumps, full storage, permission failures, and device resets. A simulator can model protocol and timing, but it must document what it does not model: kernel scheduling, electrical timing, driver bugs, DMA, filesystem wear, and real power loss.
 
-- the host fixtures, fakes, and simulators contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+## Fixture hygiene
 
-## Learning Outcomes
+Give every test an isolated temporary root, unique ports or socket names, bounded cleanup, and a clear timeout. Avoid tests that depend on the host's account database, current locale, timezone, network, `/dev`, or service manager unless they are explicitly integration tests. Parallel tests must not share mutable state.
 
-After studying this page, you should be able to:
+Capture logs and traces on failure, but redact secrets and cap artifact size. A fixture that leaves processes or mounts behind can contaminate later tests and create misleading failures.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Fidelity ladder
 
-## Planned Coverage
-
-- mental model and vocabulary for host fixtures, fakes, and simulators;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-build fixtures for delay, partial I/O, malformed input, disconnect, and missing-resource cases.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 16: Testing And Verification](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Start with a fake for fast logic tests, then a protocol simulator, then a real unprivileged OS fixture, then a target or device test. Promote a test upward when the lower layer has repeatedly missed a class of defect; keep the lower test because it remains faster and more diagnostic.
