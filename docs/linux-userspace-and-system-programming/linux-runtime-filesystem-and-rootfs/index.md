@@ -8,11 +8,28 @@ last_reviewed: null
 
 # Stage 1: Linux Runtime, Filesystem, And Rootfs
 
-Learn the runtime filesystem and rootfs assumptions that userspace applications depend on during boot and operation.
+Userspace programs do not run inside source trees. They run inside a process view of
+a mounted filesystem, with a particular loader, libraries, configuration, device
+nodes, credentials, and boot state. This chapter builds the filesystem and runtime
+model that every later process and I/O chapter relies on.
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+## The central mental model
 
-## Learning Materials
+There are three distinct objects to keep separate:
+
+```text
+pathname  --resolved in a process's namespace-->  directory entry / inode
+inode     --represented by a filesystem-->       file data and metadata
+mount     --composes filesystems-->              the visible hierarchy
+```
+
+`/etc/app.conf` is not “a string pointing to a file.” It is a lookup performed using
+the calling process’s root, current directory, mount namespace, symlink rules, and
+permissions. The resulting object can be a regular file, directory, device node,
+socket, FIFO, or another special file. A different service namespace can resolve the
+same pathname to a different object—or to no object at all.
+
+## Learning materials
 
 1. [Filesystem Hierarchy And Path Resolution](filesystem-hierarchy-and-path-resolution.md)
 2. [Files, Inodes, Metadata, And Links](files-inodes-metadata-and-links.md)
@@ -22,40 +39,108 @@ This stage is a collection of focused draft pages. Read the overview first, then
 6. [Read-Only Rootfs, Overlayfs, And Persistent State](read-only-rootfs-overlayfs-and-persistent-state.md)
 7. [ELF Executables And Dynamic Linking](elf-executables-and-dynamic-linking.md)
 
-## Study Pattern
+## Filesystem classes in a product
 
-For each page:
+| Class | Typical locations | Lifetime and policy |
+| --- | --- | --- |
+| Immutable system | `/usr`, `/bin`, `/sbin`, `/lib*` | Delivered by the image; normally read-only and replaced by an update |
+| Configuration | `/etc` or a separate configuration partition | Versioned, validated, backed up or regenerated according to product policy |
+| Runtime state | `/run`, service sockets, PID files | Volatile; recreated at boot and never treated as durable configuration |
+| Persistent data | `/var/lib`, `/data`, application partition | Survives reboot/update according to a schema and power-loss policy |
+| Logs | `/var/log`, journal storage, remote sink | Bounded, rotated, and safe when storage is full or unavailable |
+| Cache | `/var/cache`, application cache | Rebuildable; deletion must not destroy user intent |
+| Temporary | `/tmp`, private `RuntimeDirectory`, `tmpfs` | Volatile and permission-controlled; never used for irreplaceable state |
+| Kernel views | `/proc`, `/sys`, `/dev` | Generated or managed at runtime; not ordinary persistent files |
 
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
+The location alone does not establish the policy. An embedded image may put `/var` on
+tmpfs, use a read-only `/usr`, place persistent data under `/data`, or omit a
+directory entirely. The image definition, mount table, and service contract are the
+authority.
 
-## Stage Outcomes
+## Boot-to-application sequence
 
-By the end of this stage, you should be able to:
+```text
+firmware / bootloader
+        |
+        v
+kernel + command line + initramfs
+        |
+        v
+early userspace: discover storage, mount real root, hand off
+        |
+        v
+PID 1 / init: mount pseudo-filesystems, create runtime dirs, start services
+        |
+        v
+service: loader -> libc -> application -> devices and persistent state
+```
 
-- explain and demonstrate filesystem hierarchy and path resolution;
-- explain and demonstrate files, inodes, metadata, and links;
-- explain and demonstrate safe paths and temporary file operations;
-- explain and demonstrate pseudo-filesystems and device nodes;
-- explain and demonstrate mounts, initramfs, and rootfs layout;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
+Every arrow can fail independently. A service that starts too early can see an
+existing directory but not the filesystem that should be mounted there. A program
+that starts from an initramfs can find `/bin/app` but not the libraries or config that
+exist only on the final root. A program can load successfully and still fail when
+`/dev`, `/proc`, or `/sys` is not mounted.
 
-## Completion Criteria
+## A filesystem investigation sequence
 
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
+```sh
+pwd
+findmnt -T /etc/hostname
+stat /etc/hostname
+readlink -e /etc/hostname
+cat /proc/self/mountinfo
+df -hT
+df -ih
+namei -l /etc/hostname
+```
 
-## Related Topics
+Use `findmnt -T` or `/proc/self/mountinfo` to answer which mount supplies a path.
+Use `namei` to expose each component and symlink. Use `stat` to inspect the resolved
+object. These commands describe the shell’s namespace; inspect the service’s PID or
+enter its namespace when debugging a sandboxed service.
 
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+## Stage lab
+
+Build the chapter’s small probe and inspect a disposable directory:
+
+```sh
+mkdir -p /tmp/userspace-rootfs-lab/root/etc /tmp/userspace-rootfs-lab/data
+printf 'mode=lab\n' > /tmp/userspace-rootfs-lab/root/etc/app.conf
+ln -s ../etc/app.conf /tmp/userspace-rootfs-lab/root/app.conf
+namei -l /tmp/userspace-rootfs-lab/root/app.conf
+stat /tmp/userspace-rootfs-lab/root/etc/app.conf
+findmnt -T /tmp/userspace-rootfs-lab/root/etc/app.conf
+```
+
+Then compare the host root with the target rootfs manifest. The important deliverable
+is not a list of paths; it is a mapping from each path to its owner, mount, lifetime,
+writability, and recovery policy.
+
+## Completion criteria
+
+You can complete this stage when you can:
+
+- explain path resolution using a process’s root, current directory, dirfd, mounts,
+  symlinks, and permissions;
+- distinguish a pathname, directory entry, inode, open file description, mount, and
+  device node;
+- select race-resistant APIs for untrusted paths and safe temporary files;
+- identify `/proc`, `/sys`, `/dev`, `tmpfs`, and `devtmpfs` by purpose and lifetime;
+- explain initramfs handoff and why boot ordering changes path availability;
+- classify data as immutable, configuration, runtime, cache, log, temporary, or
+  persistent and choose a power-loss policy;
+- diagnose an executable failure by inspecting its ELF interpreter and dependencies.
+
+## Related topics
+
+- [Stage 0: Environment And Mental Model](../environment-and-mental-model/index.md)
+- [System Calls, Files, And File Descriptors](../system-calls-files-and-file-descriptors/index.md)
+- [Filesystem Images](../../build-systems/filesystem-image-basics.md)
+- [Install Rules And Staging](../../build-systems/install-rules-and-staging.md)
+
+## References
+
+- [Filesystem Hierarchy Standard](https://refspecs.linuxfoundation.org/fhs.shtml)
+- [`path_resolution(7)`](https://man7.org/linux/man-pages/man7/path_resolution.7.html)
+- [`mount_namespaces(7)`](https://man7.org/linux/man-pages/man7/mount_namespaces.7.html)
+- [Linux kernel filesystems documentation](https://www.kernel.org/doc/html/latest/filesystems/index.html)
