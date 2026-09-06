@@ -8,11 +8,28 @@ last_reviewed: null
 
 # Stage 2: Processes And Program Lifetime
 
-Understand process creation, replacement, exit, supervision, job control, and runtime observation.
+A process is more than an executable file. It is a running identity with an address
+space, threads, credentials, signal state, namespaces, resource limits, open file
+descriptors, and a relationship to a supervisor. This chapter explains how that
+identity is created, replaced, terminated, observed, and controlled.
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+## The lifecycle model
 
-## Learning Materials
+```text
+program file --exec--> process image --run--> exit/stop
+                              |                 |
+                         fork/spawn          wait/reap
+                              |                 |
+                         child process       supervisor records result
+```
+
+`fork` creates a new process from the caller’s current process state. `exec` replaces
+the calling process’s program image while preserving selected process attributes.
+Exit ends the process, but the parent must wait to collect the termination result and
+release the kernel’s zombie record. A supervisor may restart the service, so a new
+process with a new PID can represent the same product component.
+
+## Learning materials
 
 1. [Process Model And Identifiers](process-model-and-identifiers.md)
 2. [fork, exec, And posix_spawn](fork-exec-and-spawn.md)
@@ -20,40 +37,78 @@ This stage is a collection of focused draft pages. Read the overview first, then
 4. [Sessions, Process Groups, And Job Control](sessions-process-groups-and-job-control.md)
 5. [/proc Process Observation And Control](proc-process-observation-and-control.md)
 
-## Study Pattern
+## Process identity is multi-dimensional
 
-For each page:
+| Dimension | Examples | Why it matters |
+| --- | --- | --- |
+| PID identity | PID, PPID, thread ID, PID namespace | IDs can be reused and differ between namespaces |
+| Image | executable, arguments, environment, libraries | `exec` changes the image without necessarily changing PID |
+| Resources | address space, FDs, mappings, timers, locks | Inheritance and lifetime determine leaks and shutdown |
+| Credentials | real/effective UID/GID, groups, capabilities | Access checks and privilege are process state |
+| Scheduling | policy, priority, affinity, limits | A process can be alive but starved or blocked |
+| Relationships | parent, process group, session, supervisor | Signals, terminal ownership, and reaping depend on them |
+| Isolation | mount, user, network, IPC, cgroup namespaces | The same path, PID, or resource can have different views |
+| Observation | `/proc`, logs, exit status, core dump | Diagnosis needs identity captured before PID reuse |
 
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
+## Service lifecycle discipline
 
-## Stage Outcomes
+For an embedded service, define:
 
-By the end of this stage, you should be able to:
+- who starts it and what readiness means;
+- which PID is supervised and which children it may create;
+- how SIGTERM becomes application shutdown;
+- the shutdown deadline and escalation behavior;
+- which exit statuses trigger restart, failover, or operator attention;
+- how crash evidence is retained before restart;
+- which resources must be closed, joined, reaped, or rolled back.
 
-- explain and demonstrate process model and identifiers;
-- explain and demonstrate fork, exec, and posix_spawn;
-- explain and demonstrate exit, waiting, and zombies;
-- explain and demonstrate sessions, process groups, and job control;
-- explain and demonstrate /proc process observation and control;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
+Avoid “daemon folklore” that detaches from a supervisor and hides failures. A modern
+service normally remains in the foreground and lets PID 1 or a service manager own
+restart, logging, cgroups, and dependency ordering.
 
-## Completion Criteria
+## Stage lab
 
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
+Build the process probe and observe it:
 
-## Related Topics
+```sh
+cc -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -g \
+    examples/c/linux-userspace-process-lifecycle.c \
+    -o /tmp/process-lifecycle
+/tmp/process-lifecycle
+```
 
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+Then inspect a long-lived process:
+
+```sh
+sleep 30 & pid=$!
+cat "/proc/$pid/status"
+readlink "/proc/$pid/exe"
+ls -l "/proc/$pid/fd"
+wait "$pid"
+```
+
+## Completion criteria
+
+You can complete this stage when you can:
+
+- distinguish a program, process, thread, process group, session, and supervisor;
+- explain what `fork`, `exec`, and `posix_spawn` preserve or replace;
+- reap every child and decode exit, signal, core-dump, and stop information;
+- explain zombies, orphan reparenting, PID 1, and subreapers;
+- reason about terminal foreground groups and signal delivery;
+- diagnose whether a process crashed, exited, hung, blocked, was killed, or restarted;
+- capture `/proc` and supervisor evidence before a PID is reused.
+
+## Related topics
+
+- [Stage 1: Linux Runtime, Filesystem, And Rootfs](../linux-runtime-filesystem-and-rootfs/index.md)
+- [Stage 3: System Calls, Files, And File Descriptors](../system-calls-files-and-file-descriptors/index.md)
+- [Service Lifecycle, Readiness, And Restart](../services-init-and-systemd/service-lifecycle-readiness-and-restart.md)
+- [PID 1, Init, And Early Userspace](../services-init-and-systemd/pid1-init-and-early-userspace.md)
+
+## References
+
+- [`process(7)`](https://man7.org/linux/man-pages/man7/process.7.html)
+- [`proc(5)`](https://man7.org/linux/man-pages/man5/proc.5.html)
+- [`credentials(7)`](https://man7.org/linux/man-pages/man7/credentials.7.html)
+- [`systemd.service(5)`](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html)

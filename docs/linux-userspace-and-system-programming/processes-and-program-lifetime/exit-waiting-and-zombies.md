@@ -8,79 +8,123 @@ last_reviewed: null
 
 # Exit, Waiting, And Zombies
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how termination status, SIGCHLD, reaping, zombies, orphans, and PID 1 interact. It is part of Stage 2: Processes And Program Lifetime and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Process termination has two sides. The child stops executing, but the kernel retains
+a small termination record until a parent collects it. If the parent never waits,
+zombies accumulate. If a supervisor restarts a process without preserving the first
+failure evidence, a crash loop becomes difficult to diagnose.
 
-## Core Concepts
+## Termination paths
 
-- the exit, waiting, and zombies contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+| Path | Meaning |
+| --- | --- |
+| `return` from `main` | Equivalent to calling `exit` with the returned status |
+| `exit(status)` | Runs `atexit` handlers and flushes stdio, then terminates the process |
+| `_exit(status)` / `_Exit` | Terminates immediately without user-space exit handlers or stdio flushing |
+| fatal signal | Kernel applies signal’s default action, possibly creating a core dump |
+| supervisor kill | Process may be terminated by `SIGTERM`, deadline escalation, or `SIGKILL` |
 
-## Learning Outcomes
+Threads calling `pthread_exit` terminate only themselves. Calling `exit` from one
+thread terminates the whole process, so thread shutdown ownership must be explicit.
 
-After studying this page, you should be able to:
+## Waiting and status decoding
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+```c
+int status;
+pid_t result = waitpid(child_pid, &status, 0);
+if (result == -1) {
+    /* EINTR may mean retry; ECHILD means ownership or lifecycle changed. */
+} else if (WIFEXITED(status)) {
+    printf("exit status=%d\n", WEXITSTATUS(status));
+} else if (WIFSIGNALED(status)) {
+    printf("signal=%d core=%d\n", WTERMSIG(status),
+           WCOREDUMP(status) != 0);
+}
+```
 
-## Planned Coverage
+Use the macros, not bit shifts or assumptions about the integer representation. With
+`WUNTRACED`/`WCONTINUED`, also handle stopped and continued children. `waitid` can
+provide a `siginfo_t` result and `WNOWAIT` can inspect without consuming the record;
+use it when the product needs that precision.
 
-- mental model and vocabulary for exit, waiting, and zombies;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+`waitpid(-1, ...)` means any child, while a positive PID selects one. A supervisor
+must not accidentally reap a child owned by another subsystem unless that ownership
+is intentional.
 
-## Practical Exercise
+## Zombies and reparenting
 
-write and test a parent that handles normal exit, signal termination, and rapid child failure.
+A zombie has exited but still has a PID and status record because its parent has not
+waited. It consumes a process-table slot, not the child’s address space. The parent
+should wait promptly. If the parent exits, the child is reparented to an eligible
+subreaper or PID 1, which then owns the wait obligation.
 
-Record:
+PID 1 has special responsibilities: it must reap orphaned children and handle signals
+appropriately. A tiny init that does neither can eventually exhaust the process table
+or fail to shut down its descendants. In a container, PID 1 is the container’s init,
+not necessarily the host’s systemd.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## SIGCHLD strategies
 
-## Minimal Example
+Choose one owner and one strategy:
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+- block `SIGCHLD` and consume it through `sigwaitinfo` or `signalfd` in an event loop;
+- install a handler that records minimal state and performs safe reaping later;
+- use a supervisor API or `pidfd` plus a defined wait path;
+- use `SA_NOCLDWAIT`/ignore semantics only when losing child status is acceptable.
 
-## Common Mistakes
+Do not call complex, non-async-signal-safe code from a signal handler. Do not mix
+multiple components that all believe they own child reaping.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Shutdown and restart
 
-## Debugging Checklist
+A robust supervisor sequence is:
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+```text
+send SIGTERM to the intended process/group
+wait for graceful exit until monotonic deadline
+capture status and final logs
+send SIGKILL only to the intended remaining scope
+reap every child
+apply bounded backoff before restart
+preserve the first failure in the crash record
+```
 
-## Related Topics
+`SIGKILL` cannot be handled and may leave external state half-complete. The next
+start must detect stale locks, sockets, temporary files, transactions, and device
+state. Restart policy must distinguish a clean administrative stop from a crash and
+avoid infinite rapid restart storms.
+
+## Common mistakes
+
+- Forgetting to wait because the child “already exited.”
+- Treating any nonzero exit status as a signal or vice versa.
+- Calling `exit` in a post-fork child and flushing duplicated stdio buffers.
+- Reaping children from more than one ownership domain.
+- Sending `SIGTERM` to a PID while descendants continue running.
+- Using `SIGKILL` immediately and losing the first failure evidence.
+- Treating PID 1 in a container as a normal application process.
+
+## Debugging checklist
+
+- Inspect `ps` states for `Z` and parent relationships.
+- Capture `waitpid`/`waitid` result and decoded status.
+- Check core-dump policy, signal, backtrace, and final logs.
+- Check process groups and descendants during shutdown.
+- Check restart counters, backoff, and the first crash record.
+- Test child exits before parent setup completes, child `exec` failure, signal death,
+  parent death, and supervisor shutdown.
+
+## Related topics
 
 - [Stage 2: Processes And Program Lifetime](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [fork, exec, And posix_spawn](fork-exec-and-spawn.md)
+- [Sessions, Process Groups, And Job Control](sessions-process-groups-and-job-control.md)
+- [Service Lifecycle, Readiness, And Restart](../services-init-and-systemd/service-lifecycle-readiness-and-restart.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`wait(2)`](https://man7.org/linux/man-pages/man2/wait.2.html)
+- [`waitpid(2)`](https://man7.org/linux/man-pages/man2/waitpid.2.html)
+- [`waitid(2)`](https://man7.org/linux/man-pages/man2/waitid.2.html)
+- [`signal(7)`](https://man7.org/linux/man-pages/man7/signal.7.html)

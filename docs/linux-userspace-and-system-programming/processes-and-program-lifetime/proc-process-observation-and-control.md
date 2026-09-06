@@ -8,79 +8,140 @@ last_reviewed: null
 
 # /proc Process Observation And Control
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how to inspect process state, descriptors, mappings, limits, threads, and scheduler information. It is part of Stage 2: Processes And Program Lifetime and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+When a service is “running” but not working, `/proc` can distinguish a crash, sleep,
+blocked I/O, excessive memory use, descriptor leak, signal wait, or wrong executable.
+It is a live kernel view with race conditions and permission limits—not a consistent
+database snapshot—so observations must be timestamped and correlated.
 
-## Core Concepts
+## High-value process entries
 
-- the /proc process observation and control contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+| Entry | Use |
+| --- | --- |
+| `status` | State, IDs, memory summary, groups, capabilities, signal masks |
+| `cmdline` | Arguments as NUL-separated bytes; may be empty or intentionally changed |
+| `environ` | Initial/current environment bytes, subject to permissions and sensitivity |
+| `exe` | Link to executable file, if accessible |
+| `cwd`, `root` | Process directory and root views |
+| `fd/` | Descriptor targets; access may race with close/reuse |
+| `fdinfo/` | Per-descriptor position, flags, and facility-specific details |
+| `maps`, `smaps` | Mappings; `smaps` has memory accounting and costs more to read |
+| `limits` | Resource limits |
+| `stat`, `statm` | Kernel accounting; `stat` has parsing and field semantics traps |
+| `task/` | Per-thread IDs and state |
+| `ns/` | Namespace handles and identity |
+| `oom_score`, `cgroup` | OOM and resource-control context |
 
-## Learning Outcomes
+```sh
+pid=1234
+cat "/proc/$pid/status"
+tr '\0' ' ' < "/proc/$pid/cmdline"; echo
+readlink "/proc/$pid/exe"
+readlink "/proc/$pid/cwd"
+ls -l "/proc/$pid/fd"
+cat "/proc/$pid/limits"
+cat "/proc/$pid/wchan" 2>/dev/null || true
+```
 
-After studying this page, you should be able to:
+Avoid exposing `environ`, command-line secrets, or memory maps in support bundles
+without a redaction policy.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Process states and blocked work
 
-## Planned Coverage
+`status` reports a state such as running, sleeping, disk sleep, stopped, zombie, or
+dead. A sleeping process is not necessarily broken: it may be waiting for an event.
+An uninterruptible sleep can indicate storage or device work, but one snapshot is not
+enough to establish a hang.
 
-- mental model and vocabulary for /proc process observation and control;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Correlate:
 
-## Practical Exercise
+- repeated state and CPU observations;
+- `wchan` and kernel stack evidence where permitted;
+- `strace -p` for system-call waits;
+- FD targets and readiness sources;
+- logs, deadlines, watchdog events, and thread states.
 
-build a diagnostic report from proc/PID and distinguish crash, hang, block, and restart.
+## Memory and descriptors
 
-Record:
+`maps` shows what is mapped, not how much is resident. Use `smaps` or
+`smaps_rollup` for RSS/PSS/private/shared details where available. A growing virtual
+size may be harmless address reservation; growing RSS or dirty memory is a different
+signal. `/proc/<pid>/fd` reveals descriptor leaks and deleted-but-open files.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Descriptor numbers can be reused immediately after close. Record the observation time
+and inspect the owning process while it is still in the suspected state.
 
-## Minimal Example
+## Safe control versus observation
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+Some proc files are writable controls, such as selected `/proc/<pid>/oom_score_adj`
+or `/proc/sys` entries. Writing them changes process or kernel policy and needs an
+explicit privilege and product decision. Read-only observation should be preferred
+in diagnosis; never use a diagnostic command that mutates scheduler, memory, or
+sysctl state without recording the change.
 
-## Common Mistakes
+## Tools around `/proc`
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+```sh
+ps -e -o pid,ppid,stat,etime,%cpu,%mem,cmd
+top -H -p "$pid"
+pidstat -p "$pid" 1 5
+lsns -p "$pid"
+cat "/proc/$pid/mountinfo"
+```
 
-## Debugging Checklist
+Tool availability varies on embedded images. The underlying `/proc` files are often
+the portable fallback within Linux, but field formats and visibility are version and
+policy dependent.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+## Observation record
 
-## Related Topics
+```text
+timestamp (monotonic and wall):
+pid / start identity:
+executable / arguments:
+state / CPU / RSS / FD count:
+thread states:
+current syscall or wchan:
+credentials / namespaces / cgroup:
+relevant logs and deadlines:
+interpretation:
+next non-mutating test:
+```
+
+Capture several records rather than one giant snapshot. A process can exit between
+reading `status` and `fd`, and a new process can reuse the same PID.
+
+## Common mistakes
+
+- Parsing `/proc/<pid>/stat` without handling the parenthesized command name carefully.
+- Treating `/proc` values as a stable transaction.
+- Assuming empty `cmdline` means no arguments or a dead process.
+- Reading sensitive `environ` and maps into unrestricted logs.
+- Concluding “CPU idle means hung” or “sleeping means dead.”
+- Acting on a PID after it may have been reused.
+- Writing proc controls as part of a diagnostic script without rollback.
+
+## Debugging checklist
+
+- Capture PID start identity before collecting other files.
+- Read `status`, `fd`, `limits`, `maps`, `task`, `ns`, and cgroup context.
+- Sample state over time and correlate with system calls and logs.
+- Check credentials and proc visibility restrictions.
+- Use `strace` or debugger attachment only with operational approval and awareness of
+  timing changes.
+- Redact secrets and preserve the exact target/kernel version with the evidence.
+
+## Related topics
 
 - [Stage 2: Processes And Program Lifetime](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Process Model And Identifiers](process-model-and-identifiers.md)
+- [System-Call Contracts And Errors](../system-calls-files-and-file-descriptors/system-call-contracts-and-errors.md)
+- [Memory Pressure, OOM, And Realtime](../process-memory-and-mapping/memory-pressure-oom-and-realtime.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`proc(5)`](https://man7.org/linux/man-pages/man5/proc.5.html)
+- [Linux kernel `/proc` documentation](https://www.kernel.org/doc/html/latest/filesystems/proc.html)
+- [`ps(1)`](https://man7.org/linux/man-pages/man1/ps.1.html)
+- [`strace(1)`](https://strace.io/)

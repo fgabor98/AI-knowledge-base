@@ -2,85 +2,145 @@
 status: draft
 reviewed: false
 domain: linux-userspace
-difficulty: beginner
+difficulty: intermediate
 last_reviewed: null
 ---
 
 # fork, exec, And posix_spawn
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how a process creates or replaces an executable image and what state is inherited. It is part of Stage 2: Processes And Program Lifetime and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Launching a helper looks simple until the child inherits descriptors, locks, signal
+state, namespaces, and partially initialized memory. A robust launch design chooses
+the smallest creation mechanism, closes or transfers resources deliberately, and
+reports failures from both child setup and `exec`.
 
-## Core Concepts
+## `fork` creates; `exec` replaces
 
-- the fork, exec, and posix_spawn contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+parent image --fork--> parent image + child image (copy-on-write)
+child image  --exec--> new program image, same process identity
+```
 
-## Learning Outcomes
+After `fork`, parent and child have separate virtual memory mappings, initially
+sharing physical pages copy-on-write. A write in either process can create a private
+page. File descriptors in both processes refer to the same open-file descriptions,
+so offsets and status flags may be shared. The child inherits credentials, signal
+dispositions, current directory, umask, namespaces, and many other attributes.
 
-After studying this page, you should be able to:
+`execve` replaces code, data, heap, stack, and mapped libraries. It retains the PID,
+open descriptors not marked close-on-exec, credentials subject to exec rules, current
+directory, umask, and selected process attributes. The new program begins at its
+startup path; it does not return to the old code on success.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## The fork/exec child rule
 
-## Planned Coverage
+In a multithreaded process, after `fork` only the calling thread exists in the child.
+The child may be holding locks that belonged to vanished threads, and many libc
+operations are unsafe before `exec`. Restrict the child to async-signal-safe setup,
+`dup2`/`dup3`, `close`, `execve`, and `_exit`, or use `posix_spawn`.
 
-- mental model and vocabulary for fork, exec, and posix_spawn;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Never call `exit()` in a failed child path after `fork`: it can flush inherited stdio
+buffers and run inherited `atexit` handlers. Use `_exit(status)`.
 
-## Practical Exercise
+## A controlled launch sequence
 
-implement a small supervisor that starts a child without leaking descriptors or environment state.
+```text
+parent creates pipes with O_CLOEXEC
+parent forks
+child duplicates intended stdin/out/err
+child closes both sides of all private pipes
+child optionally reports setup errors through a close-on-exec error pipe
+child execve()s target
+parent closes child-side descriptors
+parent reads setup result and waits or supervises child
+```
 
-Record:
+An error pipe solves the ambiguity where the child exits before `exec`: the parent can
+receive `errno` from child setup, while EOF caused by close-on-exec proves `exec`
+succeeded far enough to close the pipe.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## `posix_spawn`
 
-## Minimal Example
+`posix_spawn` combines process creation and program replacement with a restricted set
+of file actions and attributes. It can be preferable for a simple helper launch,
+especially in a multithreaded process or on memory-constrained targets. Use file
+actions to open, close, or duplicate descriptors and attributes for signal masks,
+default dispositions, scheduling, or process groups as supported by the target.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+It is not a universal replacement: complex child setup, namespaces, arbitrary
+pre-exec logic, or detailed error channels may require another design. Check the
+target libc implementation and document the supported options.
 
-## Common Mistakes
+## Environment and path resolution
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+`execve` takes an explicit path and environment. `execvp` searches `PATH`, which is
+convenient interactively but risky for privileged or supervised services. Prefer an
+absolute installed path and a controlled environment. Validate arguments as data;
+never combine them into a shell command unless shell interpretation is explicitly
+required and safely encoded.
 
-## Debugging Checklist
+## Minimal example pattern
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+```c
+pid_t child = fork();
+if (child == -1) {
+    /* parent: save errno and report */
+}
+if (child == 0) {
+    if (dup2(output_fd, STDOUT_FILENO) == -1) {
+        _exit(127);
+    }
+    close(output_fd);
+    execl("/usr/bin/helper", "helper", "--once", (char *)NULL);
+    _exit(127);
+}
+/* parent owns child and must close its copy and wait/supervise */
+```
 
-## Related Topics
+The example omits a complete error pipe and signal policy for clarity; production
+code should distinguish fork failure, child setup failure, `exec` failure, and helper
+exit status.
+
+## Descriptor inheritance
+
+Use `O_CLOEXEC`, `pipe2(O_CLOEXEC)`, `dup3(..., O_CLOEXEC)`, and `fcntl` deliberately.
+Setting close-on-exec after a separate `open` can race with another thread calling
+`fork`/`exec`. The atomic creation flag closes that window. The descriptor used as
+the child’s standard stream must have close-on-exec cleared or be duplicated to the
+intended number with the correct semantics.
+
+## Common mistakes
+
+- Assuming `fork` copies kernel resources independently.
+- Calling malloc, stdio, locks, or `exit` in a multithreaded post-fork child.
+- Forgetting to close unused pipe ends, preventing EOF.
+- Losing the child’s `exec` error and reporting only a generic exit status.
+- Using `system()` for a fixed helper and inheriting shell parsing and environment risk.
+- Setting `FD_CLOEXEC` non-atomically in a multithreaded launcher.
+- Failing to wait for children and creating zombies.
+
+## Debugging checklist
+
+- Log parent PID, child PID, absolute executable, arguments, and sanitized environment.
+- Inspect child FDs before `exec` and helper FDs after launch.
+- Test missing executable, wrong interpreter, permission denied, invalid argument,
+  signal termination, and timeout.
+- Check close-on-exec with `/proc/<pid>/fd` and an intentionally launched helper.
+- Verify parent closes every unused pipe end and waits for every child.
+- Prefer `posix_spawn` when setup is simple and the target libc supports required
+  actions.
+
+## Related topics
 
 - [Stage 2: Processes And Program Lifetime](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Exit, Waiting, And Zombies](exit-waiting-and-zombies.md)
+- [Descriptor Inheritance And Redirection](../system-calls-files-and-file-descriptors/descriptor-inheritance-and-redirection.md)
+- [Exec And Dynamic Linking](../linux-runtime-filesystem-and-rootfs/elf-executables-and-dynamic-linking.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`fork(2)`](https://man7.org/linux/man-pages/man2/fork.2.html)
+- [`execve(2)`](https://man7.org/linux/man-pages/man2/execve.2.html)
+- [`posix_spawn(3)`](https://man7.org/linux/man-pages/man3/posix_spawn.3.html)
+- [`_exit(2)`](https://man7.org/linux/man-pages/man2/_exit.2.html)
