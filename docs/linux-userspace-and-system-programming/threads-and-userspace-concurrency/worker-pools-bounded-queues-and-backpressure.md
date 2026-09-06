@@ -8,79 +8,93 @@ last_reviewed: null
 
 # Worker Pools, Bounded Queues, And Backpressure
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how to prevent unbounded work, starvation, and uncontrolled shutdown in a service. It is part of Stage 6: Threads And Userspace Concurrency and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Worker threads can keep an event loop responsive, but an unbounded queue only hides a
+slow consumer until memory is exhausted. A production pool needs a bound, admission
+policy, shutdown marker, ownership transfer, and worker failure behavior.
 
-## Core Concepts
+## Queue contract
 
-- the worker pools, bounded queues, and backpressure contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+producer owns item before enqueue
+successful enqueue transfers item ownership
+worker owns item while processing
+worker releases or returns item exactly once
+full queue causes block, reject, drop, coalesce, or priority policy
+```
 
-## Learning Outcomes
+The queue’s mutex protects its indices, count, storage, and shutdown predicate.
+Condition variables wake producers when space exists and consumers when work exists.
+The capacity is part of the system’s memory budget.
 
-After studying this page, you should be able to:
+## Shutdown markers
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+Use a `stopping` predicate or explicit marker. A typical sequence is:
 
-## Planned Coverage
+```text
+stop accepting external work
+set stopping under queue lock
+wake all producers and consumers
+workers drain accepted work or discard by policy
+workers exit after queue empty and stopping is true
+join every worker
+destroy queue storage and synchronization objects
+```
 
-- mental model and vocabulary for worker pools, bounded queues, and backpressure;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Do not destroy a queue while a worker can still wake and access it. Decide whether
+shutdown drains, cancels, or rejects queued operations and how in-flight device work
+is cancelled.
 
-## Practical Exercise
+## Backpressure choices
 
-measure queue bounds and define behavior when producers outrun workers.
+| Condition | Policy | Tradeoff |
+| --- | --- | --- |
+| Queue full | Block producer | Preserves work but can propagate latency/deadlock |
+| Queue full | Reject | Explicit overload; caller must handle it |
+| Queue full | Drop newest | Keeps old work; may be stale |
+| Queue full | Drop oldest | Keeps latest work; loses history |
+| Queue full | Coalesce | Efficient for state updates; unsuitable for commands |
+| Queue full | Priority admission | Protects critical work; can starve low priority |
 
-Record:
+Choose by semantic type. “Set current brightness” can coalesce; “erase record” cannot
+be silently dropped. Expose queue depth, rejected count, age, and processing time.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Worker failure
 
-## Minimal Example
+A worker can crash, return an error, deadlock, or become stuck in a device call. The
+pool needs a health owner that notices missing progress, preserves the failed item’s
+identity, and decides whether to restart a worker, fail the service, or degrade. Do
+not restart a worker while its old thread may still access shared state.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Fairness and priority
 
-## Common Mistakes
+Separate queues or budgets may be needed for control traffic and bulk work. A single
+FIFO can let telemetry starve safety commands; strict priorities can starve low-
+priority maintenance. Bound per-class work and test overload explicitly.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Common mistakes
 
-## Debugging Checklist
+- Making queue capacity unlimited.
+- Signaling one waiter when shutdown requires waking all waiters.
+- Destroying queue state before workers join.
+- Releasing an item on both producer timeout and worker completion.
+- Retrying failed work forever without age or attempt bounds.
+- Letting bulk work starve control or shutdown traffic.
+- Assuming a thread pool cancels an in-flight blocking syscall.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+## Debugging checklist
 
-## Related Topics
+- Record capacity, depth, enqueue/dequeue age, owner, and item ID.
+- Test full queue, producer cancellation, worker failure, and shutdown races.
+- Measure wait and service time under target load.
+- Verify item ownership through every rejection, drop, retry, and shutdown path.
+- Check worker stacks, blocked calls, CPU use, and join deadlines.
+- Validate that backpressure reaches the true producer rather than an unbounded layer.
+
+## Related topics
 
 - [Stage 6: Threads And Userspace Concurrency](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [Mutexes, Condition Variables, And Semaphores](mutexes-condition-variables-and-semaphores.md)
+- [Cancellation, Priority, And Real-Time Scheduling](cancellation-priority-and-realtime-scheduling.md)
+- [IPC Protocols And Versioning](../ipc-and-event-driven-design/ipc-protocols-and-versioning.md)

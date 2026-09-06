@@ -2,85 +2,107 @@
 status: draft
 reviewed: false
 domain: linux-userspace
-difficulty: intermediate
+difficulty: advanced
 last_reviewed: null
 ---
 
 # Cancellation, Priority, And Real-Time Scheduling
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how cancellation, priority inversion, affinity, and real-time policies change failure modes. It is part of Stage 6: Threads And Userspace Concurrency and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Stopping a thread at an arbitrary instruction can leave locks held, invariants
+broken, buffers owned twice, or device commands in flight. Scheduling priority can
+also create inversion and starvation. This page treats cancellation and real-time
+policy as explicit lifecycle and system-resource decisions.
 
-## Core Concepts
+## Cooperative cancellation
 
-- the cancellation, priority, and real-time scheduling contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Prefer a stop flag/queue command plus a bounded wakeup. The worker reaches a safe
+point, stops accepting work, finishes or rolls back its current operation, releases
+resources, and returns. This makes ownership visible and allows a device protocol to
+cancel or invalidate late completion.
 
-## Learning Outcomes
+## POSIX cancellation
 
-After studying this page, you should be able to:
+Deferred cancellation acts at cancellation points such as selected blocking calls or
+an explicit `pthread_testcancel`. Cleanup handlers execute during cancellation:
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+```text
+push cleanup for mutex/resource
+enter cancellation point
+cleanup unlocks/releases in reverse order
+thread terminates as PTHREAD_CANCELED
+```
 
-## Planned Coverage
+Disable cancellation around short invariant updates and resource-transfer windows.
+Avoid asynchronous cancellation; it can strike while any instruction runs and makes
+ordinary C cleanup reasoning nearly impossible. Ensure cleanup handlers match every
+resource acquired before the cancellation point.
 
-- mental model and vocabulary for cancellation, priority, and real-time scheduling;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Priority inversion
 
-## Practical Exercise
+Priority inversion occurs when a high-priority thread waits for a lock held by a low-
+priority thread while medium-priority work prevents the low-priority owner from
+running. Priority inheritance or priority-protection mutex protocols can help where
+supported, but they require limits, permissions, and correct lock design.
 
-stop workers cooperatively and record scheduling assumptions and missed deadlines.
+Do not solve inversion by globally raising priority. Shorten critical sections,
+avoid blocking I/O under shared locks, and give control paths bounded resources.
 
-Record:
+## Scheduling policies
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Linux policies include normal fair scheduling and real-time `SCHED_FIFO`/`SCHED_RR`.
+Real-time threads can starve ordinary tasks, and a misconfigured FIFO thread can
+make a target appear dead. Affinity can improve isolation but can also overload one
+CPU or prevent balancing. `chrt`, `taskset`, and cgroup policy are operational
+controls, not substitutes for measurement.
 
-## Minimal Example
+```sh
+chrt -p "$pid"
+taskset -pc "$pid"
+cat /proc/$pid/sched
+```
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+Privileges and `RLIMIT_RTPRIO`/`RLIMIT_RTTIME` may limit changes. Record the exact
+policy, priority, affinity, cgroup, kernel configuration, and target CPU topology.
 
-## Common Mistakes
+## Real-time proof
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+A real-time claim needs a bounded path: allocation, page faults, locks, system calls,
+interrupt interference, scheduler latency, device response, and logging. Measure
+worst-case release-to-completion under representative load and power/thermal modes.
+“Uses a real-time priority” is not a proof.
 
-## Debugging Checklist
+## Common mistakes
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+- Cancelling while holding a mutex or owning a partially updated resource.
+- Using asynchronous cancellation in ordinary application code.
+- Assuming every blocking function is a cancellation point.
+- Raising priority without a starvation and privilege analysis.
+- Ignoring priority inheritance and lock ordering.
+- Pinning all workers to one CPU and causing overload.
+- Calling malloc, filesystem, or logging code in an unbounded real-time path.
 
-## Related Topics
+## Debugging checklist
+
+- Record cancellation state/type, cleanup stack, owner, and cancellation point.
+- Test cancellation during every blocking call and resource-transfer window.
+- Inspect `chrt`, affinity, cgroups, limits, and `/proc/<pid>/sched`.
+- Measure lock hold/wait times and priority inversion under load.
+- Test starvation, CPU isolation, thermal throttling, and worker failure.
+- Verify shutdown joins all threads and no cancelled thread retains shared state.
+
+## Related topics
 
 - [Stage 6: Threads And Userspace Concurrency](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [pthread Lifecycle And Thread Attributes](pthread-lifecycle-and-thread-attributes.md)
+- [Worker Pools, Bounded Queues, And Backpressure](worker-pools-bounded-queues-and-backpressure.md)
+- [Timers And Periodic Work](../time-clocks-and-signals/timers-and-periodic-work.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`pthread_cancel(3)`](https://man7.org/linux/man-pages/man3/pthread_cancel.3.html)
+- [`pthreads(7)`](https://man7.org/linux/man-pages/man7/pthreads.7.html)
+- [`sched(7)`](https://man7.org/linux/man-pages/man7/sched.7.html)
+- [`chrt(1)`](https://man7.org/linux/man-pages/man1/chrt.1.html)
+- [`sched_setaffinity(2)`](https://man7.org/linux/man-pages/man2/sched_setaffinity.2.html)

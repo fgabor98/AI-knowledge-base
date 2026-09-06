@@ -2,85 +2,103 @@
 status: draft
 reviewed: false
 domain: linux-userspace
-difficulty: intermediate
+difficulty: advanced
 last_reviewed: null
 ---
 
 # Atomics, Memory Ordering, And Reentrancy
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how C atomics, memory ordering, reentrancy, and thread-safe library use interact. It is part of Stage 6: Threads And Userspace Concurrency and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+An atomic object prevents a data race on that object; it does not automatically make
+an adjacent payload, pointer, or lifetime safe. Correct lock-free code needs an
+ownership protocol, a happens-before argument, and a reclamation strategy.
 
-## Core Concepts
+## Data races are undefined behavior
 
-- the atomics, memory ordering, and reentrancy contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Conflicting non-atomic accesses, with at least one write and no ordering, form a data
+race. “The CPU usually reads the latest value” is not a C memory-model proof. The
+compiler can reorder or eliminate accesses when the program has a race.
 
-## Learning Outcomes
+Use `<stdatomic.h>` atomic types and operations. Do not cast ordinary storage to an
+atomic pointer and assume alignment/representation compatibility.
 
-After studying this page, you should be able to:
+## Memory orders
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+| Order | Guarantee |
+| --- | --- |
+| Relaxed | Atomic access and modification order for that atomic object; no payload ordering |
+| Acquire | Later operations cannot move before the load; can consume a release publication |
+| Release | Earlier operations cannot move after the store; can publish prior writes |
+| Acq-rel | Both directions for a read-modify-write |
+| Seq-cst | Acq-rel behavior plus one global order for seq-cst operations |
 
-## Planned Coverage
+Classic publication:
 
-- mental model and vocabulary for atomics, memory ordering, and reentrancy;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+```text
+producer: write payload -> atomic_store(ready, release)
+consumer: atomic_load(ready, acquire) -> read payload
+```
 
-## Practical Exercise
+This is safe only while the producer does not modify or reclaim the payload and the
+consumer does not read before the acquire. Clearing `ready` needs its own ownership
+transition. A relaxed flag is enough for independent counters, not for publishing a
+buffer.
 
-replace an unsafe flag or callback with a documented synchronization design.
+## Lock-free is not wait-free
 
-Record:
+An atomic operation may be implemented with a hidden lock. A lock-free algorithm means
+some thread makes progress; wait-free means each operation completes in a bounded
+number of steps. Neither property solves memory reclamation, ABA, starvation, or
+unbounded retries. Check `atomic_is_lock_free` on the target when it matters.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Reentrancy
 
-## Minimal Example
+A function is reentrant when concurrent or nested calls do not corrupt shared state.
+Avoid hidden mutable static buffers, return storage with explicit ownership, protect
+shared state, and document callbacks that can re-enter the library. Thread-safe
+does not mean signal-safe; signal handlers have a much narrower safe-call set.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+`errno` is normally thread-local, but a library’s other global state may not be. Read
+the libc attributes and protect higher-level sequences even when individual calls are
+MT-Safe.
 
-## Common Mistakes
+## Atomics and lifetime
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+An atomic pointer can publish a pointer safely while the pointed-to object is still
+alive, but it cannot prevent another thread from freeing the object. Use a mutex,
+reference counting with safe acquisition, epochs/hazards, RCU-like discipline, or a
+single-owner queue. Never solve a use-after-free by making the pointer atomic.
 
-## Debugging Checklist
+## Common mistakes
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+- Making one flag atomic while accessing the payload non-atomically without ordering.
+- Choosing relaxed order because it is faster without a publication proof.
+- Calling an atomic pointer protocol lock-free while reclamation is undefined.
+- Assuming volatile provides inter-thread synchronization.
+- Hiding mutable state in a function-static buffer.
+- Calling non-reentrant code from a signal handler or callback.
+- Ignoring alignment and target lock-free properties.
 
-## Related Topics
+## Debugging checklist
+
+- Draw producer/consumer events and identify the synchronizes-with edge.
+- Identify who owns and reclaims every published object.
+- Check atomic type, alignment, lock-free property, and memory order.
+- Run ThreadSanitizer/Helgrind-style tooling in host tests where available.
+- Test reset, multiple producers, peer death, cancellation, and reclamation races.
+- Separate C memory-model issues from hardware/DMA visibility issues.
+
+## Related topics
 
 - [Stage 6: Threads And Userspace Concurrency](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Mutexes, Condition Variables, And Semaphores](mutexes-condition-variables-and-semaphores.md)
+- [Shared Memory And Zero-Copy IPC](../ipc-and-event-driven-design/shared-memory-and-zero-copy-ipc.md)
+- [C Memory Model And Concurrency](../../c/advanced-c/c-memory-model-and-concurrency.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`stdatomic.h(7)`](https://man7.org/linux/man-pages/man7/stdatomic.h.7.html)
+- [`atomic_is_lock_free(3)`](https://en.cppreference.com/w/c/atomic/atomic_is_lock_free)
+- [C11 atomics overview](https://en.cppreference.com/w/c/atomic)
+- [`signal-safety(7)`](https://man7.org/linux/man-pages/man7/signal-safety.7.html)

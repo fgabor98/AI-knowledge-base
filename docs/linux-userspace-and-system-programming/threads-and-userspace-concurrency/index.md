@@ -8,11 +8,26 @@ last_reviewed: null
 
 # Stage 6: Threads And Userspace Concurrency
 
-Make multithreaded userspace behavior explicit through ownership, synchronization, cancellation, and scheduling policy.
+Threads share one process address space, which makes communication cheap and
+lifetime mistakes easy. This stage develops a disciplined model for thread creation,
+synchronization, ownership, cancellation, bounded work, and scheduling. The C memory
+model and POSIX APIs must agree: an atomic flag cannot repair an object lifetime bug,
+and a mutex cannot make an unbounded queue safe for a constrained product.
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+## The concurrency model
 
-## Learning Materials
+```text
+process address space
+  +-- thread A: stack, registers, signal mask, TLS
+  +-- thread B: stack, registers, signal mask, TLS
+  +-- shared heap/globals, FDs, mappings, credentials
+```
+
+Every shared object needs an ownership or synchronization rule. “It is only one
+integer” is not a rule; “only the producer writes it and the consumer acquires the
+release publication” is a rule.
+
+## Learning materials
 
 1. [pthread Lifecycle And Thread Attributes](pthread-lifecycle-and-thread-attributes.md)
 2. [Mutexes, Condition Variables, And Semaphores](mutexes-condition-variables-and-semaphores.md)
@@ -20,40 +35,51 @@ This stage is a collection of focused draft pages. Read the overview first, then
 4. [Worker Pools, Bounded Queues, And Backpressure](worker-pools-bounded-queues-and-backpressure.md)
 5. [Cancellation, Priority, And Real-Time Scheduling](cancellation-priority-and-realtime-scheduling.md)
 
-## Study Pattern
+## Contract questions
 
-For each page:
+| Question | Required answer |
+| --- | --- |
+| Ownership | Which thread may mutate or destroy the object? |
+| Lifetime | Which joins, references, or barriers keep it alive? |
+| Synchronization | Which mutex, atomic, condition predicate, or queue orders access? |
+| Progress | Can a thread block, starve, deadlock, or spin? |
+| Shutdown | How do waiters wake, stop, drain, and join? |
+| Cancellation | Where are cancellation points and cleanup handlers? |
+| Scheduling | What latency/priority/affinity assumption is required? |
+| Observability | How are thread IDs, queue depth, waits, and stalls diagnosed? |
 
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
+## Stage lab
 
-## Stage Outcomes
+```sh
+cc -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -pthread -g \
+    examples/c/linux-userspace-worker-pool.c -o /tmp/worker-pool
+/tmp/worker-pool
+```
 
-By the end of this stage, you should be able to:
+Run it repeatedly and interrupt it during work. Verify that the queue closes, workers
+wake, each worker joins, and no task remains owned by a destroyed queue.
 
-- explain and demonstrate pthread lifecycle and thread attributes;
-- explain and demonstrate mutexes, condition variables, and semaphores;
-- explain and demonstrate atomics, memory ordering, and reentrancy;
-- explain and demonstrate worker pools, bounded queues, and backpressure;
-- explain and demonstrate cancellation, priority, and real-time scheduling;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
+## Completion criteria
 
-## Completion Criteria
+You can complete this stage when you can:
 
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
+- create, name, join, detach, and shut down threads with explicit ownership;
+- use mutexes and condition variables with predicate loops and lock ordering;
+- distinguish mutex synchronization from atomics and memory-order publication;
+- design a bounded worker queue with backpressure and shutdown markers;
+- handle cancellation without leaking locks, FDs, memory, or partially updated state;
+- explain priority inversion, affinity, and real-time policy limits;
+- diagnose deadlock, starvation, race, lost wakeup, and thread-lifetime failures.
 
-## Related Topics
+## Related topics
 
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+- [Stage 5: Time, Clocks, And Signals](../time-clocks-and-signals/index.md)
+- [Stage 7: IPC And Event-Driven Design](../ipc-and-event-driven-design/index.md)
+- [C Memory Model And Concurrency](../../c/advanced-c/c-memory-model-and-concurrency.md)
+- [Memory Pressure, OOM, And Real-Time Constraints](../process-memory-and-mapping/memory-pressure-oom-and-realtime.md)
+
+## References
+
+- [`pthreads(7)`](https://man7.org/linux/man-pages/man7/pthreads.7.html)
+- [POSIX Threads](https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/pthread.h.html)
+- [`pthread_mutex_lock(3)`](https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html)

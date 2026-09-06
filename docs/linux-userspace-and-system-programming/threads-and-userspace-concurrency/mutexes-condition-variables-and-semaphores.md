@@ -8,79 +8,104 @@ last_reviewed: null
 
 # Mutexes, Condition Variables, And Semaphores
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how blocking synchronization protects state and coordinates work. It is part of Stage 6: Threads And Userspace Concurrency and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Threads need both mutual exclusion and a way to wait for state changes. A mutex
+protects an invariant; a condition variable waits for a predicate; a semaphore counts
+available units. Choosing one without defining the invariant leads to lost wakeups,
+deadlocks, or code that wakes without knowing what changed.
 
-## Core Concepts
+## Mutex ownership
 
-- the mutexes, condition variables, and semaphores contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+lock mutex
+  inspect predicate and shared state
+  modify state while invariant is protected
+unlock mutex
+```
 
-## Learning Outcomes
+A mutex is not a memory buffer or a general event. Keep critical sections short, do
+not call unknown blocking operations while holding a global lock, and define lock
+ordering for nested acquisition. Recursive mutexes can hide a design error; robust
+mutexes add owner-death recovery obligations rather than making data consistent.
 
-After studying this page, you should be able to:
+## Condition-variable predicate loop
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+```c
+pthread_mutex_lock(&queue->mutex);
+while (!queue->stopping && queue->count == 0U) {
+    pthread_cond_wait(&queue->not_empty, &queue->mutex);
+}
+if (queue->count != 0U) {
+    item = queue_pop(queue);
+}
+pthread_mutex_unlock(&queue->mutex);
+```
 
-## Planned Coverage
+The condition variable has no memory of a notification. The predicate is the state;
+the mutex makes checking and waiting atomic with respect to the producer. Always use
+a `while` loop for spurious wakeups, notifications for another state transition, and
+multiple consumers racing for one item. Signal after changing the predicate while
+holding the mutex, then release it promptly.
 
-- mental model and vocabulary for mutexes, condition variables, and semaphores;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Timed waits use an explicitly selected clock and an absolute deadline where supported.
+After timeout, recheck the predicate and distinguish “still false” from a state change
+that happened just before the timeout.
 
-## Practical Exercise
+## Semaphores
 
-implement a bounded producer/consumer queue with correct predicates and teardown.
+A semaphore counts permits. It is useful for bounded resource slots or simple
+producer/consumer counts, but it does not protect a multi-field invariant by itself.
+Pair it with a mutex or atomics when queue data and count must change consistently.
+Define cancellation and shutdown behavior for a thread blocked in `sem_wait`.
 
-Record:
+## Lock ordering and deadlocks
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+For locks A and B, choose one order and obey it everywhere:
 
-## Minimal Example
+```text
+lock A -> lock B -> change both -> unlock B -> unlock A
+```
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+Do not call back into code that can acquire a lock in the opposite order. Lock
+contention can become priority inversion when a low-priority owner blocks a high-
+priority waiter. Keep ownership graphs and lock order in design documentation.
 
-## Common Mistakes
+## Process-shared synchronization
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+Pthread mutexes and condition variables are process-private by default. A process-
+shared attribute requires shared backing, correct initialization exactly once, and a
+peer-death/recovery protocol. Never place a process-private pointer in a shared queue.
 
-## Debugging Checklist
+## Common mistakes
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+- Using `if` instead of `while` around `pthread_cond_wait`.
+- Signaling without changing the predicate.
+- Checking a predicate outside the mutex and then waiting.
+- Holding a mutex across I/O, callbacks, allocation, or unbounded work.
+- Acquiring locks in inconsistent order.
+- Treating a semaphore as protection for a complex data structure.
+- Destroying a synchronization object while waiters may still reference it.
 
-## Related Topics
+## Debugging checklist
+
+- Write the invariant protected by each mutex.
+- Record owner, acquisition order, wait predicate, and wakeup source.
+- Capture thread stacks when deadlocked and inspect mutex wait relationships.
+- Test spurious wakeups, timeout races, shutdown, cancellation, and worker failure.
+- Check process-shared attributes and initialization/lifetime.
+- Measure contention and critical-section duration under target load.
+
+## Related topics
 
 - [Stage 6: Threads And Userspace Concurrency](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [pthread Lifecycle And Thread Attributes](pthread-lifecycle-and-thread-attributes.md)
+- [Atomics, Memory Ordering, And Reentrancy](atomics-memory-ordering-and-reentrancy.md)
+- [Worker Pools, Bounded Queues, And Backpressure](worker-pools-bounded-queues-and-backpressure.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`pthread_mutex(3)`](https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html)
+- [`pthread_cond_wait(3)`](https://man7.org/linux/man-pages/man3/pthread_cond_wait.3.html)
+- [`sem_wait(3)`](https://man7.org/linux/man-pages/man3/sem_wait.3.html)
+- [POSIX condition variables](https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_cond_wait.html)
