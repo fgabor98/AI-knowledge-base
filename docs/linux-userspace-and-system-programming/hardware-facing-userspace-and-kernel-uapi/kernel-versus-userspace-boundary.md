@@ -8,79 +8,79 @@ last_reviewed: null
 
 # Kernel Versus Userspace Boundary
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how latency, interrupts, DMA, power, security, sharing, and recovery determine where behavior belongs. It is part of Stage 10: Hardware-Facing Userspace And Kernel UAPI and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Userspace cannot safely perform privileged hardware access directly. It must request
+operations through a kernel UAPI that defines validation, access control, memory
+ownership, wakeups, and errors. Keeping the boundary explicit makes upgrades and
+failure diagnosis possible.
 
-## Core Concepts
+## What belongs where
 
-- the kernel versus userspace boundary contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+The kernel should own interrupts, DMA, register access, power/clock sequencing,
+concurrency with other clients, and hardware-specific safety. Userspace should own
+product policy, configuration, protocol state, retries, user-visible errors, and
+service lifecycle. A userspace helper may implement policy but must not recreate a
+private driver by poking registers.
 
-## Learning Outcomes
+## UAPI forms
 
-After studying this page, you should be able to:
+| Form | Use | Boundary concern |
+| --- | --- | --- |
+| Character/block device | Data/control stream | FD ownership, blocking, ioctl, poll |
+| sysfs | Device-model attributes | Text ABI, units, lifetime, not bulk data |
+| procfs | Process/kernel observation | Snapshot and permission semantics |
+| netlink | Kernel event/config protocol | Message versioning, credentials |
+| `ioctl` | Structured device operations | Binary ABI and compat layout |
+| `mmap` | Large/shared/device buffers | Protection, cache, lifetime, synchronization |
+| standard subsystem | GPIO, IIO, V4L2, ALSA, DRM, CAN | Prefer common semantics over private UAPI |
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Memory crossing the boundary
 
-## Planned Coverage
+Never pass a userspace pointer as a permanent kernel/device address. The kernel must
+validate ranges and access user memory safely; asynchronous operations need a defined
+copy, pin, or buffer ownership model. Fixed-width UAPI fields and explicit padding
+are safer than compiler-dependent C structs.
 
-- mental model and vocabulary for kernel versus userspace boundary;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Errors and completion
 
-## Practical Exercise
+Distinguish `ENODEV`/`ENXIO` (device/resource unavailable), `EACCES`/`EPERM` (policy),
+`EAGAIN` (not ready), `EINTR` (interrupted), `EIO` (lower-layer error), and `ETIMEDOUT`
+(deadline). A return from the kernel may mean queued, accepted, or completed; the
+subsystem documentation decides.
 
-justify a kernel, userspace, firmware, or subsystem-ABI boundary for one hardware feature.
+## Security boundary
 
-Record:
+Device-node permissions are coarse. Run a service with the smallest device set,
+capabilities, and namespace view. Treat all device data as untrusted and validate
+length, ranges, status, sequence, and timestamps. A writable UAPI can be equivalent
+to hardware privilege.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Common mistakes
 
-## Minimal Example
+- Treating `/dev` access as direct register access.
+- Using `/dev/mem` or private sysfs attributes instead of a documented UAPI.
+- Assuming a successful ioctl means hardware completion.
+- Passing raw pointers or compiler-layout structs across the ABI.
+- Debugging userspace before checking driver binding and power/firmware state.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Debugging checklist
 
-## Common Mistakes
+- Identify subsystem, driver, kernel version, UAPI header, and device identity.
+- Trace calls and correlate with kernel logs and sysfs state.
+- Check credentials, capabilities, namespaces, and device-node ownership.
+- Test missing, busy, reset, unplug, timeout, and malformed-data paths.
+- Document what the userspace trace proves and what requires hardware evidence.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 10: Hardware-Facing Userspace And Kernel UAPI](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Standard UAPI Operation Patterns](standard-uapi-operation-patterns.md)
+- [ioctl ABI And Compatibility](ioctl-abi-and-compatibility.md)
+- [Userspace, Kernel, And Hardware Boundary](../environment-and-mental-model/userspace-kernel-and-hardware-boundary.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [Linux kernel userspace API](https://www.kernel.org/doc/html/latest/userspace-api/index.html)
+- [`ioctl(2)`](https://man7.org/linux/man-pages/man2/ioctl.2.html)
+- [Kernel ABI documentation](https://www.kernel.org/doc/html/latest/admin-guide/abi.html)

@@ -8,79 +8,59 @@ last_reviewed: null
 
 # GPIO, I2C, And SPI Userspace
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how common raw hardware interfaces work and when they should be replaced by a kernel client driver. It is part of Stage 10: Hardware-Facing Userspace And Kernel UAPI and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Direct bus access from userspace can be appropriate for controlled board functions,
+but it competes with kernel drivers and must respect ownership, electrical timing,
+permissions, and transaction semantics. Prefer standard subsystem UAPIs and existing
+drivers over raw bus poking.
 
-## Core Concepts
+## GPIO
 
-- the gpio, i2c, and spi userspace contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Use the modern GPIO character-device UAPI where supported. Request lines with a
+consumer label, direction, initial value, edge behavior, and bias/drive policy. A
+line request is an ownership claim; handle `EBUSY`, hotplug, and release. Avoid old
+global GPIO numbers and sysfs GPIO for new designs.
 
-## Learning Outcomes
+## I2C
 
-After studying this page, you should be able to:
+`/dev/i2c-*` exposes adapter transactions through ioctl. Check adapter functionality,
+target address, combined-message semantics, retries, timeouts, and whether a kernel
+driver already owns the client. A successful write may only mean bytes reached the
+adapter; device register semantics and commit behavior are separate.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## SPI
 
-## Planned Coverage
+`/dev/spidev*` exposes controlled transfers with mode, bits-per-word, speed, and
+transfer framing. Chip select, delays, half-duplex, and maximum transfer size are
+device/platform-specific. Validate mode and speed at every open/configuration and
+serialize access to shared devices.
 
-- mental model and vocabulary for gpio, i2c, and spi userspace;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Common mistakes
 
-## Practical Exercise
+- Using global GPIO numbers or assuming line identity across boards.
+- Claiming an I2C/SPI device already owned by a kernel driver.
+- Treating bus ACK or ioctl success as device-operation success.
+- Ignoring bus speed, mode, address, transfer length, and timeout limits.
+- Running raw bus tools with broad privileges in production.
 
-prototype one bus operation and document ownership, addressing, timing, and product limitations.
+## Debugging checklist
 
-Record:
+- Record device-tree identity, adapter/bus, address/CS, mode, speed, and owner.
+- Check permissions, driver binding, clock/power, and electrical wiring.
+- Capture transactions with kernel tracing or bus analyzer where safe.
+- Test NACK, arbitration loss, timeout, stuck bus, reset, and unplug.
+- Verify retries do not repeat non-idempotent register operations.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 10: Hardware-Facing Userspace And Kernel UAPI](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Standard UAPI Operation Patterns](standard-uapi-operation-patterns.md)
+- [Device Tree](../../device-tree/index.md)
+- [GPIO, I2C, And SPI in embedded systems](../../c/embedded-c-and-hardware/peripheral-drivers.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [GPIO character device userspace API](https://www.kernel.org/doc/html/latest/userspace-api/gpio/chardev.html)
+- [`i2c-dev(4)`](https://man7.org/linux/man-pages/man4/i2c-dev.4.html)
+- [`spidev(4)`](https://www.kernel.org/doc/html/latest/spi/spidev.html)

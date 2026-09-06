@@ -8,79 +8,64 @@ last_reviewed: null
 
 # poll, mmap, And Device Events
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how readiness, shared buffers, sequence numbers, timestamps, overflow, and lost-event recovery work. It is part of Stage 10: Hardware-Facing Userspace And Kernel UAPI and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Many devices produce data asynchronously. `poll`/`epoll` can wait for readiness and
+`mmap` can expose buffers, but neither defines event meaning, ownership, completion,
+or cache behavior. Those must come from the subsystem UAPI.
 
-## Core Concepts
+## Readiness
 
-- the poll, mmap, and device events contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+An event may mean data available, space available, state change, error, hangup, or
+completion. Attempt nonblocking I/O after readiness and handle short data, `EAGAIN`,
+`EIO`, `ENODEV`, and HUP. Drain according to the UAPI and apply a bounded work budget.
 
-## Learning Outcomes
+## Mapped buffers
 
-After studying this page, you should be able to:
+Record address, length, offset, protection, queue state, and generation. Validate
+metadata before deriving payload pointers. The driver may require a queue/dequeue
+protocol, cache synchronization, or an explicit buffer release. Do not unmap while
+another thread or in-flight device operation uses the range.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+```text
+allocate/prepare -> queue -> device fills -> event -> dequeue/validate -> requeue
+```
 
-## Planned Coverage
+Hardware DMA adds cache coherency and memory-order rules. Userspace cannot infer them
+from `mmap` success. Follow V4L2/ALSA/UIO/VFIO or device-specific documentation.
 
-- mental model and vocabulary for poll, mmap, and device events;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Event loss and reset
 
-## Practical Exercise
+Events can coalesce, overflow, or become stale after reset. Use sequence numbers or
+state queries. On disconnect/reset, stop queues, invalidate buffers, and reject old
+generation completions.
 
-consume a pollable device stream and prove behavior on timeout, overflow, close, and reset.
+## Common mistakes
 
-Record:
+- Treating readiness as data completion.
+- Reading mapped buffers before ownership transfer.
+- Unmapping while DMA or another thread is active.
+- Ignoring event overflow, HUP, reset, and stale generations.
+- Assuming userspace atomics solve device cache visibility.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Debugging checklist
 
-## Minimal Example
+- Record event mask, sequence, buffer state, generation, and timestamps.
+- Correlate poll events with actual transfer results and driver logs.
+- Test no data, short data, overflow, timeout, reset, unplug, and close races.
+- Verify cache/DMA rules and buffer ownership from subsystem documentation.
+- Inspect `/proc/<pid>/maps` and FD flags for actual mappings.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 10: Hardware-Facing Userspace And Kernel UAPI](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Standard UAPI Operation Patterns](standard-uapi-operation-patterns.md)
+- [mmap, Files, And Shared Memory](../process-memory-and-mapping/mmap-files-and-shared-memory.md)
+- [Event Loops: select, poll, And epoll](../ipc-and-event-driven-design/event-loops-select-poll-and-epoll.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`poll(2)`](https://man7.org/linux/man-pages/man2/poll.2.html)
+- [`epoll(7)`](https://man7.org/linux/man-pages/man7/epoll.7.html)
+- [`mmap(2)`](https://man7.org/linux/man-pages/man2/mmap.2.html)
+- [Linux kernel DMA API](https://www.kernel.org/doc/html/latest/core-api/dma-api.html)

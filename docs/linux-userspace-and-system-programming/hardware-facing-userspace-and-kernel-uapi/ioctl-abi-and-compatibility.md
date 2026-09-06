@@ -8,79 +8,65 @@ last_reviewed: null
 
 # ioctl ABI And Compatibility
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how ioctl numbering, direction, sizes, padding, fixed-width types, and 32/64-bit compatibility preserve UAPI. It is part of Stage 10: Hardware-Facing Userspace And Kernel UAPI and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+`ioctl` is flexible but creates a binary ABI that is difficult to change once shipped.
+Command numbers, direction/size encoding, structure padding, pointers, and 32/64-bit
+compatibility must be designed before clients depend on them.
 
-## Core Concepts
+## Command design
 
-- the ioctl abi and compatibility contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Linux conventions use `_IO`, `_IOR`, `_IOW`, and `_IOWR` with a type and data type.
+The encoded size describes the user-visible argument size; it is not a guarantee that
+the kernel may blindly copy or trust that many bytes. The kernel validates direction,
+size, pointer ranges, reserved fields, and permissions.
 
-## Learning Outcomes
+```c
+#define SENSOR_GET_INFO _IOR('S', 0x01, struct sensor_info)
+```
 
-After studying this page, you should be able to:
+Use fixed-width integers, explicit reserved fields, version/size fields where needed,
+and stable command numbers. Initialize output structures fully to avoid leaking
+padding or stale data.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Pointers and compatibility
 
-## Planned Coverage
+Pointers in UAPI structures are problematic across 32/64-bit processes and future
+kernel implementations. Prefer offsets, `__u64` handles, or separate data transfers
+with explicit sizes. If pointers are unavoidable, implement and test compat behavior;
+do not assume a native structure layout works for a 32-bit client.
 
-- mental model and vocabulary for ioctl abi and compatibility;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Error and side-effect contract
 
-## Practical Exercise
+Document `EINVAL`, `ENOTTY`, `ENODEV`, `EFAULT`, `EINTR`, `EAGAIN`, and device-specific
+errors. Define whether an error can follow a partial side effect and how the caller
+reconciles state. The ioctl number alone is not the protocol.
 
-design a pointer-free versioned ioctl structure with reserved fields and feature discovery.
+## Common mistakes
 
-Record:
+- Copying compiler-layout structs with pointers or implicit padding.
+- Reusing ioctl numbers for changed semantics.
+- Trusting encoded size without validating actual user memory.
+- Returning uninitialized padding to userspace.
+- Ignoring 32/64-bit compat and endianness.
+- Treating ENOTTY as a generic hardware fault.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Debugging checklist
 
-## Minimal Example
+- Record command number, structure size, architecture, kernel, and UAPI headers.
+- Trace ioctl arguments and return values with redaction.
+- Test old/new clients, invalid sizes, reserved fields, pointers, and compat builds.
+- Inspect kernel logs and driver state for side effects after failure.
+- Keep a versioned UAPI header and compatibility test matrix.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 10: Hardware-Facing Userspace And Kernel UAPI](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Standard UAPI Operation Patterns](standard-uapi-operation-patterns.md)
+- [poll, mmap, And Device Events](poll-mmap-and-device-events.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`ioctl(2)`](https://man7.org/linux/man-pages/man2/ioctl.2.html)
+- [Linux kernel ioctl-based interfaces](https://docs.kernel.org/driver-api/ioctl.html)
+- [Linux ioctl UAPI guidance](https://www.kernel.org/doc/html/latest/userspace-api/ioctl/ioctl-number.html)

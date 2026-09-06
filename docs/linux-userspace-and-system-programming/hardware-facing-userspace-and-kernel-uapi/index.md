@@ -8,11 +8,25 @@ last_reviewed: null
 
 # Stage 10: Hardware-Facing Userspace And Kernel UAPI
 
-Connect userspace programs to drivers and standard kernel subsystems through documented, versioned, and testable interfaces.
+Use documented kernel interfaces to control and observe hardware without confusing a
+device node, sysfs attribute, `ioctl`, or memory mapping with the hardware itself.
+The driver owns privileged access and translates a stable UAPI into bus transactions,
+interrupt handling, power management, and device-specific behavior.
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+## The boundary
 
-## Learning Materials
+```text
+userspace: open/read/write/ioctl/poll/mmap
+        -> kernel UAPI validation and lifetime
+        -> subsystem and driver
+        -> bus/power/firmware
+        -> hardware
+```
+
+Every UAPI needs version, permissions, blocking, cancellation, ownership, and
+recovery rules. A successful call proves only what the UAPI promises.
+
+## Learning materials
 
 1. [Kernel Versus Userspace Boundary](kernel-versus-userspace-boundary.md)
 2. [devfs, sysfs, udev, And Device Discovery](devfs-sysfs-udev-and-discovery.md)
@@ -24,40 +38,35 @@ This stage is a collection of focused draft pages. Read the overview first, then
 8. [CAN, Watchdog, And Control Interfaces](can-watchdog-and-control-interfaces.md)
 9. [Specialized UAPI: V4L2, ALSA, DRM, UIO, And VFIO](specialized-uapi-v4l2-alsa-drm-uio-vfio.md)
 
-## Study Pattern
+## UAPI review table
 
-For each page:
+| Question | Evidence |
+| --- | --- |
+| Discovery | Device-tree/sysfs identity, uevent, stable subsystem name |
+| Access | UID/GID, mode, ACL, capability, service sandbox |
+| ABI | Headers, ioctl encoding, fixed widths, reserved fields, compat rules |
+| I/O | Blocking, short result, readiness, interrupt, timeout |
+| Ownership | FD, buffer, mapped range, queue, hardware claim |
+| Recovery | Reset, reopen, reconfigure, unplug, firmware, power cycle |
+| Version | Kernel/subsystem version, feature query, protocol generation |
+| Evidence | UAPI result, kernel log, sysfs state, timing, device trace |
 
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
+## Completion criteria
 
-## Stage Outcomes
+You can complete this stage when you can select a subsystem UAPI, inspect its identity
+and permissions, perform bounded operations, and explain what remains unproven about
+the physical device. You can also reject an unsafe design that depends on private
+driver structure, `/dev/mem`, undocumented sysfs behavior, or raw physical addresses.
 
-By the end of this stage, you should be able to:
+## Related topics
 
-- explain and demonstrate kernel versus userspace boundary;
-- explain and demonstrate devfs, sysfs, udev, and device discovery;
-- explain and demonstrate standard uapi operation patterns;
-- explain and demonstrate ioctl abi and compatibility;
-- explain and demonstrate poll, mmap, and device events;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
+- [Stage 9: Userspace Networking](../userspace-networking/index.md)
+- [Stage 11: Services, Init, And systemd](../services-init-and-systemd/index.md)
+- [Device Tree](../../device-tree/index.md)
+- [Linux Kernel Configuration](../../linux-kernel/configuration-and-platform-policy/index.md)
 
-## Completion Criteria
+## References
 
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
-
-## Related Topics
-
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+- [Linux kernel userspace API](https://www.kernel.org/doc/html/latest/userspace-api/index.html)
+- [Linux kernel driver API](https://www.kernel.org/doc/html/latest/driver-api/index.html)
+- [Linux kernel ABI documentation](https://www.kernel.org/doc/html/latest/admin-guide/abi.html)

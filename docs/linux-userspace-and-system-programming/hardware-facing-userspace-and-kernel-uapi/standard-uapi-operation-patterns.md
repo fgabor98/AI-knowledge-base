@@ -8,79 +8,81 @@ last_reviewed: null
 
 # Standard UAPI Operation Patterns
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how read/write, sysfs, ioctl, poll, mmap, and vectored I/O expose different device contracts. It is part of Stage 10: Hardware-Facing Userspace And Kernel UAPI and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Hardware interfaces reuse patterns: open/configure, query capabilities, submit,
+wait/readiness, transfer data, stop, and recover. Applying those patterns prevents
+an application from treating a device as a regular file when it is actually a stateful
+asynchronous subsystem.
 
-## Core Concepts
+## A disciplined sequence
 
-- the standard uapi operation patterns contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+discover identity -> open with flags -> query capabilities
+-> configure -> arm/start -> wait/readiness -> transfer
+-> validate -> stop/flush -> close/recover
+```
 
-## Learning Outcomes
+Check each return value. Keep configuration separate from operation state, and make
+recovery able to return to a known baseline. Record the device generation so late
+events from an old open cannot update new state.
 
-After studying this page, you should be able to:
+## Common operations
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+| Operation | Questions |
+| --- | --- |
+| `open` | Does it claim hardware? Can it block? What permissions and mode? |
+| `ioctl` | What structure/version/direction and side effects? |
+| `read/write` | Stream, record, command, or data? Short result? |
+| `poll/epoll` | What does readiness mean? Can events be lost/coalesced? |
+| `mmap` | Who owns pages, when valid, and how synchronized? |
+| sysfs read/write | Units, state, range, and atomicity? |
+| close | Does it stop/reset, release power, or discard pending work? |
 
-## Planned Coverage
+## Capability and state queries
 
-- mental model and vocabulary for standard uapi operation patterns;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Query capabilities and current state rather than assuming the device tree, firmware,
+or board revision. Reject unsupported modes before enabling hardware. A capability
+query may succeed while a later operation fails because the device is busy, unplugged,
+or not powered.
 
-## Practical Exercise
+## Data validation
 
-compare two standard subsystem interfaces and document their operation and error semantics.
+Validate length, status, sequence, endianness, units, range, checksum, and timestamp
+domain before handing data to product logic. Preserve raw status/error context for
+diagnosis. Do not use a successful byte count as a validity flag.
 
-Record:
+## Recovery
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+Use an explicit state machine: disconnected, opened, configured, active, faulted,
+recovering. On reset or unplug, stop requests, invalidate buffers, close/reopen if
+safe, re-query capabilities, and reject late completions from the old generation.
 
-## Minimal Example
+## Common mistakes
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+- Assuming all device files support ordinary file semantics.
+- Skipping capability/state queries.
+- Starting hardware before configuration is validated.
+- Treating readiness, bytes, or ioctl return as data validity.
+- Reusing buffers or accepting events after device reset.
 
-## Common Mistakes
+## Debugging checklist
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+- Record identity, generation, state, operation, FD, sequence, and duration.
+- Trace open/configure/start/wait/transfer/stop/close.
+- Test busy, unsupported, timeout, partial data, reset, unplug, and reopen.
+- Correlate userspace result with sysfs, kernel log, and hardware evidence.
+- Verify recovery reaches a known configuration, not merely an open FD.
 
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 10: Hardware-Facing Userspace And Kernel UAPI](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [ioctl ABI And Compatibility](ioctl-abi-and-compatibility.md)
+- [poll, mmap, And Device Events](poll-mmap-and-device-events.md)
+- [Hardware Service State Machines And Recovery](../design-and-architecture-patterns/hardware-service-state-machines-and-recovery.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [Linux kernel userspace API](https://www.kernel.org/doc/html/latest/userspace-api/index.html)
+- [`poll(2)`](https://man7.org/linux/man-pages/man2/poll.2.html)
+- [`ioctl(2)`](https://man7.org/linux/man-pages/man2/ioctl.2.html)

@@ -8,79 +8,54 @@ last_reviewed: null
 
 # Serial, Input, Sensors, And hwmon
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how TTY, evdev, IIO, and hwmon present standard device behavior to applications. It is part of Stage 10: Hardware-Facing Userspace And Kernel UAPI and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Standard subsystems expose common hardware through stable patterns. Choosing the
+subsystem UAPI instead of a private register protocol improves portability, but
+userspace still must validate units, timestamps, freshness, permissions, and device
+lifetime.
 
-## Core Concepts
+## Input and sensors
 
-- the serial, input, sensors, and hwmon contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Input event devices provide typed events with codes and timestamps; they are not
+ordinary text streams. IIO can expose channels, scale, raw values, triggered buffers,
+and timestamps. hwmon commonly exposes sensor values and limits as sysfs attributes
+with documented units and update behavior.
 
-## Learning Outcomes
+Read the subsystem documentation and query available channels/features. Do not assume
+`/sys/class/hwmon/hwmon0` identifies the same sensor after boot or board changes.
 
-After studying this page, you should be able to:
+## Data validity
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+Validate event type/code, payload size, sign, scale, unit, range, timestamp domain,
+sequence, and freshness. Distinguish a valid zero from missing data and a stale
+cached value. Sensor conversion/calibration policy belongs in an explicit layer.
 
-## Planned Coverage
+## Common mistakes
 
-- mental model and vocabulary for serial, input, sensors, and hwmon;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+- Hard-coding hwmon index or channel order.
+- Treating sysfs sensor text as a durable configuration API.
+- Ignoring scale, units, timestamp, and freshness.
+- Parsing input events as text or assuming one read equals one event.
+- Continuing after device removal or stale sysfs topology.
 
-## Practical Exercise
+## Debugging checklist
 
-write a client that validates units, timestamps, calibration, and unavailable sensor state.
+- Record subsystem, sysfs path, device identity, channel, unit, scale, and timestamp.
+- Inspect driver binding, permissions, buffer mode, and event rate.
+- Test stale data, overflow, invalid range, unplug/reset, and channel changes.
+- Compare raw, scaled, calibrated, and product-level values.
+- Correlate userspace samples with kernel and external measurement evidence.
 
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 10: Hardware-Facing Userspace And Kernel UAPI](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Serial Protocols, Timeouts, And Testing](../terminals-ttys-and-serial-userspace/serial-protocols-timeouts-and-testing.md)
+- [devfs, sysfs, udev, And Device Discovery](devfs-sysfs-udev-and-discovery.md)
+- [IIO userspace interface](https://www.kernel.org/doc/html/latest/iio/index.html)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [Linux input event interface](https://www.kernel.org/doc/html/latest/input/input.html)
+- [Linux IIO userspace interface](https://www.kernel.org/doc/html/latest/iio/iio_devbuf.html)
+- [Linux hwmon sysfs interface](https://www.kernel.org/doc/html/latest/hwmon/sysfs-interface.html)

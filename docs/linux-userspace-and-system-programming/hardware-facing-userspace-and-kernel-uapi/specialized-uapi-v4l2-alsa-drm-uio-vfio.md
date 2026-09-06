@@ -8,79 +8,68 @@ last_reviewed: null
 
 # Specialized UAPI: V4L2, ALSA, DRM, UIO, And VFIO
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how specialized multimedia, display, and device-assignment APIs differ from simple character devices. It is part of Stage 10: Hardware-Facing Userspace And Kernel UAPI and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Major subsystems have rich state machines and buffer protocols. A generic “open,
+read, close” mental model is insufficient; use their capability queries, negotiated
+formats, event queues, and ownership rules.
 
-## Core Concepts
+## V4L2
 
-- the specialized uapi: v4l2, alsa, drm, uio, and vfio contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Video4Linux2 devices negotiate format, size, field, colorspace, and buffer method.
+Streaming I/O commonly follows request/queue, stream-on, dequeue, validate, process,
+requeue, and stream-off. Handle sequence gaps, timestamps, buffer starvation,
+disconnect, and format changes. Do not assume a camera index is stable.
 
-## Learning Outcomes
+## ALSA
 
-After studying this page, you should be able to:
+ALSA PCM devices expose hardware/software parameters, sample format, rate, channels,
+period, buffer, and start/stop/xrun state. Configure explicitly and handle XRUN
+recovery. A successful write can mean frames queued, not audible output. Mixer/control
+names and availability are card/profile dependent.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## DRM/KMS
 
-## Planned Coverage
+DRM/KMS uses modes, connectors, planes, framebuffers, atomic commits, and events.
+Resource ownership and master/client rules matter. Validate formats/strides and use
+atomic commit completion events rather than assuming a submit returned means scanout
+completed.
 
-- mental model and vocabulary for specialized uapi: v4l2, alsa, drm, uio, and vfio;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## UIO and VFIO
 
-## Practical Exercise
+UIO can expose device memory and interrupts to userspace but leaves significant driver
+policy to the application. VFIO provides an IOMMU-mediated device assignment model
+with container/group/device ownership and DMA restrictions. Neither justifies mapping
+arbitrary physical memory. Review isolation, reset, interrupt, and device ownership
+before deployment.
 
-survey one specialized UAPI and identify its buffers, ownership, security, and synchronization model.
+## Common mistakes
 
-Record:
+- Treating subsystem indices/names as stable hardware identity.
+- Skipping format/capability negotiation.
+- Reusing a V4L2/ALSA/DRM buffer before ownership returns.
+- Ignoring xrun, sequence, event, mode, and disconnect errors.
+- Using UIO/VFIO without IOMMU, reset, privilege, and DMA analysis.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Debugging checklist
 
-## Minimal Example
+- Record subsystem/card/device identity, capabilities, negotiated format, buffers,
+  events, and generation.
+- Use subsystem tools (`v4l2-ctl`, `alsactl`, `modetest`) where available.
+- Test buffer starvation, xrun, hotplug, mode change, reset, and peer/process death.
+- Correlate events and timestamps with kernel logs and external output.
+- Verify memory/cache/DMA ownership and service permissions.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 10: Hardware-Facing Userspace And Kernel UAPI](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [poll, mmap, And Device Events](poll-mmap-and-device-events.md)
+- [Standard UAPI Operation Patterns](standard-uapi-operation-patterns.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [V4L2 userspace API](https://www.kernel.org/doc/html/latest/userspace-api/media/v4l/v4l2.html)
+- [ALSA kernel documentation](https://www.kernel.org/doc/html/latest/sound/index.html)
+- [DRM userspace API](https://www.kernel.org/doc/html/latest/gpu/drm-uapi.html)
+- [UIO HOWTO](https://www.kernel.org/doc/html/latest/driver-api/uio-howto.html)
+- [VFIO documentation](https://www.kernel.org/doc/html/latest/driver-api/vfio.html)
