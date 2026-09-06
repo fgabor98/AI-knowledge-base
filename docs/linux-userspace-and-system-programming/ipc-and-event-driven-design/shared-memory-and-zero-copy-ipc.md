@@ -2,85 +2,103 @@
 status: draft
 reviewed: false
 domain: linux-userspace
-difficulty: intermediate
+difficulty: advanced
 last_reviewed: null
 ---
 
 # Shared Memory And Zero-Copy IPC
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how shared regions exchange high-rate data without losing synchronization or ownership. It is part of Stage 7: IPC And Event-Driven Design and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Large or high-rate payloads can make repeated copies expensive. Shared memory can
+reduce copying, but it replaces transport copying with explicit synchronization,
+buffer ownership, versioning, peer-death recovery, and cache/coherence obligations.
 
-## Core Concepts
+## Separate data and control
 
-- the shared memory and zero-copy ipc contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Use shared memory for bulk bytes and a socket, eventfd, or semaphore for control:
 
-## Learning Outcomes
+```text
+producer writes slot -> release/publication -> event notification
+consumer waits       -> acquire/ownership -> reads slot
+consumer returns slot or advances sequence
+```
 
-After studying this page, you should be able to:
+The shared region does not wake a process or authenticate a peer by itself. Define
+slot count, states, sequence numbers, maximum payload, and behavior when the consumer
+falls behind.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Representation
 
-## Planned Coverage
+Use offsets, lengths, fixed-width integers, and explicit padding—not raw pointers.
+Include magic, version, total layout size, endianness, alignment, and generation.
+Validate every offset/length against the mapped region before deriving a pointer.
 
-- mental model and vocabulary for shared memory and zero-copy ipc;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+```text
+header: magic/version/size/generation
+slots:  state | sequence | length | payload | checksum
+```
 
-## Practical Exercise
+The producer must not overwrite a slot until the consumer has returned ownership.
+Single-producer/single-consumer rings can be efficient, but only when the index
+ownership and memory-order proof is explicit. Multi-producer or multi-consumer
+designs need a stronger algorithm or a lock.
 
-implement a shared ring or buffer protocol with sequence and shutdown state.
+## Backing choices
 
-Record:
+`shm_open` creates a POSIX shared-memory object; an ordinary file can supply a mapped
+region; `memfd_create` creates an anonymous Linux file descriptor suitable for mapping
+and FD passing. Set size with `ftruncate` before mapping, and define cleanup of names
+or descriptors after peer death.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Lifetime and recovery
 
-## Minimal Example
+A mapping can outlive a name or FD, and a process can die while holding a slot. Use
+generation/lease state, robust synchronization, or restart-time initialization rules
+to detect abandoned ownership. Never wait forever for a dead peer’s slot.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+If the backing file is truncated while mapped, access beyond the new size can SIGBUS.
+Resize by creating a new generation and switching ownership, not by shrinking a live
+region under readers.
 
-## Common Mistakes
+## Zero-copy is conditional
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+The data may still be copied by the kernel, device, network stack, or cache path. A
+zero-copy design can increase memory footprint, cache misses, synchronization cost,
+and latency variance. Measure end-to-end behavior and retain a bounded-copy fallback.
 
-## Debugging Checklist
+Device/DMA sharing has additional cache, ownership, and memory-barrier rules. Ordinary
+userspace atomics do not prove visibility to hardware.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+## Common mistakes
 
-## Related Topics
+- Sharing raw process pointers.
+- Publishing a slot before all payload fields are written.
+- Reusing a slot while a consumer still reads it.
+- Treating shared memory as a durable database.
+- Ignoring stale generation and peer-death recovery.
+- Resizing/truncating a mapped object in place.
+- Assuming zero-copy removes all copies or synchronization.
+
+## Debugging checklist
+
+- Record backing FD/name, mapping address/length, version, generation, and owner.
+- Inspect maps, FD lifetime, queue indices, states, and sequence gaps.
+- Test peer crash at each ownership transition and restart with stale data.
+- Test malformed headers, oversized lengths, truncated backing, and full rings.
+- Use race detection and an event/control trace alongside payload checksums.
+- Test hardware/DMA cache behavior separately from process-to-process visibility.
+
+## Related topics
 
 - [Stage 7: IPC And Event-Driven Design](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [IPC Selection And Failure Models](ipc-selection-and-failure-models.md)
+- [mmap, Files, And Shared Memory](../process-memory-and-mapping/mmap-files-and-shared-memory.md)
+- [Atomics, Memory Ordering, And Reentrancy](../threads-and-userspace-concurrency/atomics-memory-ordering-and-reentrancy.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`shm_open(3)`](https://man7.org/linux/man-pages/man3/shm_open.3.html)
+- [`memfd_create(2)`](https://man7.org/linux/man-pages/man2/memfd_create.2.html)
+- [`mmap(2)`](https://man7.org/linux/man-pages/man2/mmap.2.html)
+- [`futex(2)`](https://man7.org/linux/man-pages/man2/futex.2.html)

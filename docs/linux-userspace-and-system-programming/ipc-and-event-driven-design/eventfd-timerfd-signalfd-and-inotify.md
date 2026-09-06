@@ -8,79 +8,82 @@ last_reviewed: null
 
 # eventfd, timerfd, signalfd, And inotify
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how Linux event descriptors and filesystem notifications become ordinary event-loop inputs. It is part of Stage 7: IPC And Event-Driven Design and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Linux exposes counters, timers, signals, and filesystem notifications as file
+descriptors. This lets one event loop own the wait set, but each FD has different
+read formats, coalescing, overflow, and lifetime semantics.
 
-## Core Concepts
+## `eventfd`
 
-- the eventfd, timerfd, signalfd, and inotify contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+An eventfd contains a 64-bit counter. A write adds to it; a read returns and clears
+the counter in normal mode, or returns one unit in semaphore mode. It is a wakeup or
+count channel, not a byte stream and not a general payload transport.
 
-## Learning Outcomes
+Use it to notify an event loop that work is available in a protected queue. Define
+whether multiple notifications coalesce and ensure producers cannot overflow the
+counter. Create with `EFD_CLOEXEC` and `EFD_NONBLOCK` as appropriate.
 
-After studying this page, you should be able to:
+## `timerfd`
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+`timerfd_create` makes timer expiration readable. A read returns the number of
+expirations since the last read. Use the right clock and an absolute/periodic arm
+policy. If the count is greater than one, record an overrun and apply the work policy;
+do not silently execute one task as if no ticks were missed.
 
-## Planned Coverage
+## `signalfd`
 
-- mental model and vocabulary for eventfd, timerfd, signalfd, and inotify;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Block selected signals and create a signalfd for that mask. Add it to the loop and
+read `signalfd_siginfo` records. The signals must remain blocked in threads that
+should not handle them; create the mask before spawning workers. The event loop owns
+translation from signal to shutdown/reload/reap state.
 
-## Practical Exercise
+## `inotify`
 
-combine timer, signal, notification, and wakeup events without unsafe callbacks.
+Inotify reports filesystem events such as create, modify, move, delete, and queue
+overflow. It reports changes, not complete durable state. An editor may write a temp
+file and rename it; multiple events can coalesce; a watched directory can be moved or
+deleted; and the queue can overflow. On `IN_Q_OVERFLOW`, rescan authoritative state.
 
-Record:
+Never treat “file modified” as “configuration is valid.” Read, parse, validate, and
+atomically publish a new configuration generation.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Common event-loop rules
 
-## Minimal Example
+- set close-on-exec at creation;
+- use nonblocking mode when the handler must drain without blocking;
+- read until `EAGAIN` where the event model requires draining;
+- bound records, work, and queue depth;
+- close/unregister from the owner thread or define reuse rules;
+- preserve generation/context when an FD is replaced.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Common mistakes
 
-## Common Mistakes
+- Treating eventfd as a payload queue.
+- Reading only one timerfd expiration and hiding overruns.
+- Creating signalfd without blocking the same signals in workers.
+- Treating inotify as a complete configuration database.
+- Ignoring queue overflow and watch invalidation.
+- Closing an event FD while another thread can receive a stale readiness event.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Debugging checklist
 
-## Debugging Checklist
+- Record FD type, flags, owner, event count, and generation.
+- Test counter overflow, timer overrun, signal bursts, and inotify overflow.
+- Inspect `/proc/<pid>/fdinfo` and event-loop registrations.
+- Test peer/process shutdown and FD close/reuse.
+- Rescan state after any notification ambiguity or overflow.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 7: IPC And Event-Driven Design](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Event Loops: select, poll, And epoll](event-loops-select-poll-and-epoll.md)
+- [Signal-Safe Shutdown And Event Integration](../time-clocks-and-signals/signal-safe-shutdown-and-event-integration.md)
+- [Timers And Periodic Work](../time-clocks-and-signals/timers-and-periodic-work.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`eventfd(2)`](https://man7.org/linux/man-pages/man2/eventfd.2.html)
+- [`timerfd_create(2)`](https://man7.org/linux/man-pages/man2/timerfd_create.2.html)
+- [`signalfd(2)`](https://man7.org/linux/man-pages/man2/signalfd.2.html)
+- [`inotify(7)`](https://man7.org/linux/man-pages/man7/inotify.7.html)

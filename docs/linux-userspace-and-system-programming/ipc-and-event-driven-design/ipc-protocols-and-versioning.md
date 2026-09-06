@@ -8,79 +8,83 @@ last_reviewed: null
 
 # IPC Protocols And Versioning
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how framing, limits, serialization, features, reserved fields, and compatibility make an IPC contract durable. It is part of Stage 7: IPC And Event-Driven Design and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+An IPC channel that works between matching binaries can fail during rolling updates,
+partial deployment, restart, or malformed input. A versioned protocol makes messages,
+errors, capabilities, retries, and compatibility explicit.
 
-## Core Concepts
+## Frame design
 
-- the ipc protocols and versioning contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+magic | major | minor | message_type | flags | request_id | payload_length | payload
+```
 
-## Learning Outcomes
+Define byte order, integer widths, alignment, maximum header/payload sizes, and
+whether unknown fields are ignored or rejected. Validate magic, version, type, flags,
+length, and authorization before allocating or acting. A stream parser must retain
+partial headers and payloads across reads.
 
-After studying this page, you should be able to:
+## Requests and replies
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+Each request should have a request ID and a defined result shape:
 
-## Planned Coverage
+```text
+accepted -> in progress -> succeeded/failed/cancelled/unknown
+```
 
-- mental model and vocabulary for ipc protocols and versioning;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+Asynchronous events need their own type and sequence. A reply may arrive after a
+client timeout; the client must reject stale generations or reconcile the side effect.
+Cancellation is a protocol message with its own acknowledgement and race semantics,
+not just a local socket close.
 
-## Practical Exercise
+## Compatibility
 
-define a versioned protocol with malformed-message and unknown-feature behavior.
+Use major versions for incompatible semantics and minor versions for compatible
+extensions. Reserve fields, define default values, and prefer capability negotiation
+over guessing from a version number. Old clients should ignore known-safe optional
+fields; new clients must tolerate missing optional fields. Reject unknown required
+flags.
 
-Record:
+Never serialize C structs by copying their in-memory representation across processes:
+padding, alignment, endianness, ABI widths, and pointers are not stable wire format.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Idempotence and retry
 
-## Minimal Example
+Commands that may be retried need an idempotency key or sequence. A client cannot know
+whether a peer crashed before or after applying a side effect. Provide a query or
+generation read that reconciles state. Do not retry “set once,” “increment,” or “erase”
+blindly unless their semantics explicitly make that safe.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Bounds and overload
 
-## Common Mistakes
+Define maximum message size, in-flight requests per peer, output queue, retry count,
+deadline, and error rate. On overload, reject early with a structured error, shed
+optional work, or apply class-specific backpressure. Do not let malformed lengths or
+unresponsive clients consume unbounded memory.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Common mistakes
 
-## Debugging Checklist
+- Copying C structs as a wire format.
+- Accepting unbounded lengths before validation.
+- Treating version equality as capability negotiation.
+- Retrying ambiguous non-idempotent commands.
+- Reusing request IDs across live generations.
+- Ignoring unknown flags, malformed frames, or partial messages.
+- Providing no compatibility test between old and new clients.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+## Debugging checklist
 
-## Related Topics
+- Log protocol version, capabilities, type, request ID, generation, and lengths.
+- Test fragmentation, coalescing, unknown fields, old/new peers, and malformed input.
+- Test timeout before reply, peer crash after side effect, duplicate request, and
+  cancellation races.
+- Check queue bounds and overload responses.
+- Preserve wire captures with sensitive-data redaction.
+
+## Related topics
 
 - [Stage 7: IPC And Event-Driven Design](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [IPC Selection And Failure Models](ipc-selection-and-failure-models.md)
+- [Credentials, Authentication, And Peer Lifecycle](credentials-authentication-and-peer-lifecycle.md)
+- [Serialization And Protocols](../../c/advanced-c/protocols-and-serialization.md)

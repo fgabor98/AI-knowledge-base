@@ -8,79 +8,86 @@ last_reviewed: null
 
 # IPC Selection And Failure Models
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how pipes, sockets, shared memory, queues, and event notifications differ. It is part of Stage 7: IPC And Event-Driven Design and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+IPC choices are often made from throughput alone. In a real product, peer identity,
+message size, latency, restart behavior, queue bounds, observability, and security
+matter just as much. The right mechanism makes failure behavior easier to prove.
 
-## Core Concepts
+## Selection questions
 
-- the ipc selection and failure models contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Ask in order:
 
-## Learning Outcomes
+1. Are endpoints related, unrelated, or remote in the future?
+2. Is the data a byte stream, message, counter, event, or shared bulk buffer?
+3. What are maximum message size, rate, burst, and queue depth?
+4. Is delivery reliable, at-most-once, retryable, or intentionally lossy?
+5. Does the peer need credentials, FD passing, or namespace crossing?
+6. What happens when the peer is slow, crashes, upgrades, or disappears?
+7. How will the operation be traced and tested without hardware?
 
-After studying this page, you should be able to:
+## Mechanism tradeoffs
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+| Mechanism | Strength | Failure/complexity boundary |
+| --- | --- | --- |
+| Pipe | Simple ordered stream, natural backpressure | Related lifecycle, no peer credentials, byte framing required |
+| `socketpair` | Bidirectional related-process channel | Same stream framing and FD ownership obligations |
+| Unix stream socket | Local request/response, credentials, reconnect | Stream framing, socket path lifecycle, backlog/peer death |
+| Unix datagram socket | Message boundaries and local endpoint | Queue limits, truncation, loss/ordering policy |
+| Shared memory | Large payload with few copies | Synchronization, reclamation, stale peers, separate control path |
+| POSIX message queue | Message priorities and boundaries | Kernel limits, portability/deployment overhead |
+| `eventfd` | Compact wakeup/counter | Not a payload transport; count semantics must be defined |
+| D-Bus | Discoverable service bus and typed messages | Runtime footprint, activation, policy, dependency complexity |
 
-## Planned Coverage
+Do not use shared memory merely to avoid a small copy. Its synchronization and
+recovery proof can cost more than the copy saved.
 
-- mental model and vocabulary for ipc selection and failure models;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Failure model
 
-## Practical Exercise
+Define what each endpoint observes:
 
-select an IPC mechanism from message size, rate, security, ownership, and restart requirements.
+```text
+peer not started     -> connect/open fails or waits by policy
+peer overloaded      -> reject/backpressure/drop by message class
+peer crashes         -> EOF/error; outstanding requests become unknown
+peer restarts        -> new connection/generation; stale replies rejected
+transport corrupt    -> framing/checksum error; close or resynchronize
+local queue full     -> bounded admission decision
+shutdown             -> stop intake, cancel/drain, close, join
+```
 
-Record:
+An unanswered command is not automatically a failed command. If the peer could have
+performed a side effect before dying, the result is `unknown`; retries require an
+idempotency key or a query that can reconcile state.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Testing without the peer
 
-## Minimal Example
+Use a fake peer that can delay, fragment, reorder where the mechanism permits, close
+mid-frame, send invalid lengths, refuse connections, and crash after acknowledging a
+request. Keep the real client protocol unchanged so the fake tests application logic.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Common mistakes
 
-## Common Mistakes
+- Choosing shared memory for small messages without a reclamation design.
+- Assuming stream reads preserve messages.
+- Treating EOF as proof that the last command was not applied.
+- Retrying non-idempotent commands after an ambiguous disconnect.
+- Leaving queue limits to kernel defaults.
+- Using a socket path as authentication without checking peer credentials.
+- Building a protocol that cannot be tested with a fake peer.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Debugging checklist
 
-## Debugging Checklist
+- Record mechanism, endpoint, peer identity, generation, request ID, and queue depth.
+- Capture connect/accept, read/write, readiness, timeout, and close events.
+- Test slow, dead, restarted, malicious, and version-skewed peers.
+- Inspect socket/pipe FDs and kernel queue/capacity state.
+- Verify overload, cancellation, and unknown-outcome policy.
+- Measure copy, latency, memory, and recovery cost before optimizing.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 7: IPC And Event-Driven Design](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [IPC Protocols And Versioning](ipc-protocols-and-versioning.md)
+- [Credentials, Authentication, And Peer Lifecycle](credentials-authentication-and-peer-lifecycle.md)
+- [Shared Memory And Zero-Copy IPC](shared-memory-and-zero-copy-ipc.md)

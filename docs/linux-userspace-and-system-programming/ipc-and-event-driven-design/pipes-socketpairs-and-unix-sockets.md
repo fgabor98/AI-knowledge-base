@@ -8,79 +8,100 @@ last_reviewed: null
 
 # Pipes, socketpairs, And Unix Sockets
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how local stream and datagram channels support related processes and service APIs. It is part of Stage 7: IPC And Event-Driven Design and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Local processes need a transport that provides the desired directionality, message
+boundaries, peer lifecycle, and backpressure. Pipes are excellent streams; Unix
+sockets add independent endpoints, credentials, reconnect, and datagrams.
 
-## Core Concepts
+## Pipes and socketpairs
 
-- the pipes, socketpairs, and unix sockets contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+Use a pipe for one-way byte flow and `socketpair(AF_UNIX, SOCK_STREAM, 0, fds)` for a
+related bidirectional stream. Both require framing and exact closure ownership.
 
-## Learning Outcomes
+```text
+pipe:       writer --> kernel buffer --> reader
+socketpair: endpoint A <--> kernel buffers <--> endpoint B
+```
 
-After studying this page, you should be able to:
+`socketpair` endpoints are already connected and do not have a filesystem pathname.
+They are useful for parent/child control channels and event-loop wakeups.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+## Unix stream sockets
 
-## Planned Coverage
+A server creates a socket, binds a pathname or abstract address, listens, and accepts:
 
-- mental model and vocabulary for pipes, socketpairs, and unix sockets;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+```text
+socket -> bind -> listen -> accept
+client: socket -> connect
+both sides: read/write framed stream -> shutdown/close
+```
 
-## Practical Exercise
+The pathname is a filesystem object with ownership and stale-socket cleanup policy.
+Unlink a stale socket only after verifying that it belongs to the service; blindly
+removing a live pathname can disrupt another instance. Abstract sockets avoid a
+filesystem path but have different namespace and discoverability semantics.
 
-build a local request/response service using a Unix socket and a test client.
+## Framing
 
-Record:
+Streams do not preserve writes. Use a fixed header:
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+```text
+magic | version | type | flags | request_id | payload_length | payload
+```
 
-## Minimal Example
+Read exactly the header, validate magic/version/length against a fixed maximum, then
+read the payload through a bounded loop. Keep partial bytes in a connection-owned
+buffer. Never allocate `payload_length` before checking its range.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Datagrams
 
-## Common Mistakes
+Unix datagrams preserve message boundaries, but messages can be rejected, truncated,
+or lost according to queue and socket behavior. Design each datagram to stand alone
+or include a request ID and retry policy. Do not assume a datagram is authenticated
+just because it is local.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Passing descriptors
 
-## Debugging Checklist
+Unix sockets can pass FDs with `SCM_RIGHTS`. Receiving an FD transfers a kernel handle,
+not necessarily trust. Validate object type, flags, peer authority, and lifetime.
+Set close-on-exec on received descriptors and close them on every rejection path.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+## Shutdown
 
-## Related Topics
+EOF means the peer performed an orderly stream close. `ECONNRESET`, `EPIPE`, and
+`SIGPIPE` indicate other lifecycle paths. `shutdown(SHUT_WR)` can half-close a socket;
+define whether the protocol permits it. Close only after queued output and pending
+responses are resolved by policy.
+
+## Common mistakes
+
+- Assuming one `send` equals one `recv`.
+- Leaving stale Unix socket paths or deleting a live one.
+- Treating local transport as authentication.
+- Accepting unbounded frame lengths or FD counts.
+- Forgetting close-on-exec on passed/received descriptors.
+- Ignoring half-close, EOF, reset, and SIGPIPE semantics.
+- Using one stream for unrelated messages without request IDs or framing.
+
+## Debugging checklist
+
+- Inspect `ss -x -a`, socket path, owner, mode, namespace, and peer credentials.
+- Trace connect, accept, send, receive, shutdown, EOF, and reset events.
+- Test fragmented headers/payloads, oversized frames, stale paths, and peer crash.
+- Check FD passing and close-on-exec with `/proc/<pid>/fd`.
+- Verify backpressure, output queues, cancellation, and restart generations.
+
+## Related topics
 
 - [Stage 7: IPC And Event-Driven Design](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [IPC Selection And Failure Models](ipc-selection-and-failure-models.md)
+- [IPC Protocols And Versioning](ipc-protocols-and-versioning.md)
+- [Descriptor Inheritance And Redirection](../system-calls-files-and-file-descriptors/descriptor-inheritance-and-redirection.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`unix(7)`](https://man7.org/linux/man-pages/man7/unix.7.html)
+- [`socketpair(2)`](https://man7.org/linux/man-pages/man2/socketpair.2.html)
+- [`unix(4)`](https://man7.org/linux/man-pages/man4/unix.4.html)
+- [`cmsg(3)`](https://man7.org/linux/man-pages/man3/cmsg.3.html)

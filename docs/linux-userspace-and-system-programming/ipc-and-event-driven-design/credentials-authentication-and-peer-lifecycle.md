@@ -2,85 +2,93 @@
 status: draft
 reviewed: false
 domain: linux-userspace
-difficulty: intermediate
+difficulty: advanced
 last_reviewed: null
 ---
 
 # Credentials, Authentication, And Peer Lifecycle
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how local identity, peer death, reconnect, retry, and authorization affect IPC correctness. It is part of Stage 7: IPC And Event-Driven Design and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Local IPC is not automatically trusted. A socket path can be replaced, a process can
+run with unexpected credentials, and a peer can disappear after authentication. A
+service must authorize the actual peer and keep that identity tied to the connection
+and request lifecycle.
 
-## Core Concepts
+## Peer identity
 
-- the credentials, authentication, and peer lifecycle contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+For Unix-domain sockets, Linux can expose peer credentials such as PID, UID, and GID
+through `SO_PEERCRED`; credential passing and namespace behavior need target-specific
+review. Supplement this with filesystem ownership/mode, service-manager policy,
+capabilities, SELinux/AppArmor labels where used, and protocol authentication when
+the threat model requires it.
 
-## Learning Outcomes
+Credentials answer who the kernel associates with the endpoint. Authorization answers
+what that identity may do. Do not authorize solely because a client reached a local
+pathname.
 
-After studying this page, you should be able to:
+## Connection lifecycle
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+```text
+accepted -> authenticate -> negotiate -> active
+     |          |             |
+   close     reject        timeout/reset
+                              |
+                         reconnect/new generation
+```
 
-## Planned Coverage
+Capture credentials and protocol generation at accept/authentication. Recheck state
+when a privileged or destructive request arrives if credentials can change or the
+protocol permits delegation.
 
-- mental model and vocabulary for credentials, authentication, and peer lifecycle;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Peer death and unknown outcomes
 
-## Practical Exercise
+EOF, reset, timeout, and process disappearance end a connection but do not reveal
+whether its last side effect completed. Mark outstanding requests unknown, close
+dependent FDs, and reconcile through a state query or generation protocol before
+retrying.
 
-authorize a Unix-socket peer and test crash, half-close, stale socket, and reconnect paths.
+## FD passing
 
-Record:
+An FD received with `SCM_RIGHTS` is an authority-bearing capability. Validate its type,
+access mode, owner context, and expected protocol before using it. Set close-on-exec,
+limit the number accepted, and close on every error path. Do not pass a privileged FD
+to a less-trusted process as a shortcut around authorization.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Socket endpoint protection
 
-## Minimal Example
+Create service directories with controlled ownership, bind sockets with deliberate
+mode, and clean stale paths only after proving they belong to the service. Abstract
+socket names avoid filesystem cleanup but are visible within a network namespace and
+still require credential checks.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Common mistakes
 
-## Common Mistakes
+- Treating local transport or a pathname as authentication.
+- Reading peer credentials once and forgetting request authorization.
+- Retrying an unknown side effect after disconnect.
+- Accepting unlimited connections, FDs, or in-flight requests.
+- Passing privileged descriptors without validating the recipient.
+- Deleting a socket path that belongs to another instance.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+## Debugging checklist
 
-## Debugging Checklist
+- Record endpoint, PID/UID/GID, namespace, protocol version, and authorization result.
+- Inspect socket owner/mode and `SO_PEERCRED` evidence.
+- Test unauthorized users, changed groups, stale paths, peer crash, reset, and retry.
+- Test FD passing, descriptor leaks, exec inheritance, and connection limits.
+- Verify unknown-outcome reconciliation before side-effect retry.
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 7: IPC And Event-Driven Design](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [Pipes, socketpairs, And Unix Sockets](pipes-socketpairs-and-unix-sockets.md)
+- [IPC Protocols And Versioning](ipc-protocols-and-versioning.md)
+- [Linux Credentials, Permissions, And ACLs](../identity-privilege-and-userspace-security/linux-credentials-permissions-and-acls.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`unix(7)`](https://man7.org/linux/man-pages/man7/unix.7.html)
+- [`socket(7)`](https://man7.org/linux/man-pages/man7/socket.7.html)
+- [`credentials(7)`](https://man7.org/linux/man-pages/man7/credentials.7.html)
+- [`SCM_RIGHTS`](https://man7.org/linux/man-pages/man7/unix.7.html)
