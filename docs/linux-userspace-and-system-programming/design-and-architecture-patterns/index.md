@@ -1,57 +1,22 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Stage 17: Design And Architecture Patterns
 
-Turn mechanisms into maintainable decisions about process boundaries, service architecture, state machines, recovery, and contracts.
+Good userspace architecture makes ownership, failure, timing, and contracts visible. It does not begin with a favorite framework; it begins with the workload, trust boundaries, lifecycle, and recovery requirements.
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+## Design sequence
 
-## Learning Materials
+1. State the externally observable requirements and unacceptable failures.
+2. Identify processes, privileges, resources, devices, and persistence owners.
+3. Choose synchronous or event-driven control flow per boundary.
+4. Model states and failure transitions before implementing retries.
+5. Define IPC/UAPI/configuration contracts with versioning and observability.
+6. Test normal, degraded, restart, update, and power-loss paths.
 
-1. [Utility, Daemon, And Process Boundaries](utility-daemon-and-process-boundaries.md)
-2. [Synchronous Versus Event-Driven Architecture](synchronous-versus-event-driven-architecture.md)
-3. [Hardware Service State Machines And Recovery](hardware-service-state-machines-and-recovery.md)
-4. [Design Review And Userspace Contracts](design-review-and-userspace-contracts.md)
+Prefer simple local structure until concurrency, isolation, independent restart, or resource ownership justifies another process or event loop. Every abstraction should buy a measurable property: testability, containment, throughput, latency, or maintainability.
 
-## Study Pattern
+## Completion checklist
 
-For each page:
-
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
-
-## Stage Outcomes
-
-By the end of this stage, you should be able to:
-
-- explain and demonstrate utility, daemon, and process boundaries;
-- explain and demonstrate synchronous versus event-driven architecture;
-- explain and demonstrate hardware service state machines and recovery;
-- explain and demonstrate design review and userspace contracts;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
-
-## Completion Criteria
-
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
-
-## Related Topics
-
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+- [ ] Every resource has one clear owner and a shutdown policy.
+- [ ] Process boundaries are justified by isolation or lifecycle needs.
+- [ ] Backpressure, cancellation, retry, and timeout behavior are explicit.
+- [ ] Hardware recovery is modeled as states and events, not scattered flags.
+- [ ] Contracts include errors, versioning, limits, and diagnostic context.

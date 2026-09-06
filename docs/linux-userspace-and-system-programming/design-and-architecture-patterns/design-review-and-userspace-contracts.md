@@ -1,86 +1,24 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Design Review And Userspace Contracts
 
-## What Problem Does This Solve?
+## Contract contents
 
-This page covers how ownership, ABI, observability, security, compatibility, and target assumptions become reviewable decisions. It is part of Stage 17: Design And Architecture Patterns and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+A useful contract specifies data representation and limits, ownership and lifetime, synchronization, ordering, timeout/cancellation behavior, errors and errno mapping, version negotiation, permissions, persistence, and observability. Include what happens when the peer is old, malformed, slow, restarted, or absent.
 
-## Core Concepts
+For a device or IPC operation, answer: who may call it, what state is required, what can change concurrently, which side owns buffers, whether partial completion is possible, how retries avoid duplication, and how an operator correlates the result with logs.
 
-- the design review and userspace contracts contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+## Review artifacts
 
-## Learning Outcomes
+Use a small decision record containing requirements, alternatives, selected design, rejected options, assumptions, failure matrix, resource budgets, security boundaries, and test plan. Draw the process/resource ownership and state-transition diagrams when prose hides relationships.
 
-After studying this page, you should be able to:
+Review the unhappy paths explicitly:
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+| Area | Question |
+| --- | --- |
+| Startup | What if configuration, device, dependency, or storage is absent? |
+| Runtime | What if input is malformed, slow, duplicated, or too large? |
+| Failure | What if a call blocks, returns short, or the peer dies? |
+| Recovery | What state is safe after restart, reset, or power loss? |
+| Security | Which identity and policy authorize each effect? |
+| Operations | What evidence identifies the exact failure and build? |
 
-## Planned Coverage
-
-- mental model and vocabulary for design review and userspace contracts;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-write a design record and review it with the roadmap’s core decision questions.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 17: Design And Architecture Patterns](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+An architecture is ready when its contracts can be implemented by an independent component, tested with a fake and a real boundary, and operated during degradation. Revisit the record when measurements or target constraints invalidate an assumption.

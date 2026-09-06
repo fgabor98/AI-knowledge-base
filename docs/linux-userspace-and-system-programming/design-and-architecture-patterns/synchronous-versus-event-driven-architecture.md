@@ -1,86 +1,15 @@
----
-status: draft
-reviewed: false
-domain: linux-userspace
-difficulty: advanced
-last_reviewed: null
----
-
 # Synchronous Versus Event-Driven Architecture
 
-## What Problem Does This Solve?
+## Synchronous control
 
-This page covers how polling, blocking calls, notifications, worker threads, and event loops affect complexity and timing. It is part of Stage 17: Design And Architecture Patterns and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Blocking calls are often the clearest design for a utility or a low-concurrency service. They make sequencing and error propagation obvious, but each blocked thread consumes resources and cancellation can be difficult. Define timeouts and interruption behavior for every blocking boundary.
 
-## Core Concepts
+## Event-driven control
 
-- the synchronous versus event-driven architecture contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+An event loop fits many descriptors, timers, signals, and stateful protocols. It can reduce thread count and make readiness explicit, but callback/state complexity, reentrancy, starvation, and error propagation require discipline. Keep handlers short; move CPU-heavy work to a bounded worker pool and return completion events.
 
-## Learning Outcomes
+## Decision criteria
 
-After studying this page, you should be able to:
+Choose based on concurrency, latency deadlines, blocking APIs, CPU work, cancellation, memory budget, and team familiarity. Hybrid designs are common: an event loop owns I/O and a small worker pool handles computation. Do not let a blocking device call run on the loop thread without a measured bound.
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
-
-## Planned Coverage
-
-- mental model and vocabulary for synchronous versus event-driven architecture;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
-
-## Practical Exercise
-
-compare two designs for the same device service and measure their shutdown and overload behavior.
-
-Record:
-
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
-
-## Minimal Example
-
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
-
-## Common Mistakes
-
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
-
-- [Stage 17: Design And Architecture Patterns](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-
-## References
-
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+Every queue needs ownership, capacity, ordering, backpressure, and overload behavior. Decide whether to reject, drop, coalesce, or prioritize work. Shutdown should stop admission, cancel or drain work according to policy, close descriptors, and report incomplete operations.
