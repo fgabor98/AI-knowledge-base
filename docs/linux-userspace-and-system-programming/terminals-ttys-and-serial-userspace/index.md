@@ -8,48 +8,81 @@ last_reviewed: null
 
 # Stage 8: Terminals, TTYs, And Serial Userspace
 
-Understand terminal state and serial communication well enough to build and test reliable hardware-facing tools.
+Terminals and serial ports are byte-oriented interfaces with line discipline,
+foreground-process, flow-control, and timing behavior layered on top. A reliable
+serial tool configures the port deliberately, treats bytes as an incomplete stream,
+and tests framing and timeout behavior independently from the physical UART.
 
-This stage is a collection of focused draft pages. Read the overview first, then study the leaf pages in order while extending one small C utility or service.
+## The layered model
 
-## Learning Materials
+```text
+application protocol
+        |
+read/write bytes
+        |
+TTY line discipline and termios settings
+        |
+serial driver / USB-serial adapter
+        |
+UART, modem, or external device
+```
+
+A terminal connected to a shell is not equivalent to a raw serial port. The default
+line discipline may echo, buffer until newline, translate characters, generate
+signals, and interpret control characters. A serial protocol normally wants raw mode
+and explicit framing.
+
+## Learning materials
 
 1. [TTY Processes And Pseudo-terminals](tty-processes-and-pseudo-terminals.md)
 2. [termios And Serial Configuration](termios-and-serial-configuration.md)
 3. [Serial Protocols, Timeouts, And Testing](serial-protocols-timeouts-and-testing.md)
 
-## Study Pattern
+## Stage lab
 
-For each page:
+```sh
+cc -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -g \
+    examples/c/linux-userspace-termios-pty.c -o /tmp/termios-pty
+/tmp/termios-pty
+```
 
-1. Read the contract and identify the libc, POSIX, Linux, kernel UAPI, or init-system layer.
-2. Implement the smallest host-side example.
-3. Add error, timeout, ownership, and cleanup paths.
-4. Observe the result with the relevant Linux tools.
-5. Repeat on the target and record differences.
-6. Integrate the mechanism into the running capstone service.
+The probe creates a pseudo-terminal, applies raw-ish settings to its slave, and
+exchanges bytes through the master. It demonstrates terminal APIs without requiring
+a board or USB adapter.
 
-## Stage Outcomes
+## Serial contract checklist
 
-By the end of this stage, you should be able to:
+| Area | Decision |
+| --- | --- |
+| Device identity | Stable discovery rule, permissions, and reconnect behavior |
+| Electrical mode | Baud, data bits, parity, stop bits, flow control, inversion if applicable |
+| Line discipline | Raw/canonical, echo, signal generation, translations |
+| Framing | Header, length, checksum, delimiter, maximum frame |
+| Timing | Inter-byte, response, transaction, and startup deadlines |
+| Recovery | Flush, reset, reopen, resynchronize, or fail degraded |
+| Ownership | One reader/writer or serialized access; FD and termios owner |
+| Testing | PTY, fake device, fault injection, and real hardware matrix |
 
-- explain and demonstrate tty processes and pseudo-terminals;
-- explain and demonstrate termios and serial configuration;
-- explain and demonstrate serial protocols, timeouts, and testing;
-- connect the mechanism to an embedded Linux failure, test, or service-design decision;
-- produce evidence that distinguishes application, kernel, deployment, and hardware causes.
+## Completion criteria
 
-## Completion Criteria
+You can complete this stage when you can:
 
-- The examples compile with warnings and debug information.
-- Normal, interrupted, missing-resource, and teardown paths are tested.
-- Resource ownership and target assumptions are documented.
-- At least one failure has been diagnosed using observable evidence.
-- The work is linked to the next stage or an existing capstone.
+- distinguish controlling terminals, TTYs, PTYs, and serial devices;
+- configure `termios` without accidentally retaining echo, canonical mode, or flow
+  control from a previous owner;
+- design a bounded serial frame parser with inter-byte and transaction deadlines;
+- recover from framing errors, disconnects, partial responses, and device reset;
+- test protocol logic through a PTY/fake and validate electrical behavior on hardware.
 
-## Related Topics
+## Related topics
 
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
-- [Embedded Linux](../../embedded-linux/index.md)
+- [Stage 7: IPC And Event-Driven Design](../ipc-and-event-driven-design/index.md)
+- [Stage 9: Userspace Networking](../userspace-networking/index.md)
+- [Serial Input, Sensors, And hwmon](../hardware-facing-userspace-and-kernel-uapi/serial-input-sensors-and-hwmon.md)
+- [Signal Model And sigaction](../time-clocks-and-signals/signal-model-and-sigaction.md)
+
+## References
+
+- [`termios(3)`](https://man7.org/linux/man-pages/man3/termios.3.html)
+- [`pty(7)`](https://man7.org/linux/man-pages/man7/pty.7.html)
+- [`tty(4)`](https://man7.org/linux/man-pages/man4/tty.4.html)

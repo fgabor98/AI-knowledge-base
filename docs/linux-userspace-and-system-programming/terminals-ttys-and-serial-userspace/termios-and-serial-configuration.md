@@ -8,79 +8,88 @@ last_reviewed: null
 
 # termios And Serial Configuration
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how canonical/raw mode, echo, baud, parity, flow control, VMIN, and VTIME affect reads. It is part of Stage 8: Terminals, TTYs, And Serial Userspace and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Serial settings persist in the device/driver state for the open session and can be
+inherited from a previous application. If canonical mode, echo, parity, or flow
+control is wrong, the protocol can appear corrupt even when the wiring is correct.
 
-## Core Concepts
+## Configuration sequence
 
-- the termios and serial configuration contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+open device with O_NOCTTY | O_CLOEXEC
+tcgetattr -> save original settings
+modify a copy deliberately
+cfmakeraw or explicit raw settings where appropriate
+set baud/data/parity/stop/flow control
+tcsetattr with chosen timing
+flush only according to protocol policy
+restore settings/close on exit if the device is a terminal
+```
 
-## Learning Outcomes
+Use `O_NOCTTY` when a serial device must not become the process’s controlling
+terminal. Preserve the original settings for interactive devices and restore them on
+all normal cleanup paths. A service may instead own a dedicated port and configure it
+from a known baseline on every open.
 
-After studying this page, you should be able to:
+## Important settings
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+| Setting | Examples | Failure if wrong |
+| --- | --- | --- |
+| Input mode | `IGNBRK`, parity checks, `ISTRIP`, `IXON` | Bytes changed, dropped, or flow-controlled |
+| Output mode | `OPOST`, newline translation | Binary payload altered |
+| Control mode | `CS8`, `CLOCAL`, `CREAD`, parity, `CSTOPB` | Framing mismatch or no receiver |
+| Local mode | `ICANON`, `ECHO`, `ISIG`, `IEXTEN` | Lines/signals/echo instead of raw bytes |
+| Flow control | `CRTSCTS`, `IXON`/`IXOFF` | Deadlock or dropped data |
+| Baud | `cfsetispeed`, `cfsetospeed` | Corruption or no communication |
+| Read timing | `VMIN`, `VTIME` | Unexpected short reads or waits |
 
-## Planned Coverage
+`cfmakeraw` is a useful starting point on systems that provide it, but inspect and
+adjust the result. It does not select the device’s baud or solve protocol timeouts.
+Check every `tcgetattr`, `tcsetattr`, `tcflush`, and modem-control call.
 
-- mental model and vocabulary for termios and serial configuration;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+## Read timing is not framing
 
-## Practical Exercise
+`VMIN`/`VTIME` control when a read returns in noncanonical mode. They do not identify
+the end of a response and may interact with partial bytes and inter-byte gaps. Use a
+parser with an absolute transaction deadline and an inter-byte policy for protocols
+that need one.
 
-configure a serial descriptor and prove its timeout and hangup behavior.
+## Modem control and hangup
 
-Record:
+`CLOCAL`, `HUPCL`, DTR/RTS, carrier detect, and USB-serial behavior vary by device and
+driver. A close may drop modem control lines and reset the attached equipment. Treat
+open/close as a hardware state transition and document it.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## Common mistakes
 
-## Minimal Example
+- Configuring only baud and ignoring line discipline/flow control.
+- Using `cfmakeraw` without checking required parity or modem settings.
+- Treating `VMIN`/`VTIME` as a complete response timeout.
+- Forgetting `O_NOCTTY` in a noninteractive service.
+- Not restoring terminal settings on an interactive tool.
+- Flushing input/output at the wrong protocol boundary.
+- Ignoring configuration return values and continuing with old settings.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+## Debugging checklist
 
-## Common Mistakes
+- Capture before/after `termios` settings and device identity.
+- Check baud, data bits, parity, stop bits, flow control, carrier, and modem lines.
+- Use a logic analyzer or loopback to separate electrical from parser faults.
+- Test short reads, inter-byte gaps, disconnect, hangup, and reopen.
+- Verify the service user’s device permissions and exclusive-access policy.
+- Restore or reinitialize settings after every failed setup path.
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
-
-## Debugging Checklist
-
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
-
-## Related Topics
+## Related topics
 
 - [Stage 8: Terminals, TTYs, And Serial Userspace](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [TTY Processes And Pseudo-terminals](tty-processes-and-pseudo-terminals.md)
+- [Serial Protocols, Timeouts, And Testing](serial-protocols-timeouts-and-testing.md)
+- [Serial Input, Sensors, And hwmon](../hardware-facing-userspace-and-kernel-uapi/serial-input-sensors-and-hwmon.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`termios(3)`](https://man7.org/linux/man-pages/man3/termios.3.html)
+- [`tcsetattr(3)`](https://man7.org/linux/man-pages/man3/tcsetattr.3.html)
+- [`cfmakeraw(3)`](https://man7.org/linux/man-pages/man3/cfmakeraw.3.html)
+- [`serial(4)`](https://man7.org/linux/man-pages/man4/ttyS.4.html)

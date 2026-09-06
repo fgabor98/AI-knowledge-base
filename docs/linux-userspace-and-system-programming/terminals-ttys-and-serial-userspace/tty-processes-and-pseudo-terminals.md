@@ -8,79 +8,95 @@ last_reviewed: null
 
 # TTY Processes And Pseudo-terminals
 
-## What Problem Does This Solve?
+## What problem does this solve?
 
-This page covers how terminals, line disciplines, controlling terminals, and PTYs connect programs. It is part of Stage 8: Terminals, TTYs, And Serial Userspace and focuses on behavior that must remain correct on a constrained or partially available embedded Linux target.
+Terminal behavior depends on sessions, process groups, a controlling terminal, and a
+line discipline. Pseudo-terminals (PTYs) reproduce this behavior for SSH, terminal
+emulators, tests, and expect-like tools without requiring physical hardware.
 
-## Core Concepts
+## TTY roles
 
-- the tty processes and pseudo-terminals contract;
-- ownership, lifetime, blocking, and failure behavior;
-- the relevant POSIX or Linux interfaces;
-- target differences in libc, kernel configuration, architecture, and rootfs;
-- observability, testing, and recovery requirements.
+```text
+terminal emulator / SSH / PTY master
+              |
+              v
+        PTY slave (TTY device)
+              |
+              v
+       session leader / shell / foreground process group
+```
 
-## Learning Outcomes
+The PTY master is controlled by the emulator or test harness. The slave looks like a
+terminal to the shell or program. The line discipline sits between them and can
+perform canonical input buffering, echo, special-character handling, and signal
+generation.
 
-After studying this page, you should be able to:
+## Controlling terminal
 
-- explain the mechanism without confusing libc behavior with kernel behavior;
-- identify preconditions, outputs, side effects, and failure returns;
-- write a minimal C example with explicit cleanup and bounded resources;
-- inspect the behavior on a host and on an embedded target;
-- choose an appropriate recovery and diagnostic strategy.
+A session can have one controlling terminal. The terminal tracks a foreground process
+group. Input and terminal-generated signals go to that group; background access may
+produce `SIGTTIN`/`SIGTTOU`. A service should not depend on a controlling terminal;
+interactive tools may deliberately require one.
 
-## Planned Coverage
+Inspect:
 
-- mental model and vocabulary for tty processes and pseudo-terminals;
-- API synopsis, feature-test requirements, and relevant data types;
-- normal path, partial success, interruption, timeout, cancellation, and teardown;
-- concurrency and ownership rules;
-- target-specific constraints and security implications;
-- host-side test doubles or fixtures where useful;
-- integration with drivers, services, Build Systems, and debugging workflows.
+```sh
+ps -o pid,ppid,pgid,sid,tpgid,stat,tty,cmd
+tty
+stty -a
+ls -l /dev/pts
+mountpoint /dev/pts
+```
 
-## Practical Exercise
+`/dev/pts` is a devpts filesystem. Its availability and mount options are part of a
+container or target rootfs contract.
 
-use a PTY pair to test a command-line or serial-like program deterministically.
+## Canonical and raw input
 
-Record:
+Canonical mode buffers input until a line delimiter and interprets special characters.
+Noncanonical mode returns based on `VMIN` and `VTIME`, but these settings are not a
+complete transaction timeout. A raw serial protocol normally disables canonical
+processing, echo, signal characters, and unwanted input/output translations, then
+adds its own framing and deadline logic.
 
-- the exact target, kernel, libc, and configuration;
-- the successful path and at least three failure paths;
-- descriptor, memory, thread, and persistent-state ownership;
-- logs, return values, timing, and other evidence;
-- the final cleanup and recovery behavior.
+## PTY lifecycle
 
-## Minimal Example
+Create a PTY master, obtain/unlock the slave, and give the slave to the child or test
+subject. The master observes the subject’s output and supplies input. Closing one side
+produces hangup/EOF behavior that differs from a clean protocol close; test both.
 
-~~~text
-Add the smallest host-side C example that demonstrates the contract, one failure path, and deterministic cleanup.
-~~~
+PTYs are not electrically faithful serial ports. They do not model baud timing,
+parity errors, UART FIFO behavior, USB latency, power loss, or modem control lines.
+They are ideal for line discipline, framing, command/response, and process-lifecycle
+tests.
 
-## Common Mistakes
+## Common mistakes
 
-- treating a successful return as proof that the whole operation completed;
-- ignoring interruption, partial progress, lifetime, or cleanup behavior;
-- assuming desktop Linux behavior or privileges exist on the target;
-- using a private workaround where a documented POSIX, Linux, or subsystem interface exists.
+- Assuming a TTY is a raw byte stream.
+- Leaving echo or canonical mode enabled for a binary protocol.
+- Ignoring controlling-terminal and foreground-process-group rules.
+- Treating PTY tests as proof of UART electrical behavior.
+- Forgetting `/dev/pts` mount and namespace requirements.
+- Closing the master/slave side without testing resulting HUP/EOF behavior.
 
-## Debugging Checklist
+## Debugging checklist
 
-- Check the target kernel, libc, architecture, rootfs, and feature configuration.
-- Check every return value, errno, timeout, signal, and cleanup operation.
-- Inspect procfs, sysfs, descriptors, service state, and logs.
-- Reproduce with the smallest possible host fixture before involving the whole product.
-- Test restart, missing resources, full storage, disconnection, and power-cycle behavior where relevant.
+- Record device path, session, PGID, foreground TPGID, and line discipline.
+- Capture `stty -a`/`termios` settings before and after configuration.
+- Inspect `/dev/pts`, mount namespace, permissions, and process groups.
+- Test canonical/raw, echo, signal characters, HUP, EOF, and background access.
+- Separate PTY protocol evidence from physical UART/USB evidence.
 
-## Related Topics
+## Related topics
 
 - [Stage 8: Terminals, TTYs, And Serial Userspace](index.md)
-- [Linux Userspace And System Programming](../index.md)
-- [C Programming](../../c/index.md)
-- [Linux Kernel Programming](../../linux-kernel/index.md)
+- [termios And Serial Configuration](termios-and-serial-configuration.md)
+- [Sessions, Process Groups, And Job Control](../processes-and-program-lifetime/sessions-process-groups-and-job-control.md)
+- [Serial Protocols, Timeouts, And Testing](serial-protocols-timeouts-and-testing.md)
 
 ## References
 
-- Relevant Linux manual pages in sections 2, 3, 5, and 7.
-- Relevant kernel UAPI, libc, POSIX, and target-platform documentation.
+- [`pty(7)`](https://man7.org/linux/man-pages/man7/pty.7.html)
+- [`termios(3)`](https://man7.org/linux/man-pages/man3/termios.3.html)
+- [`credentials(7)`](https://man7.org/linux/man-pages/man7/credentials.7.html)
+- [`devpts(5)`](https://man7.org/linux/man-pages/man5/devpts.5.html)
