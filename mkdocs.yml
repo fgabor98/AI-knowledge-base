@@ -398,7 +398,137 @@ nav:
           - Build CI For Embedded Linux: build-systems/advanced/build-ci-for-embedded-linux.md
       - Build Systems For Embedded Linux: build-systems/embedded-linux-roadmap.md
   - Linux Userspace And System Programming:
-      - linux-userspace-and-system-programming/index.md
+      - "Overview": linux-userspace-and-system-programming/index.md
+      - "Environment And Mental Model":
+          - "Overview": linux-userspace-and-system-programming/environment-and-mental-model/index.md
+          - "Userspace, Kernel, And Hardware Boundary": linux-userspace-and-system-programming/environment-and-mental-model/userspace-kernel-and-hardware-boundary.md
+          - "POSIX, Linux, libc, And Manual Pages": linux-userspace-and-system-programming/environment-and-mental-model/posix-linux-libc-and-manual-pages.md
+          - "Host, Target, ABI, And Rootfs Lab": linux-userspace-and-system-programming/environment-and-mental-model/host-target-abi-and-rootfs-lab.md
+          - "Blocking, Failure, And Ownership Model": linux-userspace-and-system-programming/environment-and-mental-model/blocking-failure-and-ownership-model.md
+      - "Linux Runtime, Filesystem, And Rootfs":
+          - "Overview": linux-userspace-and-system-programming/linux-runtime-filesystem-and-rootfs/index.md
+          - "Filesystem Hierarchy And Path Resolution": linux-userspace-and-system-programming/linux-runtime-filesystem-and-rootfs/filesystem-hierarchy-and-path-resolution.md
+          - "Files, Inodes, Metadata, And Links": linux-userspace-and-system-programming/linux-runtime-filesystem-and-rootfs/files-inodes-metadata-and-links.md
+          - "Safe Paths And Temporary File Operations": linux-userspace-and-system-programming/linux-runtime-filesystem-and-rootfs/safe-path-and-temporary-file-operations.md
+          - "Pseudo-filesystems And Device Nodes": linux-userspace-and-system-programming/linux-runtime-filesystem-and-rootfs/pseudo-filesystems-and-device-nodes.md
+          - "Mounts, Initramfs, And Rootfs Layout": linux-userspace-and-system-programming/linux-runtime-filesystem-and-rootfs/mounts-initramfs-and-rootfs-layout.md
+          - "Read-Only Rootfs, Overlayfs, And Persistent State": linux-userspace-and-system-programming/linux-runtime-filesystem-and-rootfs/read-only-rootfs-overlayfs-and-persistent-state.md
+          - "ELF Executables And Dynamic Linking": linux-userspace-and-system-programming/linux-runtime-filesystem-and-rootfs/elf-executables-and-dynamic-linking.md
+      - "Processes And Program Lifetime":
+          - "Overview": linux-userspace-and-system-programming/processes-and-program-lifetime/index.md
+          - "Process Model And Identifiers": linux-userspace-and-system-programming/processes-and-program-lifetime/process-model-and-identifiers.md
+          - "fork, exec, And posix_spawn": linux-userspace-and-system-programming/processes-and-program-lifetime/fork-exec-and-spawn.md
+          - "Exit, Waiting, And Zombies": linux-userspace-and-system-programming/processes-and-program-lifetime/exit-waiting-and-zombies.md
+          - "Sessions, Process Groups, And Job Control": linux-userspace-and-system-programming/processes-and-program-lifetime/sessions-process-groups-and-job-control.md
+          - "/proc Process Observation And Control": linux-userspace-and-system-programming/processes-and-program-lifetime/proc-process-observation-and-control.md
+      - "System Calls, Files, And File Descriptors":
+          - "Overview": linux-userspace-and-system-programming/system-calls-files-and-file-descriptors/index.md
+          - "System-Call Contracts And Errors": linux-userspace-and-system-programming/system-calls-files-and-file-descriptors/system-call-contracts-and-errors.md
+          - "File Descriptors And Open-File Descriptions": linux-userspace-and-system-programming/system-calls-files-and-file-descriptors/file-descriptors-and-open-file-descriptions.md
+          - "Descriptor Inheritance And Redirection": linux-userspace-and-system-programming/system-calls-files-and-file-descriptors/descriptor-inheritance-and-redirection.md
+          - "Regular-File I/O And Metadata": linux-userspace-and-system-programming/system-calls-files-and-file-descriptors/regular-file-io-and-metadata.md
+          - "Durability, Locking, And Power Loss": linux-userspace-and-system-programming/system-calls-files-and-file-descriptors/durability-locking-and-power-loss.md
+          - "Pipes, FIFOs, And Backpressure": linux-userspace-and-system-programming/system-calls-files-and-file-descriptors/pipes-fifos-and-backpressure.md
+          - "Blocking, Nonblocking, And Partial I/O": linux-userspace-and-system-programming/system-calls-files-and-file-descriptors/blocking-nonblocking-and-partial-io.md
+      - "Process Memory And Mapping":
+          - "Overview": linux-userspace-and-system-programming/process-memory-and-mapping/index.md
+          - "Process Address Space": linux-userspace-and-system-programming/process-memory-and-mapping/process-address-space.md
+          - "mmap, Files, And Shared Memory": linux-userspace-and-system-programming/process-memory-and-mapping/mmap-files-and-shared-memory.md
+          - "Memory Protection And Process Hardening": linux-userspace-and-system-programming/process-memory-and-mapping/memory-protection-and-hardening.md
+          - "Memory Pressure, OOM, And Real-Time Constraints": linux-userspace-and-system-programming/process-memory-and-mapping/memory-pressure-oom-and-realtime.md
+      - "Time, Clocks, And Signals":
+          - "Overview": linux-userspace-and-system-programming/time-clocks-and-signals/index.md
+          - "Clocks, Time Bases, And Deadlines": linux-userspace-and-system-programming/time-clocks-and-signals/clocks-time-bases-and-deadlines.md
+          - "Timers And Periodic Work": linux-userspace-and-system-programming/time-clocks-and-signals/timers-and-periodic-work.md
+          - "Signal Model And sigaction": linux-userspace-and-system-programming/time-clocks-and-signals/signal-model-and-sigaction.md
+          - "Signal-Safe Shutdown And Event Integration": linux-userspace-and-system-programming/time-clocks-and-signals/signal-safe-shutdown-and-event-integration.md
+      - "Threads And Userspace Concurrency":
+          - "Overview": linux-userspace-and-system-programming/threads-and-userspace-concurrency/index.md
+          - "pthread Lifecycle And Thread Attributes": linux-userspace-and-system-programming/threads-and-userspace-concurrency/pthread-lifecycle-and-thread-attributes.md
+          - "Mutexes, Condition Variables, And Semaphores": linux-userspace-and-system-programming/threads-and-userspace-concurrency/mutexes-condition-variables-and-semaphores.md
+          - "Atomics, Memory Ordering, And Reentrancy": linux-userspace-and-system-programming/threads-and-userspace-concurrency/atomics-memory-ordering-and-reentrancy.md
+          - "Worker Pools, Bounded Queues, And Backpressure": linux-userspace-and-system-programming/threads-and-userspace-concurrency/worker-pools-bounded-queues-and-backpressure.md
+          - "Cancellation, Priority, And Real-Time Scheduling": linux-userspace-and-system-programming/threads-and-userspace-concurrency/cancellation-priority-and-realtime-scheduling.md
+      - "IPC And Event-Driven Design":
+          - "Overview": linux-userspace-and-system-programming/ipc-and-event-driven-design/index.md
+          - "IPC Selection And Failure Models": linux-userspace-and-system-programming/ipc-and-event-driven-design/ipc-selection-and-failure-models.md
+          - "Pipes, socketpairs, And Unix Sockets": linux-userspace-and-system-programming/ipc-and-event-driven-design/pipes-socketpairs-and-unix-sockets.md
+          - "Shared Memory And Zero-Copy IPC": linux-userspace-and-system-programming/ipc-and-event-driven-design/shared-memory-and-zero-copy-ipc.md
+          - "eventfd, timerfd, signalfd, And inotify": linux-userspace-and-system-programming/ipc-and-event-driven-design/eventfd-timerfd-signalfd-and-inotify.md
+          - "IPC Protocols And Versioning": linux-userspace-and-system-programming/ipc-and-event-driven-design/ipc-protocols-and-versioning.md
+          - "Credentials, Authentication, And Peer Lifecycle": linux-userspace-and-system-programming/ipc-and-event-driven-design/credentials-authentication-and-peer-lifecycle.md
+          - "Event Loops: select, poll, And epoll": linux-userspace-and-system-programming/ipc-and-event-driven-design/event-loops-select-poll-and-epoll.md
+      - "Terminals, TTYs, And Serial Userspace":
+          - "Overview": linux-userspace-and-system-programming/terminals-ttys-and-serial-userspace/index.md
+          - "TTY Processes And Pseudo-terminals": linux-userspace-and-system-programming/terminals-ttys-and-serial-userspace/tty-processes-and-pseudo-terminals.md
+          - "termios And Serial Configuration": linux-userspace-and-system-programming/terminals-ttys-and-serial-userspace/termios-and-serial-configuration.md
+          - "Serial Protocols, Timeouts, And Testing": linux-userspace-and-system-programming/terminals-ttys-and-serial-userspace/serial-protocols-timeouts-and-testing.md
+      - "Userspace Networking":
+          - "Overview": linux-userspace-and-system-programming/userspace-networking/index.md
+          - "Socket Lifecycle And Addresses": linux-userspace-and-system-programming/userspace-networking/socket-lifecycle-and-addresses.md
+          - "TCP Streams And Reconnect": linux-userspace-and-system-programming/userspace-networking/tcp-streams-and-reconnect.md
+          - "UDP Datagrams And Multicast": linux-userspace-and-system-programming/userspace-networking/udp-datagrams-and-multicast.md
+          - "IPv4, IPv6, DNS, And Interface Binding": linux-userspace-and-system-programming/userspace-networking/ipv4-ipv6-dns-and-interface-binding.md
+          - "Socket Options, TLS, And Network Diagnostics": linux-userspace-and-system-programming/userspace-networking/socket-options-tls-and-network-diagnostics.md
+      - "Hardware-Facing Userspace And Kernel UAPI":
+          - "Overview": linux-userspace-and-system-programming/hardware-facing-userspace-and-kernel-uapi/index.md
+          - "Kernel Versus Userspace Boundary": linux-userspace-and-system-programming/hardware-facing-userspace-and-kernel-uapi/kernel-versus-userspace-boundary.md
+          - "devfs, sysfs, udev, And Device Discovery": linux-userspace-and-system-programming/hardware-facing-userspace-and-kernel-uapi/devfs-sysfs-udev-and-discovery.md
+          - "Standard UAPI Operation Patterns": linux-userspace-and-system-programming/hardware-facing-userspace-and-kernel-uapi/standard-uapi-operation-patterns.md
+          - "ioctl ABI And Compatibility": linux-userspace-and-system-programming/hardware-facing-userspace-and-kernel-uapi/ioctl-abi-and-compatibility.md
+          - "poll, mmap, And Device Events": linux-userspace-and-system-programming/hardware-facing-userspace-and-kernel-uapi/poll-mmap-and-device-events.md
+          - "GPIO, I2C, And SPI Userspace": linux-userspace-and-system-programming/hardware-facing-userspace-and-kernel-uapi/gpio-i2c-and-spi-userspace.md
+          - "Serial, Input, Sensors, And hwmon": linux-userspace-and-system-programming/hardware-facing-userspace-and-kernel-uapi/serial-input-sensors-and-hwmon.md
+          - "CAN, Watchdog, And Control Interfaces": linux-userspace-and-system-programming/hardware-facing-userspace-and-kernel-uapi/can-watchdog-and-control-interfaces.md
+          - "Specialized UAPI: V4L2, ALSA, DRM, UIO, And VFIO": linux-userspace-and-system-programming/hardware-facing-userspace-and-kernel-uapi/specialized-uapi-v4l2-alsa-drm-uio-vfio.md
+      - "Services, Init, And systemd":
+          - "Overview": linux-userspace-and-system-programming/services-init-and-systemd/index.md
+          - "PID 1, Init, And Early Userspace": linux-userspace-and-system-programming/services-init-and-systemd/pid1-init-and-early-userspace.md
+          - "systemd Units, Dependencies, And Ordering": linux-userspace-and-system-programming/services-init-and-systemd/systemd-units-dependencies-and-ordering.md
+          - "Service Lifecycle, Readiness, And Restart": linux-userspace-and-system-programming/services-init-and-systemd/service-lifecycle-readiness-and-restart.md
+          - "Logging, tmpfiles, And Watchdogs": linux-userspace-and-system-programming/services-init-and-systemd/logging-tmpfiles-and-watchdogs.md
+          - "Service Sandboxing And Resource Controls": linux-userspace-and-system-programming/services-init-and-systemd/service-sandboxing-and-resource-controls.md
+      - "Identity, Privilege, And Userspace Security":
+          - "Overview": linux-userspace-and-system-programming/identity-privilege-and-userspace-security/index.md
+          - "Linux Credentials, Permissions, And ACLs": linux-userspace-and-system-programming/identity-privilege-and-userspace-security/linux-credentials-permissions-and-acls.md
+          - "Capabilities And Privilege Dropping": linux-userspace-and-system-programming/identity-privilege-and-userspace-security/capabilities-and-privilege-dropping.md
+          - "Namespaces And cgroups": linux-userspace-and-system-programming/identity-privilege-and-userspace-security/namespaces-and-cgroups.md
+          - "seccomp, LSM, And Service Isolation": linux-userspace-and-system-programming/identity-privilege-and-userspace-security/seccomp-lsm-and-service-isolation.md
+          - "Secure Userspace Input And Files": linux-userspace-and-system-programming/identity-privilege-and-userspace-security/secure-userspace-input-and-files.md
+      - "Persistent State, Storage, And Power-Loss Behavior":
+          - "Overview": linux-userspace-and-system-programming/persistent-state-storage-and-power-loss/index.md
+          - "State Classes And Storage Policy": linux-userspace-and-system-programming/persistent-state-storage-and-power-loss/state-classes-and-storage-policy.md
+          - "Atomic Persistence And Schema Migration": linux-userspace-and-system-programming/persistent-state-storage-and-power-loss/atomic-persistence-and-schema-migration.md
+          - "Embedded Filesystems, Wear, And Durability": linux-userspace-and-system-programming/persistent-state-storage-and-power-loss/embedded-filesystems-wear-and-durability.md
+          - "Updates, Rollback, And Recovery State": linux-userspace-and-system-programming/persistent-state-storage-and-power-loss/updates-rollback-and-recovery-state.md
+      - "Diagnostics, Debugging, And Performance":
+          - "Overview": linux-userspace-and-system-programming/diagnostics-debugging-and-performance/index.md
+          - "Userspace Failure Taxonomy And Evidence": linux-userspace-and-system-programming/diagnostics-debugging-and-performance/userspace-failure-taxonomy-and-evidence.md
+          - "strace, procfs, And Runtime Inspection": linux-userspace-and-system-programming/diagnostics-debugging-and-performance/strace-procfs-and-runtime-inspection.md
+          - "GDB, Core Dumps, And Symbols": linux-userspace-and-system-programming/diagnostics-debugging-and-performance/gdb-core-dumps-and-symbols.md
+          - "ELF, ABI, And Loader Diagnostics": linux-userspace-and-system-programming/diagnostics-debugging-and-performance/elf-abi-and-loader-diagnostics.md
+          - "Userspace Performance And Resource Measurement": linux-userspace-and-system-programming/diagnostics-debugging-and-performance/userspace-performance-and-resource-measurement.md
+          - "Target Hardware And Cross-Layer Debugging": linux-userspace-and-system-programming/diagnostics-debugging-and-performance/target-hardware-and-cross-layer-debugging.md
+      - "Cross-Compilation, Packaging, And Target Integration":
+          - "Overview": linux-userspace-and-system-programming/cross-compilation-packaging-and-target-integration/index.md
+          - "Target Triples, Sysroots, And ABI": linux-userspace-and-system-programming/cross-compilation-packaging-and-target-integration/target-triples-sysroots-and-abi.md
+          - "Dynamic Loader And Library Deployment": linux-userspace-and-system-programming/cross-compilation-packaging-and-target-integration/dynamic-loader-and-library-deployment.md
+          - "Installation Layout And Package Integration": linux-userspace-and-system-programming/cross-compilation-packaging-and-target-integration/installation-layout-and-package-integration.md
+          - "Yocto Application And Service Integration": linux-userspace-and-system-programming/cross-compilation-packaging-and-target-integration/yocto-application-and-service-integration.md
+          - "Artifacts, Provenance, And Release Identity": linux-userspace-and-system-programming/cross-compilation-packaging-and-target-integration/artifacts-provenance-and-release-identity.md
+      - "Testing And Verification":
+          - "Overview": linux-userspace-and-system-programming/testing-and-verification/index.md
+          - "Testable Userspace Architecture": linux-userspace-and-system-programming/testing-and-verification/testable-userspace-architecture.md
+          - "Host Fixtures, Fakes, And Simulators": linux-userspace-and-system-programming/testing-and-verification/host-fixtures-fakes-and-simulators.md
+          - "Unit, Integration, Sanitizer, And Fuzz Testing": linux-userspace-and-system-programming/testing-and-verification/unit-integration-sanitizer-and-fuzz-testing.md
+          - "Target Boot And Device Integration Tests": linux-userspace-and-system-programming/testing-and-verification/target-boot-and-device-integration-tests.md
+          - "Lifecycle, Update, And Hardware-in-the-Loop Tests": linux-userspace-and-system-programming/testing-and-verification/lifecycle-update-and-hardware-in-the-loop-tests.md
+      - "Design And Architecture Patterns":
+          - "Overview": linux-userspace-and-system-programming/design-and-architecture-patterns/index.md
+          - "Utility, Daemon, And Process Boundaries": linux-userspace-and-system-programming/design-and-architecture-patterns/utility-daemon-and-process-boundaries.md
+          - "Synchronous Versus Event-Driven Architecture": linux-userspace-and-system-programming/design-and-architecture-patterns/synchronous-versus-event-driven-architecture.md
+          - "Hardware Service State Machines And Recovery": linux-userspace-and-system-programming/design-and-architecture-patterns/hardware-service-state-machines-and-recovery.md
+          - "Design Review And Userspace Contracts": linux-userspace-and-system-programming/design-and-architecture-patterns/design-review-and-userspace-contracts.md
   - Debugging And Diagnostics:
       - debugging/index.md
   - Networking:
