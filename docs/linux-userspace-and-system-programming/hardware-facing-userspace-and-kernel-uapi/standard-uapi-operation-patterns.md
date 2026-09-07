@@ -58,6 +58,24 @@ Use an explicit state machine: disconnected, opened, configured, active, faulted
 recovering. On reset or unplug, stop requests, invalidate buffers, close/reopen if
 safe, re-query capabilities, and reject late completions from the old generation.
 
+## Failure during partial initialization
+
+Suppose discovery and open succeed, three buffers are mapped, and enabling the
+device fails. Record each acquired resource as it becomes owned. Cleanup must
+release exactly those resources and preserve the enable error, while separately
+reporting a failed stop/unmap/close if it affects recovery.
+
+Do not enter the normal read loop merely because an FD exists. Distinguish
+`OPEN`, `CONFIGURED`, and `ACTIVE`, and reject commands inappropriate to
+the current state. During recovery, repeat capability negotiation because
+firmware, device identity, or available formats may have changed.
+
+An operation table should include a side-effect column. A failed query often
+has no product effect; a failed write or ioctl may leave hardware partly
+configured. For the latter, read back state, perform a documented reset, or
+mark the outcome unknown before accepting further commands. Host fakes should
+model each failure boundary so rollback is exercised before target testing.
+
 ## Common mistakes
 
 - Assuming all device files support ordinary file semantics.

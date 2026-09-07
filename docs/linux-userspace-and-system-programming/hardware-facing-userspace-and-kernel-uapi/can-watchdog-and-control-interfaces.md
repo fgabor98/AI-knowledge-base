@@ -50,6 +50,26 @@ Reset, power, actuator, and safety controls need authorization, rate limits, saf
 defaults, and idempotence. Treat a command accepted by the driver as distinct from
 the physical state reached. On shutdown or fault, drive the documented safe state.
 
+## Distinguish the two watchdog layers
+
+A service-manager watchdog checks one application's notifications. A hardware
+watchdog checks that its owner continues feeding a device and can reset the
+machine. Assign a single owner to each; PID 1 may supervise applications and
+own the hardware watchdog independently.
+
+Opening `/dev/watchdog*` may arm a timer. Reading watchdog documentation or
+sysfs identity is appropriate for discovery; opening the device is an operation
+with consequences. If `nowayout` is enabled, ordinary close will not disarm
+it. Magic-close behavior depends on driver support and policy. Design tests
+with a recovery console and a known reset outcome.
+
+SocketCAN applications should distinguish classic CAN and CAN FD payload
+limits and structures. Query/enable the required socket mode, interpret
+identifier flags separately from identifier bits, and subscribe to error
+frames deliberately. A successful send does not prove another ECU applied the
+command. Bus-off recovery also belongs to an explicit interface-owner policy:
+two services trying to restart a shared interface can disrupt each other.
+
 ## Common mistakes
 
 - Treating CAN send as remote acknowledgement.

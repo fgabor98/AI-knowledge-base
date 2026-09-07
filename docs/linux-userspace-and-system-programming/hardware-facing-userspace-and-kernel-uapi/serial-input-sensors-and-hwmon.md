@@ -31,6 +31,33 @@ Validate event type/code, payload size, sign, scale, unit, range, timestamp doma
 sequence, and freshness. Distinguish a valid zero from missing data and a stale
 cached value. Sensor conversion/calibration policy belongs in an explicit layer.
 
+## Interpreting a sample through three subsystems
+
+For evdev, consume `struct input_event` records using the target headers and
+group changes through `EV_SYN/SYN_REPORT`. On `SYN_DROPPED`, discard events
+through the next synchronization report and query current device state using
+the applicable `EVIOCG*` operations. Otherwise a dropped key-release event
+can leave the application believing a key is still pressed.
+See [input event codes](https://docs.kernel.org/input/event-codes.html).
+
+For IIO, first establish whether the channel is raw, processed, or buffered.
+A documented raw conversion commonly follows `(raw + offset) * scale`;
+verify the specific channel ABI and units. Buffered scans need the enabled
+channel indices, storage bits, real bits, shifts, endianness, and alignment.
+Do not assume a tightly packed array of native integers or that every channel
+has the same scale.
+
+For hwmon, a temperature input commonly represents millidegrees Celsius:
+`42000` corresponds to 42 °C for an attribute with that documented unit.
+Other channel classes use different units. Discover the device's `name`,
+parent path and channel labels, then read the attribute's contract. An open
+path or numeric zero is not a freshness guarantee.
+
+A useful test feeds the product layer the same physical quantity via three
+adapters and checks identical units, validity, and age semantics. Keep raw
+values beside converted values in failure evidence so scaling mistakes remain
+diagnosable.
+
 ## Common mistakes
 
 - Hard-coding hwmon index or channel order.

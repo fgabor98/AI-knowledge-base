@@ -43,6 +43,30 @@ with container/group/device ownership and DMA restrictions. Neither justifies ma
 arbitrary physical memory. Review isolation, reset, interrupt, and device ownership
 before deployment.
 
+## A streaming buffer's lifetime
+
+For V4L2 capture, a typical memory-mapped workflow is capability query, format
+negotiation, `REQBUFS`, `QUERYBUF`, mappings, initial `QBUF`, and
+`STREAMON`. Readiness allows attempting `DQBUF`; validate the returned
+index, bytes used, flags and timestamp before processing. `QBUF` hands
+ownership back, so a worker must finish accessing the frame before requeue.
+A copied thumbnail may have a simpler lifetime than a borrowed full frame.
+
+For ALSA, count **frames**: one frame contains one sample per channel. Convert
+frames to bytes using negotiated format and channel count. Handle short frame
+counts and state-specific recovery such as underrun/overrun. Restarting a PCM
+stream may discard continuity, which should appear in the application's timeline.
+
+For DRM, successful nonblocking submission and page-flip/fence completion are
+different milestones. Retain buffers until the documented release condition;
+recycling them immediately after submission can corrupt scanout.
+
+UIO does not itself provide DMA isolation. VFIO's traditional group/container
+interface and newer device/IOMMU interfaces must be selected for the deployed
+kernel. Inspect isolation boundaries and reset effects on other functions.
+These are specialist driver architectures with an explicit hardware ownership
+contract, not ordinary unprivileged file access.
+
 ## Common mistakes
 
 - Treating subsystem indices/names as stable hardware identity.

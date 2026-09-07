@@ -42,6 +42,36 @@ Document `EINVAL`, `ENOTTY`, `ENODEV`, `EFAULT`, `EINTR`, `EAGAIN`, and device-s
 errors. Define whether an error can follow a partial side effect and how the caller
 reconciles state. The ioctl number alone is not the protocol.
 
+## Example of a layout that can be reviewed
+
+An illustrative new interface might expose a fixed-size information record:
+
+```c
+struct sensor_info {
+    __u32 features;
+    __u32 max_samples;
+    __aligned_u64 sample_period_ns;
+    __u32 reserved[4];
+};
+```
+
+The header would include `linux/types.h`; both sides agree on offsets,
+size, units, reserved-field rules, and command encoding. Compile assertions
+for `sizeof` and `offsetof` in both supported data models. The example
+does not allocate a globally valid ioctl number.
+
+`_IOR` means the caller reads data from the kernel; `_IOW` means the caller
+supplies data. Pass the **type**, not `sizeof(type)`, as the macro's final
+argument. Generic ioctl dispatch does not automatically validate every argument
+or enforce this layout; the implementing subsystem must do so.
+See the [kernel ioctl guidance](https://docs.kernel.org/driver-api/ioctl.html).
+
+Changing the structure size can change the encoded request number. Preserve
+the old operation and add a new command or a documented extensibility scheme.
+A field called `version` does not by itself solve incompatible layouts.
+Opaque handles, offsets, and user addresses are different meanings even if all
+use 64 bits: document which one each field contains.
+
 ## Common mistakes
 
 - Copying compiler-layout structs with pointers or implicit padding.

@@ -56,6 +56,24 @@ capabilities, and namespace view. Treat all device data as untrusted and validat
 length, ranges, status, sequence, and timestamps. A writable UAPI can be equivalent
 to hardware privilege.
 
+## A boundary decision worked through
+
+Consider a sensor with an interrupt, a FIFO, and product-specific alert rules.
+The kernel driver manages interrupt delivery, bus transactions, power state,
+and a standard IIO buffer interface. Userspace configures sampling, validates
+and converts readings, chooses thresholds, persists product settings, and
+reports alerts. This gives one hardware owner and independently testable policy.
+
+A low-rate prototype might use i2c-dev if its ownership and timing requirements
+permit it. A device requiring precise interrupt response or safe DMA typically
+needs a kernel subsystem driver or a deliberately isolated userspace driver
+framework. UIO/VFIO are supported exceptions to the usual partition, with
+explicit reset, memory, and privilege responsibilities.
+
+Write the decision as requirements and evidence: maximum sample latency,
+permitted lost samples, other clients, suspend/resume, fault recovery, and
+required privileges. “It can be accessed from C” answers none of these.
+
 ## Common mistakes
 
 - Treating `/dev` access as direct register access.

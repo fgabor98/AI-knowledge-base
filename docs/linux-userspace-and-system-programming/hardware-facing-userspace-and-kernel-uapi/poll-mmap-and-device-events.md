@@ -40,6 +40,25 @@ Events can coalesce, overflow, or become stale after reset. Use sequence numbers
 state queries. On disconnect/reset, stop queues, invalidate buffers, and reject old
 generation completions.
 
+## Separate notification, ownership, and data visibility
+
+A useful capture trace records four events: buffer submitted, readiness
+reported, buffer ownership returned, and buffer released by the consumer.
+These are not interchangeable timestamps. Readiness can race with another
+consumer; a nonblocking dequeue may still return `EAGAIN`.
+
+Keep mapping lifetime separate from buffer ownership. A mapping may remain
+valid while the application is forbidden to touch a queued buffer. Conversely,
+a device reset may invalidate the logical contents while the virtual mapping
+still exists. On shutdown, stop production through the subsystem, resolve
+outstanding buffer ownership, join consumers, then unmap.
+
+The correct cache operation comes from the particular UAPI. `msync` is not
+a generic DMA cache-flush primitive, and `volatile` cannot establish a
+device's ownership transition. Test a slow consumer and reset while several
+buffers are queued; the expected result is bounded resource use and explicit
+discontinuity, not reuse of an old frame as a new sample.
+
 ## Common mistakes
 
 - Treating readiness as data completion.

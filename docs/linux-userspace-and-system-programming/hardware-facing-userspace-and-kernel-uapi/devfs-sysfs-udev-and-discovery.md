@@ -55,6 +55,25 @@ Open only after required device readiness. If a device can disappear, handle
 `ENODEV`, HUP, reset, and stale configuration. Do not rely on one udev event to prove
 firmware load, calibration, or power readiness; query the subsystem.
 
+## Reconcile discovery with hotplug
+
+The historical devfs filesystem and current devtmpfs are different facilities;
+modern Linux deployments normally use devtmpfs with userspace naming policy.
+A sysfs object may exist before its driver is bound, so node creation, binding,
+firmware initialization, and functional readiness must be checked separately.
+
+Avoid the race “enumerate devices, then subscribe to changes”: a removal can
+occur between those steps. Subscribe, enumerate, then reconcile queued events
+with the current topology. Treat add/remove events as hints to re-evaluate
+identity and capability, and make duplicate events harmless.
+
+For a USB serial adapter, compare its configured identity and physical parent
+path before associating it with a logical device. Serial numbers can be absent
+or duplicated; a product may deliberately choose a physical port identity.
+After reconnect, allocate a new session generation even if the symlink and
+major/minor look unchanged. Existing FDs do not retarget themselves to the
+replacement device.
+
 ## Common mistakes
 
 - Hard-coding unstable enumeration names.
