@@ -1,3 +1,11 @@
+---
+status: draft
+reviewed: false
+domain: linux-userspace
+difficulty: advanced
+last_reviewed: null
+---
+
 # State Classes And Storage Policy
 
 ## Classify before choosing a file
@@ -27,3 +35,40 @@ Use separate directories, quotas, and permissions for unrelated classes. A servi
 ## Operational discipline
 
 Never assume storage is infinite or healthy. Monitor free space, write failures, filesystem read-only transitions, and accumulated update generations. Expose a clear state such as `valid`, `defaulted`, `migrating`, or `degraded`; silent fallback makes field diagnosis much harder.
+
+## Example storage contract
+
+| Record | Location policy | Writer | Failure behavior |
+| --- | --- | --- | --- |
+| Installed defaults | Immutable application data | Image builder | Reject incompatible image |
+| User settings | Dedicated persistent state | Configuration owner | Keep last validated generation |
+| Control socket | Private `/run` directory | Service instance | Recreate after proving ownership |
+| Derived index | Bounded cache partition/directory | Cache worker | Rebuild from authoritative data |
+| Device identity | Provisioning-owned storage | Provisioning workflow | Fail identity-dependent operations |
+| Crash evidence | Quota-limited diagnostics | Collector | Preserve first cause; report truncation |
+
+These are policy choices, not mandatory paths. Write down which records survive
+a service restart, reboot, firmware rollback and factory reset. Keep defaults
+distinct from user modifications so an update can supply new defaults without
+silently replacing a user's choice.
+
+## Locks and replaceable state
+
+A lock on the current data inode does not necessarily protect the replacement
+inode installed by rename. Use a separate stable lock object or one writer
+service for the entire read-modify-write transaction. All writers must follow
+the same protocol.
+
+A PID file is diagnostic metadata, not exclusive ownership. PID reuse and
+crashes make existence checks unreliable. Similarly, unlinking a Unix socket
+path just because a connection attempt failed can race another starter.
+Prefer supervisor-owned runtime directories and explicit instance ownership.
+
+A missing persistent mount must not cause writes into an underlying empty
+directory on the root filesystem. Verify the expected storage identity before
+accepting mutations, and expose read-only/degraded operation when it is absent.
+
+## Related topics
+
+- [Stage 13 overview](index.md)
+- [Durability and locking](../system-calls-files-and-file-descriptors/durability-locking-and-power-loss.md)
