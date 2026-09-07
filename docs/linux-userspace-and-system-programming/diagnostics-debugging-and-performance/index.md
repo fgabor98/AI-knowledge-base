@@ -1,3 +1,11 @@
+---
+status: draft
+reviewed: false
+domain: linux-userspace
+difficulty: advanced
+last_reviewed: null
+---
+
 # Stage 14: Diagnostics, Debugging, And Performance
 
 Debugging is evidence collection followed by hypothesis testing. Start with the smallest reproducible symptom, capture the process identity and environment, then choose a tool that observes the suspected boundary without changing timing so much that the problem disappears.
@@ -23,3 +31,23 @@ Use `strace` for syscall boundaries, `/proc` for runtime state, GDB for executio
 - [ ] Diagnostics distinguish symptom from first failing boundary.
 - [ ] Performance claims include workload, warm-up, sampling overhead, and tail latency.
 - [ ] Cross-layer failures retain both userspace and kernel/device evidence.
+
+## Stage exercise
+
+Choose one reproducible failure and produce a compact investigation bundle:
+instance identity, expected transition, first discriminating evidence,
+hypothesis, controlled experiment and outcome. Use the appropriate leaf page
+to choose tools, then explain why the evidence supports the conclusion.
+
+Repeat once with a process hang and once with a loader or deployment failure.
+The deliverable is a reproducible diagnosis and a regression or runbook step,
+including any evidence that remained unavailable on the target.
+
+## Learning materials
+
+1. [Userspace Failure Taxonomy And Evidence](userspace-failure-taxonomy-and-evidence.md)
+2. [Strace, Procfs, And Runtime Inspection](strace-procfs-and-runtime-inspection.md)
+3. [GDB, Core Dumps, And Symbols](gdb-core-dumps-and-symbols.md)
+4. [ELF, ABI, And Loader Diagnostics](elf-abi-and-loader-diagnostics.md)
+5. [Userspace Performance And Resource Measurement](userspace-performance-and-resource-measurement.md)
+6. [Target Hardware And Cross-Layer Debugging](target-hardware-and-cross-layer-debugging.md)

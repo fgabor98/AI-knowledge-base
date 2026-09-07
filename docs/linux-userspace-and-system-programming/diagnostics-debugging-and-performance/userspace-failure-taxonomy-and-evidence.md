@@ -1,3 +1,11 @@
+---
+status: draft
+reviewed: false
+domain: linux-userspace
+difficulty: advanced
+last_reviewed: null
+---
+
 # Userspace Failure Taxonomy And Evidence
 
 ## Classify the first broken boundary
@@ -20,3 +28,35 @@ Make evidence actionable: include the exact command to reproduce, expected versu
 ## Hypothesis discipline
 
 Write “If X is the cause, Y should be observable.” Then collect Y. This prevents a large log dump from becoming a substitute for reasoning and makes the eventual fix reviewable.
+
+## Investigate “the service stopped responding”
+
+Start with an instance identity: executable build ID, boot ID, PID and start
+time, configuration generation, and service restart counter. A reused PID or
+new service instance can make several observations appear contradictory.
+
+| Observation | Next discriminating observation |
+| --- | --- |
+| No process | Service result, exit status/signal, previous logs and core |
+| High CPU, no completions | Sample stacks; distinguish useful work from a retry/spin loop |
+| Low CPU, no completions | All thread stacks, waits, descriptors and queue age |
+| One worker absent | Worker lifecycle and OOM events for the whole cgroup |
+| Process ready, device missing | Discovery, driver binding, namespace and permission evidence |
+| Failure only after update | Binary/library/configuration compatibility and release manifest |
+
+For a hang, take several spaced observations. A thread in `futex` may be
+waiting normally or deadlocked; a socket read may be waiting for a peer whose
+request was never sent. Identify which state transition was expected next and
+which event would enable it.
+
+A useful incident note contains observation, hypothesis, test, result, and
+remaining uncertainty. For example: “The response queue grows while the output
+FD is never registered writable; restoring interest drains it.” That supports
+an event-loop interest bug more directly than a general “network is slow”
+description. Preserve the reproducer and add a regression covering that
+transition.
+
+## Related topics
+
+- [Stage 14 overview](index.md)
+- [Testing and verification](../testing-and-verification/index.md)
