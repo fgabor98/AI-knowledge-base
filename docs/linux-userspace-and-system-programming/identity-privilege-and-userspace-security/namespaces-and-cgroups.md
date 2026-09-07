@@ -1,3 +1,11 @@
+---
+status: draft
+reviewed: false
+domain: linux-userspace
+difficulty: advanced
+last_reviewed: null
+---
+
 # Namespaces And Cgroups
 
 Namespaces change a process's view of selected kernel objects. Cgroups group processes for resource accounting and control. Neither mechanism, by itself, answers whether a request is authorized.
@@ -31,3 +39,49 @@ For each isolated service, document:
 - How will operators inspect the process from the host and from inside the namespace?
 
 Debug from both views. `/proc`, `/sys`, device nodes, and paths may have different meanings inside an isolated environment. A diagnostic that works on the host may be unavailable in the service namespace, so preserve host-side evidence as well.
+
+## Read the namespace and hierarchy actually in use
+
+```sh
+# Set pid to the service PID; inspection requires the relevant access.
+readlink "/proc/$pid/ns/user"
+readlink "/proc/$pid/ns/mnt"
+readlink "/proc/$pid/ns/net"
+cat "/proc/$pid/uid_map"
+cat "/proc/$pid/gid_map"
+cat "/proc/$pid/cgroup"
+```
+
+A user-namespace mapping such as `0 100000 65536` maps namespace UID 0
+to parent UID 100000 over a range. Being root there does not grant authority
+over arbitrary host resources. A mount namespace initially inherits a mount
+view; creating it alone does not hide sensitive files or stop mount propagation.
+Entering a PID namespace changes the namespace for subsequently created children,
+so creating a child and mounting a suitable procfs are separate setup steps.
+
+Locate the service's cgroup using its membership and the visible cgroup mount;
+do not assume `/sys/fs/cgroup/memory.current` belongs to that service.
+An administrator's host view and a delegated container view can differ.
+
+## Limits form a hierarchy
+
+In cgroup v2, a child's resource policy is constrained by its ancestors.
+Controllers must be available and enabled for the relevant subtree. Delegation
+grants a bounded ability to manage descendants, not unrestricted host policy.
+
+`memory.high` causes pressure/reclaim behavior; `memory.max` imposes a
+hard bound that can invoke cgroup OOM handling. `cpu.max` specifies quota
+and period; `cpu.weight` affects relative share under contention.
+`pids.max` counts tasks, including threads, and can make creation fail
+without terminating existing workers. Observe `memory.events`, CPU
+throttling statistics, and pressure while applying a representative burst.
+
+Test the application's overload response before selecting production limits.
+A useful outcome is “reject new work while preserving shutdown and diagnostics,”
+not merely “the kernel eventually killed it.”
+See [cgroup v2](https://docs.kernel.org/admin-guide/cgroup-v2.html).
+
+## Related topics
+
+- [Stage 12 overview](index.md)
+- [Service sandboxing](../services-init-and-systemd/service-sandboxing-and-resource-controls.md)

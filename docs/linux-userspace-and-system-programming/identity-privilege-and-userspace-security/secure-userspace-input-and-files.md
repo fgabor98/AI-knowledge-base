@@ -1,3 +1,11 @@
+---
+status: draft
+reviewed: false
+domain: linux-userspace
+difficulty: advanced
+last_reviewed: null
+---
+
 # Secure Userspace Input And Files
 
 Security failures often occur at the boundary between bytes and meaning. Treat command-line arguments, environment variables, configuration files, device data, IPC messages, network frames, and filenames as hostile until validated.
@@ -27,3 +35,41 @@ Keep secrets out of argv, logs, crash dumps, world-readable environment snapshot
 - Are parsing, authorization, and side effects separated so they can be tested independently?
 
 Security is a property of the whole data flow. A correct parser does not help if a later conversion truncates a value, and a safe open does not help if the contents are interpreted as shell syntax.
+
+## Safe arithmetic before safe I/O
+
+For a buffer of `capacity` bytes and untrusted `offset` and `length`,
+validate `offset <= capacity && length <= capacity - offset` before deriving
+a pointer. Checking `offset + length <= capacity` can accept an overflowing
+sum. Apply the same discipline to element count times element size and header
+plus payload size.
+
+Separate decoding, semantic validation, authorization, and effects. For an
+actuator command, a valid integer is insufficient: validate units and range,
+authorize this client for this actuator, check current device state, and only
+then submit the effect. A malformed request must not partially update the
+active configuration.
+
+## Path confinement example
+
+Open a trusted directory once. For a relative untrusted name, Linux
+`openat2` can apply `RESOLVE_BENEATH | RESOLVE_NO_SYMLINKS` with deliberate
+open flags. `O_NOFOLLOW` alone protects only the final component in a
+normal open; it does not prohibit intermediate symlinks. The actual choice
+may permit some symlinks, but it must state that policy.
+
+`RESOLVE_BENEATH` confines traversal; it does not validate the resulting
+file type, owner, content, or hard-link provenance. Inspect the opened FD
+and use trusted directory ownership. On a target without `openat2`, do not
+silently weaken the guarantee by falling back to an unrestricted open.
+See [openat2(2)](https://man7.org/linux/man-pages/man2/openat2.2.html).
+
+Tests should include `..`, absolute names, intermediate/final symlinks,
+concurrent rename, oversized records, embedded NUL bytes, duplicate keys,
+and numeric overflow. Check that failures leave active state and resource
+counts unchanged.
+
+## Related topics
+
+- [Stage 12 overview](index.md)
+- [Service sandboxing](../services-init-and-systemd/service-sandboxing-and-resource-controls.md)

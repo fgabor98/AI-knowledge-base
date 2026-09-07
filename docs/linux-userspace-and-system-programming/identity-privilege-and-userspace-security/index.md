@@ -1,3 +1,11 @@
+---
+status: draft
+reviewed: false
+domain: linux-userspace
+difficulty: advanced
+last_reviewed: null
+---
+
 # Stage 12: Identity, Privilege, And Userspace Security
 
 Userspace security is the set of boundaries that decide who a process is, what it may access, which kernel interfaces it may invoke, and how untrusted data becomes an action. Linux provides many mechanisms, but they are not interchangeable: a UID is an identity, a capability is a permission fragment, a namespace changes what an object means, a cgroup controls resources, and an LSM policy mediates security decisions.
@@ -21,7 +29,7 @@ On a disposable service or test account, inspect:
 
 ```sh
 id
-cat /proc/self/status | grep -E '^(Uid|Gid|Groups|Cap|NoNewPrivs|Seccomp):'
+grep -E '^(Uid|Gid|Groups|Cap[A-Za-z]*|NoNewPrivs|Seccomp):' /proc/self/status
 namei -l /path/to/a/file
 getfacl /path/to/a/file
 capsh --print 2>/dev/null || true
@@ -44,3 +52,23 @@ For a deployed unit, record the configured identity, namespace options, capabili
 - [namespaces(7)](https://man7.org/linux/man-pages/man7/namespaces.7.html)
 - [cgroups v2](https://docs.kernel.org/admin-guide/cgroup-v2.html)
 - [seccomp user-space API](https://docs.kernel.org/userspace-api/seccomp_filter.html)
+
+## Stage exercise: define one service's authority
+
+Choose a device reader with a local control socket. List its required device
+and state paths, client identities, permitted commands, startup privileges,
+steady-state credentials, namespace view and resource limits. Then trace one
+request from bytes to authorization to kernel effect.
+
+Test the same packaged service under its configured identity: valid request,
+unauthorized request, forbidden file, full queue, missing device and restart.
+Capture the returned error and policy evidence. The result should explain
+which layer denied each operation and whether any side effect occurred.
+
+## Learning materials
+
+1. [Linux Credentials, Permissions, And ACLs](linux-credentials-permissions-and-acls.md)
+2. [Capabilities And Privilege Dropping](capabilities-and-privilege-dropping.md)
+3. [Namespaces And Cgroups](namespaces-and-cgroups.md)
+4. [Seccomp, LSM, And Service Isolation](seccomp-lsm-and-service-isolation.md)
+5. [Secure Userspace Input And Files](secure-userspace-input-and-files.md)
