@@ -1,3 +1,11 @@
+---
+status: draft
+reviewed: false
+domain: linux-userspace
+difficulty: advanced
+last_reviewed: null
+---
+
 # Stage 15: Cross-Compilation, Packaging, And Target Integration
 
 An application is deployable only when its build identity, ABI, loader, libraries, files, service definition, permissions, and update artifact agree. Cross-compilation makes this contract explicit because the machine running the compiler is not the machine running the result.
@@ -19,3 +27,23 @@ Before release, verify architecture and interpreter, dynamic dependencies, file 
 - [ ] The deployed loader and all required libraries are present and compatible.
 - [ ] Package ownership, permissions, service integration, and state directories are defined.
 - [ ] Every release can be traced to source, toolchain, inputs, and tests.
+
+## Stage exercise
+
+Cross-build a small utility using the product SDK, stage its install, package
+it, and execute the packaged artifact in a clean target image. Preserve the
+compiler/sysroot identity and inspect ELF interpreter/dependencies before
+deployment.
+
+Add the service unit and account through the package workflow, verify readiness
+after boot, then upgrade from a previous package with modified configuration.
+The evidence should connect source to package to image to running process,
+including its matching debug symbols.
+
+## Learning materials
+
+1. [Target Triples, Sysroots, And ABI](target-triples-sysroots-and-abi.md)
+2. [Dynamic Loader And Library Deployment](dynamic-loader-and-library-deployment.md)
+3. [Installation Layout And Package Integration](installation-layout-and-package-integration.md)
+4. [Yocto Application And Service Integration](yocto-application-and-service-integration.md)
+5. [Artifacts, Provenance, And Release Identity](artifacts-provenance-and-release-identity.md)
