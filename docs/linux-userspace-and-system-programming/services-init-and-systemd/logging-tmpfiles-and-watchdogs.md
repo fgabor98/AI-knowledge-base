@@ -37,6 +37,31 @@ required workers, dependencies, and device communication. A heartbeat thread alo
 can mask a deadlocked main service. Record feed and pretimeout evidence without
 filling storage.
 
+## Directory lifecycle and watchdog notifications
+
+For one service's transient socket directory, `RuntimeDirectory=example`
+creates `/run/example` with service ownership and ties its lifecycle to the
+unit. `StateDirectory=example` provides persistent state storage.
+Use tmpfiles rules for paths with an independently defined lifecycle. Do not
+run age-based cleanup over active database, lock, or socket files.
+
+For a systemd service watchdog, query `sd_watchdog_enabled` and arrange
+`sd_notify(..., "WATCHDOG=1")` at a comfortable margin, commonly half the
+advertised interval. The watchdog is activated after startup completes;
+`TimeoutStartSec` handles a stuck startup. These notifications do not write
+directly to a hardware watchdog. See
+[sd_watchdog_enabled](https://www.freedesktop.org/software/systemd/man/latest/sd_watchdog_enabled.html).
+
+Tie each feed to a progress condition. An idle event loop can be healthy
+without receiving device samples, while a worker stuck past its request
+deadline is unhealthy even if its heartbeat thread runs. Record the latest
+completed operation and age of required work.
+
+For evidence, use `journalctl -u example.service -b -o short-monotonic` and
+include the boot ID. Journal retention may be volatile; explicitly configure
+persistent collection if a reboot must preserve it. Rate-limited messages can
+be absent from the journal, so maintain counters for repeated failures too.
+
 ## Common mistakes
 
 - Logging secrets or unbounded payloads.

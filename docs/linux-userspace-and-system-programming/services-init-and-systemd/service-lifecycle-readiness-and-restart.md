@@ -40,6 +40,49 @@ Stop intake, cancel/drain work, stop children, close hardware safely, commit or 
 unknown persistent operations, and exit before the deadline. The supervisor may then
 escalate to SIGKILL. Startup must handle all unclean remnants.
 
+## Select the startup contract explicitly
+
+`Type=simple` considers the process launched early in startup.
+`Type=exec` waits for executable invocation but still does not prove
+application initialization. `Type=notify` waits for the program's readiness
+notification. `Type=oneshot` represents bounded work; with
+`RemainAfterExit=yes`, an active unit need not have any running process.
+
+For a daemon that implements systemd notification, this is an illustrative
+policy, to be adjusted to measured startup and shutdown times:
+
+```ini
+[Unit]
+Description=Example device service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/usr/bin/example-device-service
+User=example
+RuntimeDirectory=example
+StateDirectory=example
+Restart=on-failure
+RestartSec=3s
+RestartPreventExitStatus=78
+TimeoutStartSec=20s
+TimeoutStopSec=10s
+KillMode=control-group
+```
+
+Here exit 78 is an **application convention** for invalid configuration.
+The application sends `READY=1` after its required startup work and performs
+shutdown after SIGTERM. A program without notification support will time out
+with this unit. Rate limiting eventually stops automatic restarts; it is not
+an infinite slow retry mechanism. See
+[systemd.service](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html).
+
+A deliberate stop should not start a reconnect loop. Give the application a
+shutdown deadline shorter than the supervisor's limit, reserve time for cleanup,
+and make the next start tolerate SIGKILL at every step.
+
 ## Common mistakes
 
 - Advertising ready before device/configuration health exists.

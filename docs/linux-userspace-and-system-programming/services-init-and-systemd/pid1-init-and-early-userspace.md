@@ -18,7 +18,7 @@ correct.
 ## Boot sequence
 
 ```text
-firmware -> kernel -> initramfs /init -> real root -> PID 1
+firmware -> kernel -> initramfs /init (PID 1) -> real root -> exec final init (PID 1)
         -> pseudo-filesystems -> devices/mounts -> services
 ```
 
@@ -50,6 +50,25 @@ dmesg | sed -n '1,100p'
 
 Compare initramfs logs, kernel command line, final-root mount state, PID 1 logs, and
 the service environment. A missing runtime path may be a handoff or mount-order bug.
+
+## PID 1 persists across the root handoff
+
+With an initramfs, `/init` is already PID 1. It normally mounts the real root
+and executes the final init through an appropriate handoff. Replacing its
+program image preserves PID 1; it does not create a second system init.
+Some systems boot directly into a root filesystem and have no separate
+initramfs userspace step.
+
+The namespace's init has special signal rules. A program that relies solely
+on the ordinary default action of SIGTERM may not behave as expected when it
+becomes PID 1. Install a deliberate shutdown path and reap adopted children.
+Reaping is not signal forwarding: a tiny container init may need to do both.
+
+If root selection fails, keep a bounded recovery path with console access and
+the original mount/error evidence. A rescue shell should not be mistaken for
+successful service readiness. Test initramfs-to-root transitions with a missing
+loader, missing final init, and an unavailable data partition, and record which
+component owns recovery at each point.
 
 ## Common mistakes
 

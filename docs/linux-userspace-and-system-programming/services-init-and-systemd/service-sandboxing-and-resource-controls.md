@@ -43,6 +43,30 @@ identity, namespace, environment, cwd, mounts, capabilities, and limits. Tempora
 relax one control in a controlled test to confirm a hypothesis, then restore the
 policy and add a targeted allow rule.
 
+## A policy with visible consequences
+
+Start from the real resource map. A local protocol daemon that needs no devices
+can often use `NoNewPrivileges=yes`, `ProtectSystem=strict`,
+`ProtectHome=yes`, `PrivateTmp=yes`, and `PrivateDevices=yes`, with
+managed runtime/state directories. A hardware daemon usually needs a different
+device policy: `DeviceAllow` does not make a device node appear inside the
+private `/dev` created by `PrivateDevices`.
+
+Similarly, making a path writable does not mount missing storage or create a
+file, and a private network namespace has its own interfaces and routes.
+Test the precise combination rather than each directive in isolation.
+
+Measure a startup/recovery peak before choosing `MemoryHigh` and
+`MemoryMax`. The former applies reclaim pressure/throttling; the latter is a
+hard limit that can cause OOM handling. `TasksMax` counts threads as well as
+processes. `LimitNOFILE` bounds descriptor numbers, while application
+connection and queue limits should reject overload earlier.
+
+Inspect effective properties and logs, then exercise one allowed and one denied
+operation per boundary. `systemd-analyze security` is a useful policy overview;
+its score does not establish that authorization or hardware safety is correct.
+See [resource controls](https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html).
+
 ## Common mistakes
 
 - Running as root because a sandbox was not designed.

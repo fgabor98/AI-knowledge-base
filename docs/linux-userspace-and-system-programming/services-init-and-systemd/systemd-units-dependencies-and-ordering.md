@@ -58,6 +58,32 @@ systemctl show example.service
 journalctl -u example.service -b
 ```
 
+## Dependency behavior in concrete terms
+
+| Declaration on A | What happens to B |
+| --- | --- |
+| `Wants=B.service` | Starting A also requests B; B failing need not stop A |
+| `Requires=B.service` plus `After=B.service` | B is requested first; its activation failure prevents A starting |
+| `After=B.service` alone | Orders jobs if both are present; does not start B |
+| `PartOf=B.service` | B's stop/restart propagates to A; does not itself start B |
+| `BindsTo=B.service` plus `After=B.service` | Stronger lifetime coupling when A cannot operate without B |
+
+Ordering uses B's service type to decide when startup is complete. If B is
+`Type=simple`, A may proceed before B has bound its socket. For a real
+readiness dependency, B needs a supported readiness mechanism or socket
+activation, and A still needs runtime disconnect handling.
+
+`WantedBy=multi-user.target` is enablement metadata: enabling creates links.
+Starting does not enable future boot starts, and enabling without `--now`
+does not start immediately. `daemon-reload` reloads unit definitions;
+application configuration reload is a separate action.
+
+For a persistent mount needed by the service, consider
+`RequiresMountsFor=/var/lib/example`. A condition such as
+`ConditionPathExists=` is evaluated at start time; it does not watch for
+the path to appear later. Avoid hiding required diagnostic command failures
+behind `|| true` when verifying the actual unit.
+
 ## Common mistakes
 
 - Using `After=` without `Requires=`/`Wants=` when availability is required.
