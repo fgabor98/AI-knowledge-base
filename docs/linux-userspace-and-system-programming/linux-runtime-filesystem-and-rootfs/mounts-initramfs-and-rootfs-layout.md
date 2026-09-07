@@ -44,8 +44,9 @@ service PID for service-specific evidence.
 An initramfs is an early root filesystem loaded with or by the kernel. Its job may
 include loading modules, obtaining keys, discovering storage, assembling RAID or
 LVM, unlocking encryption, loading firmware, and selecting an A/B root slot. It then
-hands control to the real root filesystem using a product-specific mechanism such as
-`switch_root` or `pivot_root`.
+hands control to the real root filesystem using a mechanism such as `switch_root`.
+The initial rootfs used by initramfs cannot itself be pivoted with `pivot_root`;
+that syscall applies to suitable mounted roots in other handoff/container setups.
 
 ```text
 kernel unpacks initramfs
@@ -60,7 +61,7 @@ mount real root at a staging path
 move required mounts / switch root
         |
         v
-new /sbin/init or PID 1 starts normal userspace
+exec final /sbin/init, preserving PID 1, to start normal userspace
 ```
 
 Files in the initramfs are not necessarily present after handoff. Open FDs and
@@ -121,9 +122,13 @@ or should be created on first boot.
 
 ```sh
 test -d /data && echo directory-present
-findmnt -T /data || echo no-filesystem-mounted
+findmnt --mountpoint /data || echo no-mount-at-data
 stat -f -c 'type=%T blocks=%b free=%a' /data
 ```
+
+`findmnt -T /data` instead reports whichever filesystem contains the path,
+including the root filesystem when the intended data mount is missing. Use
+`--mountpoint` or `mountpoint` for the exact-mount question, then verify its source.
 
 An empty directory on the root filesystem can conceal a missing data mount. Compare
 filesystem type, device/source, mount options, and expected marker files. Do not

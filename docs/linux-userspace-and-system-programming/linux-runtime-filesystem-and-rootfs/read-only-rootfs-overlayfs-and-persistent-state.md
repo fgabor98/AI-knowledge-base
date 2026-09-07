@@ -63,7 +63,6 @@ contract and enforce them with service sandboxing where available.
 findmnt -o TARGET,SOURCE,FSTYPE,OPTIONS
 findmnt -T /etc
 findmnt -T /var/lib/my-service
-touch /etc/should-not-change 2>&1 || true
 df -hT
 df -ih
 ```

@@ -101,16 +101,23 @@ enter its namespace when debugging a sandboxed service.
 
 ## Stage lab
 
-Build the chapter’s small probe and inspect a disposable directory:
+Inspect a new disposable directory from a shell:
 
 ```sh
-mkdir -p /tmp/userspace-rootfs-lab/root/etc /tmp/userspace-rootfs-lab/data
-printf 'mode=lab\n' > /tmp/userspace-rootfs-lab/root/etc/app.conf
-ln -s ../etc/app.conf /tmp/userspace-rootfs-lab/root/app.conf
-namei -l /tmp/userspace-rootfs-lab/root/app.conf
-stat /tmp/userspace-rootfs-lab/root/etc/app.conf
-findmnt -T /tmp/userspace-rootfs-lab/root/etc/app.conf
+lab_dir=$(mktemp -d /tmp/userspace-rootfs-lab.XXXXXX)
+mkdir -p "$lab_dir/root/etc" "$lab_dir/data"
+printf 'mode=lab\n' > "$lab_dir/root/etc/app.conf"
+ln -s etc/app.conf "$lab_dir/root/app.conf"
+namei -l "$lab_dir/root/app.conf"
+stat -L "$lab_dir/root/app.conf"
+findmnt -T "$lab_dir/root/etc/app.conf"
 ```
+
+The symlink target is relative to its containing `root` directory, so
+`etc/app.conf` reaches the intended file. `../etc/app.conf` would escape
+that directory and normally be dangling in this fixture. `findmnt -T` reports
+the filesystem containing the path; it does not claim the fixture is a mountpoint.
+The lab leaves its private directory for inspection.
 
 Then compare the host root with the target rootfs manifest. The important deliverable
 is not a list of paths; it is a mapping from each path to its owner, mount, lifetime,

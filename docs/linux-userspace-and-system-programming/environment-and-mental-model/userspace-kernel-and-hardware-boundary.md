@@ -74,7 +74,7 @@ run with the narrowest credentials that meet its job.
 | --- | --- | --- |
 | Application | Protocol state, buffer sizes, retries, ownership, policy, and user-visible meaning | That a kernel request completed, that a path exists, or that a peer remains alive |
 | libc | C/POSIX abstractions, wrappers, allocation policy, buffering, and thread-local `errno` implementation | A particular kernel version, device behavior, or target rootfs |
-| Dynamic loader | Mapping the interpreter and shared objects, relocations, symbol resolution | That a library has the expected configuration or ABI semantics |
+| Dynamic loader | Loading shared objects, relocations, symbol resolution; the kernel maps the requested interpreter | That a library has the expected configuration or ABI semantics |
 | Kernel | Isolation, scheduling, virtual memory, VFS, sockets, credentials, and driver dispatch | That hardware is wired, powered, calibrated, or physically responsive |
 | Driver/subsystem | The documented UAPI and translation to a device or protocol | That every board has the same wiring or that undocumented behavior is stable |
 | Hardware/firmware | Electrical state, timing, conversion, storage, and device-specific behavior | That the caller handled timeouts, disconnects, bad data, or power loss |

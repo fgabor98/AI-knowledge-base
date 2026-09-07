@@ -56,8 +56,11 @@ cc -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -pthread -g \
 /tmp/worker-pool
 ```
 
-Run it repeatedly and interrupt it during work. Verify that the queue closes, workers
-wake, each worker joins, and no task remains owned by a destroyed queue.
+Run it repeatedly and observe normal completion: the producer closes the queue,
+workers wake, accepted tasks drain, and workers join. The probe does not install
+a signal-driven shutdown path, so sending SIGINT tests process termination,
+not graceful queue cleanup. Adding cooperative signal integration and propagating
+worker/setup failures are follow-up exercises before treating it as service code.
 
 ## Completion criteria
 

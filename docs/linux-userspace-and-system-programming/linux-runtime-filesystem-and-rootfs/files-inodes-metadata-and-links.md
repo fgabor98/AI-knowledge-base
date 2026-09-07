@@ -53,11 +53,14 @@ never use an mtime equality test as a perfect change detector.
 ```sh
 stat file
 stat -c 'type=%F mode=%A uid=%u gid=%g size=%s links=%h inode=%i dev=%D' file
-lstat symlink
+stat -- symlink       # GNU stat: inspect the symlink itself
+stat -L -- symlink    # GNU stat: follow the symlink
 ```
 
-`stat` follows the final symlink; `lstat` inspects the link. `fstat(fd)` inspects the
-object already opened and avoids a second pathname lookup.
+The C APIs `stat(2)` and `lstat(2)` respectively follow and inspect the final
+symlink. GNU `stat(1)` has a different default, shown above; `lstat` is not
+a standard shell command. `fstat(fd)` inspects the object already opened
+and avoids a second pathname lookup.
 
 ## Hard links and unlink
 
@@ -71,8 +74,8 @@ rm original
 cat alias
 ```
 
-The data remains while at least one hard link and one open reference (if any) keeps
-the inode alive. `unlink` removes a name; it does not necessarily erase data
+The data remains while a hard link **or** a live open/mapping reference keeps
+the object alive. `unlink` removes a name; it does not necessarily erase data
 immediately. A process can write an unlinked log or temporary file through its open
 FD, while a new process cannot find it by pathname. This is useful for private
 temporary storage, but it can also consume space invisibly until the owner exits.

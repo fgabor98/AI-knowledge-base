@@ -21,7 +21,7 @@ database snapshot—so observations must be timestamped and correlated.
 | --- | --- |
 | `status` | State, IDs, memory summary, groups, capabilities, signal masks |
 | `cmdline` | Arguments as NUL-separated bytes; may be empty or intentionally changed |
-| `environ` | Initial/current environment bytes, subject to permissions and sensitivity |
+| `environ` | Initial environment storage; not a reliable view of later `setenv`/`putenv` changes |
 | `exe` | Link to executable file, if accessible |
 | `cwd`, `root` | Process directory and root views |
 | `fd/` | Descriptor targets; access may race with close/reuse |

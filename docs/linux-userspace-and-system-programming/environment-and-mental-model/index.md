@@ -15,8 +15,9 @@ which layer owns a behavior, which assumptions are guaranteed, and which observa
 are only accidental properties of one development machine.
 
 This chapter establishes that foundation. Work through the pages in order while
-building and observing the small probe in
-[`examples/c/linux-userspace-environment-and-mental-model.c`](../../../examples/c/linux-userspace-environment-and-mental-model.c).
+building and observing the repository file
+`examples/c/linux-userspace-environment-and-mental-model.c` through the
+[chapter lab](#chapter-lab).
 
 ## What this chapter solves
 
