@@ -16,11 +16,11 @@ Knowledge-guide companion: [Stage 2](knowledge-guide-companion.md#stage-2-build-
 ## Kbuild And External Modules
 
 - [ ] **P0** [Kernel build system](https://docs.kernel.org/kbuild/index.html)
-- [ ] **P0** [Makefiles](https://docs.kernel.org/kbuild/makefiles.html)
-- [ ] **P0** [Building external modules](https://docs.kernel.org/kbuild/modules.html)
-- [ ] **P0** [Kbuild modules-only variables](https://docs.kernel.org/kbuild/modules.html#options)
-- [ ] **P0** [Kbuild make variables](https://docs.kernel.org/kbuild/kbuild.html)
-- [ ] **P0** [Kconfig language](https://docs.kernel.org/kbuild/kconfig-language.html)
+- [x] **P0** [Makefiles](https://docs.kernel.org/kbuild/makefiles.html)
+- [x] **P0** [Building external modules](https://docs.kernel.org/kbuild/modules.html)
+- [x] **P0** [Kbuild modules-only variables](https://docs.kernel.org/kbuild/modules.html#options)
+- [x] **P0** [Kbuild make variables](https://docs.kernel.org/kbuild/kbuild.html)
+- [x] **P0** [Kconfig language](https://docs.kernel.org/kbuild/kconfig-language.html)
 - [ ] **P0** [Kconfig macro language](https://docs.kernel.org/kbuild/kconfig-macro-language.html)
 - [ ] **P0** [LLVM builds](https://docs.kernel.org/kbuild/llvm.html)
 - [ ] **P1** [Reproducible builds](https://docs.kernel.org/kbuild/reproducible-builds.html)
