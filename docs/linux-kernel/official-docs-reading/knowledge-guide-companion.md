@@ -56,11 +56,11 @@ Stage completion:
 
 Official tracker: [Build System, Kconfig, And Development Tools](02-build-kconfig-and-devtools.md)
 
-- [ ] [Kernel Source, Build, And Tailoring](../source-build-and-tailoring/index.md)
-- [ ] [Kernel Source Acquisition](../source-build-and-tailoring/kernel-source-acquisition.md)
-- [ ] [Kernel Configuration And Tailoring](../source-build-and-tailoring/kernel-configuration-and-tailoring.md)
-- [ ] [Kernel Build And Install Overview](../source-build-and-tailoring/kernel-build-and-install-overview.md)
-- [ ] [Kernel Module Lifecycle](../fundamentals/kernel-module-lifecycle.md)
+- [x] [Kernel Source, Build, And Tailoring](../source-build-and-tailoring/index.md)
+- [x] [Kernel Source Acquisition](../source-build-and-tailoring/kernel-source-acquisition.md)
+- [x] [Kernel Configuration And Tailoring](../source-build-and-tailoring/kernel-configuration-and-tailoring.md)
+- [x] [Kernel Build And Install Overview](../source-build-and-tailoring/kernel-build-and-install-overview.md)
+- [x] [Kernel Module Lifecycle](../fundamentals/kernel-module-lifecycle.md)
 - [ ] [Built-In Drivers Vs Loadable Modules](../fundamentals/built-in-vs-loadable-modules.md)
 
 Stage completion:

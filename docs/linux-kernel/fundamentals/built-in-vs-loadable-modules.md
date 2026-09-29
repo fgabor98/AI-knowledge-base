@@ -60,37 +60,7 @@ rapid driver iteration?
 
 ## How Kconfig Expresses The Choice
 
-Kconfig value:
-
-```text
-CONFIG_EXAMPLE_DRIVER=y
-```
-
-means the driver is linked into the kernel image.
-
-Kconfig value:
-
-```text
-CONFIG_EXAMPLE_DRIVER=m
-```
-
-means Kbuild produces a loadable module.
-
-Unset:
-
-```text
-# CONFIG_EXAMPLE_DRIVER is not set
-```
-
-means the driver is not built.
-
-Kbuild often connects this directly:
-
-```make
-obj-$(CONFIG_EXAMPLE_DRIVER) += example_driver.o
-```
-
-The same source file can become built-in, modular, or absent depending on the final `.config`.
+A tristate symbol set to `y` links the driver into the kernel image, `m` makes Kbuild produce a `.ko`, and unset leaves it out. Through a rule such as `obj-$(CONFIG_EXAMPLE_DRIVER) += example_driver.o`, the same source file can become built-in, modular, or absent depending on the final `.config`. The symbol types are explained in [Kconfig Symbol Values](../source-build-and-tailoring/kernel-configuration-and-tailoring.md#kconfig-symbol-values).
 
 ## Built-In Driver Behavior
 
@@ -141,25 +111,7 @@ A module:
 - may depend on other modules
 - may be subject to signing policy
 
-Check:
-
-```sh
-modinfo example_driver.ko
-modinfo example_driver.ko | grep vermagic
-lsmod | grep example
-```
-
-Load:
-
-```sh
-sudo modprobe example_driver
-```
-
-Unload:
-
-```sh
-sudo modprobe -r example_driver
-```
+Loading, unloading, and inspecting modules is covered in [Kernel Module Lifecycle](kernel-module-lifecycle.md).
 
 ## Boot-Critical Drivers
 

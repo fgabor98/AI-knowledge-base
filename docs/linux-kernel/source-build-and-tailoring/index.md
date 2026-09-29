@@ -171,51 +171,37 @@ identify target kernel
 -> archive artifacts if the result matters
 ```
 
-Minimal example:
-
-```sh
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor_board_defconfig
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- menuconfig
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) Image dtbs modules
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-  INSTALL_MOD_PATH=$PWD/rootfs-staging \
-  modules_install
-make O=build-arm64 ARCH=arm64 kernelrelease
-```
-
-Then on the target:
-
-```sh
-uname -r
-cat /proc/version
-ls /lib/modules/$(uname -r)
-tr -d '\0' < /proc/device-tree/model
-```
+The configuration steps are covered in [Kernel Configuration And Tailoring](kernel-configuration-and-tailoring.md); the build, install, deploy, and runtime-verification commands are in [Kernel Build And Install Overview](kernel-build-and-install-overview.md).
 
 ## Example Artifact Manifest
 
-For any result worth keeping, create a small manifest:
+For any result worth keeping, create a small manifest. It records the source provenance (where the tree came from) and the artifact identity (what was built and deployed) in one place:
 
 ```text
 board: example-a53-board
 purpose: test i2c temperature sensor driver probe
 kernel_source: git@example.com/vendor/linux.git
+kernel_branch: vendor-6.6.y
 kernel_commit: 3f02c1d9c8a4
 kernel_describe: v6.6.32-product-17-g3f02c1d-dirty
 patches: product/i2c-sensor-bringup.patch
 config_base: arch/arm64/configs/vendor_board_defconfig
 config_fragments: fragments/debug.config fragments/i2c-sensor.config
 output_dir: build-arm64
-kernel_release: 6.6.32-product-g3f02c1d
+arch: arm64
+cross_compile: aarch64-linux-gnu-
 compiler: aarch64-linux-gnu-gcc 13.2.0
+kernel_release: 6.6.32-product-g3f02c1d
 boot_image: deploy/boot/Image
 dtb: deploy/boot/example-a53-board.dtb
 modules: deploy/rootfs/lib/modules/6.6.32-product-g3f02c1d/
-debug_files: deploy/debug/vmlinux deploy/debug/System.map deploy/debug/Module.symvers
+debug_files: deploy/debug/vmlinux deploy/debug/System.map deploy/debug/.config deploy/debug/Module.symvers
+build_log: deploy/logs/build.log
+checksums: sha256 of Image, DTB, .config, Module.symvers
 target_uname_r: 6.6.32-product-g3f02c1d
 ```
 
-This looks bureaucratic until the first time a board boots an old DTB while your source tree contains the new one.
+This looks bureaucratic until the first time a board boots an old DTB while your source tree contains the new one. Keep the manifest with the archived artifacts for any build that other people use, CI publishes, or a meaningful test depends on: losing `vmlinux` or `System.map` makes later crash analysis much harder, and losing `Module.symvers` makes external module rebuilds unreliable.
 
 ## Boundaries With The Build-System Chapter
 
@@ -245,19 +231,6 @@ You are ready to move on when you can:
 - compare `make kernelrelease`, `uname -r`, and module `vermagic`
 - prove that the target booted the intended kernel image and Device Tree
 - archive `vmlinux`, `System.map`, `.config`, and `Module.symvers` for debug
-
-## Common Mistakes
-
-- Reading upstream source while the board runs a heavily patched vendor kernel.
-- Building a module against `/lib/modules/$(uname -r)/build` on the host when the target uses another kernel.
-- Editing `.config` directly and losing the reproducible source of the change.
-- Treating a config fragment as proof that the final `.config` contains the requested value.
-- Copying `Image` but not the matching DTB.
-- Copying modules but forgetting to run `depmod` for the target rootfs.
-- Testing an external module without checking `vermagic`.
-- Deleting `vmlinux`, `System.map`, or `Module.symvers` after a meaningful build.
-- Reusing one output directory for multiple architectures.
-- Assuming a build command updated the board when it only produced local artifacts.
 
 ## Official References
 
