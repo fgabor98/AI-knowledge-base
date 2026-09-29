@@ -139,31 +139,7 @@ These can alter release strings, buffer sizes, address layout, timeout values, a
 
 ## Built-In Versus Module
 
-For driver developers, `y` versus `m` is one of the most important decisions.
-
-| Choice | Use When | Tradeoffs |
-| --- | --- | --- |
-| Built-in (`y`) | Needed for early boot, rootfs access, core platform initialization, or no module loader path is available | Harder to reload during development; always present; failures can affect boot. |
-| Module (`m`) | Driver can load after rootfs is available; useful for iterative development and optional hardware | Easier reload cycle; must match kernel release; needs module install and dependency metadata. |
-| Disabled | Feature not needed | Smaller kernel/runtime surface; source still exists but is inactive. |
-
-Boot-critical features are usually built in:
-
-```text
-CONFIG_MMC=y
-CONFIG_EXT4_FS=y
-CONFIG_BLK_DEV_INITRD=y
-```
-
-An optional sensor driver might be a module:
-
-```text
-CONFIG_IIO=y
-CONFIG_I2C=y
-CONFIG_EXAMPLE_TEMP_SENSOR=m
-```
-
-A module is not available until the system can access the rootfs or initramfs containing it. If the driver is required before that point, building it as `m` is usually wrong.
+For driver developers, `y` versus `m` is one of the most important decisions. A module is not available until the system can access the rootfs or initramfs containing it, so a driver needed before that point must usually be `y`. The decision rules, the rootfs-on-eMMC failure example, and the module development loop are covered in [Built-In Drivers Vs Loadable Modules](../fundamentals/built-in-vs-loadable-modules.md).
 
 ## Finding The Symbol For A Driver
 
@@ -229,16 +205,7 @@ config EXAMPLE_TEMP
     depends on I2C && OF
 ```
 
-If `I2C` or `OF` is disabled, the prompt may be hidden and a fragment requesting `CONFIG_EXAMPLE_TEMP=m` may not survive into the final `.config`.
-
-Debug dependency problems by reading both Kconfig and final `.config`:
-
-```sh
-rg "config EXAMPLE_TEMP" -n drivers
-grep '^CONFIG_I2C' build/.config
-grep '^CONFIG_OF' build/.config
-grep '^CONFIG_EXAMPLE_TEMP' build/.config
-```
+If `I2C` or `OF` is disabled, the prompt may be hidden and a fragment requesting `CONFIG_EXAMPLE_TEMP=m` may not survive into the final `.config`. Debug this the same way as above: read the `depends on` line in Kconfig, then grep each dependency in the final `.config`.
 
 Common dependency categories for drivers:
 
@@ -332,17 +299,9 @@ CONFIG_EXAMPLE_TEMP=m
 CONFIG_DYNAMIC_DEBUG=y
 ```
 
-Fragments are common in Yocto, vendor SDKs, and product layers because they allow product policy to sit on top of a vendor defconfig.
-
-The risk: fragments express intent, not guaranteed result. Always inspect the final `.config`.
+Fragments are common in Yocto, vendor SDKs, and product layers because they allow product policy to sit on top of a vendor defconfig. Like any request, a fragment must be checked against the final `.config` (see [Auditing Requested Versus Final Config](#auditing-requested-versus-final-config)).
 
 ## Configuration Commands
-
-### Start From A Board Defconfig
-
-```sh
-make O=build-arm64 ARCH=arm64 vendor_board_defconfig
-```
 
 ### Refresh Existing Config For A New Kernel
 
@@ -414,41 +373,9 @@ make O=build-arm64 ARCH=arm64 olddefconfig
 
 Build frameworks may have their own fragment mechanism. Use the framework's normal path when working inside Yocto, Buildroot, or a vendor SDK.
 
-## Tailoring Strategy For Driver Development
-
-Start small and explicit:
-
-1. Begin from the board or product defconfig.
-2. Enable only the subsystem and driver options needed for the experiment.
-3. Decide built-in versus module based on boot timing.
-4. Add debug options temporarily in a separate fragment.
-5. Build and inspect final `.config`.
-6. Test on target.
-7. Remove or isolate debug options before production.
-
-Example driver fragment:
-
-```text
-CONFIG_I2C=y
-CONFIG_REGMAP=y
-CONFIG_REGMAP_I2C=y
-CONFIG_EXAMPLE_TEMP=m
-```
-
-Example debug fragment:
-
-```text
-CONFIG_DYNAMIC_DEBUG=y
-CONFIG_DEBUG_FS=y
-CONFIG_FUNCTION_TRACER=y
-CONFIG_KPROBES=y
-```
-
-Keep these separate because debug features can affect performance, timing, memory footprint, attack surface, and production policy.
-
 ## Driver-Focused Configuration Workflow
 
-Suppose you want to enable a new SPI ADC driver.
+Tailor small and explicit: begin from the board or product defconfig, enable only the subsystem and driver options the experiment needs, and keep temporary debug options in a separate fragment (see [Debug Configuration](#debug-configuration)). Suppose you want to enable a new SPI ADC driver.
 
 ### 1. Find The Driver
 
@@ -521,57 +448,6 @@ If no `.ko` appears, check:
 rg "EXAMPLE_ADC" drivers/iio/adc
 grep '^CONFIG_EXAMPLE_ADC' build-arm64/.config
 ```
-
-## Built-In Driver Example
-
-Suppose the root filesystem is on eMMC. The MMC host controller, block layer, and filesystem support must be available before rootfs mount unless an initramfs handles them.
-
-Good production shape:
-
-```text
-CONFIG_MMC=y
-CONFIG_MMC_SDHCI=y
-CONFIG_MMC_SDHCI_PLTFM=y
-CONFIG_EXT4_FS=y
-```
-
-Risky shape without initramfs support:
-
-```text
-CONFIG_MMC=m
-CONFIG_MMC_SDHCI=m
-CONFIG_EXT4_FS=m
-```
-
-Symptom of the risky shape:
-
-```text
-VFS: Cannot open root device
-Kernel panic - not syncing: VFS: Unable to mount root fs
-```
-
-This is not a driver probe bug. It is a configuration and boot sequencing bug.
-
-## Module Driver Example
-
-Suppose an optional USB sensor can appear after boot. Building it as a module can make development faster:
-
-```text
-CONFIG_USB=y
-CONFIG_USB_SERIAL=m
-CONFIG_USB_SERIAL_EXAMPLE=m
-```
-
-Development loop:
-
-```sh
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) modules
-scp build-arm64/drivers/usb/serial/example.ko target:/tmp/
-ssh target 'insmod /tmp/example.ko; dmesg | tail -n 50'
-ssh target 'rmmod example'
-```
-
-For product packaging, install modules under `/lib/modules/<kernelrelease>/` and run dependency handling rather than copying `.ko` files manually.
 
 ## Auditing Requested Versus Final Config
 
@@ -647,7 +523,7 @@ Keep debug options in a named fragment:
 fragments/kernel-debug.config
 ```
 
-Then product builds can exclude it cleanly.
+Then product builds can exclude it cleanly. Keeping it separate matters because debug features change performance, timing, memory footprint, and attack surface.
 
 ## Production Tailoring
 

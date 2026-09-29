@@ -234,7 +234,7 @@ ls /lib/modules/$(uname -r)/build
 make -C /lib/modules/$(uname -r)/build M=$PWD modules
 ```
 
-For deeper debugging, you may also need the distro source package and patch set, not only headers.
+This is a convenient way to learn module mechanics on a development host, but it proves nothing about compatibility with an embedded target running a different kernel. For deeper debugging, you may also need the distro source package and patch set, not only headers.
 
 Strengths:
 
@@ -298,48 +298,15 @@ Check Buildroot's `.config` and board files before editing a random Linux tree.
 
 ## Step 4: Match Source To Runtime
 
-The source is likely correct only when several pieces agree.
-
-| Evidence | What To Check |
-| --- | --- |
-| `uname -r` | Matches `make kernelrelease` from the build tree. |
-| `/proc/version` | Mentions expected compiler, build user, build date, or CI identity. |
-| `/lib/modules/<release>/` | Exists and matches the running kernel release. |
-| `modinfo driver.ko` | `vermagic` matches the target kernel. |
-| `build/.config` | Contains expected driver and debug options. |
-| `Module.symvers` | Exists for external module symbol versioning. |
-| `git describe --dirty` | Matches release manifest or local version string. |
-| boot artifacts | Image and DTB checksums match what was deployed. |
-
-Run from the build tree:
-
-```sh
-make O=build-arm64 ARCH=arm64 kernelrelease
-git rev-parse HEAD
-git describe --tags --dirty --always
-```
-
-Run on target:
-
-```sh
-uname -r
-cat /proc/version
-ls /lib/modules/$(uname -r)
-```
-
-For a module:
-
-```sh
-modinfo ./my_driver.ko | grep -E 'filename|vermagic|depends|srcversion'
-```
-
-The key comparison:
+The source is likely correct only when the build tree and the running target agree. Collect the values in the [Build Identity Checklist](index.md#the-build-identity-checklist), then make the key comparison:
 
 ```text
 make kernelrelease == uname -r == module vermagic release component
 ```
 
-Exact `vermagic` contains more than just the release string. It may include SMP, preempt, module unload, modversions, architecture, and compiler-related metadata depending on kernel configuration and version. Treat mismatch as a compatibility warning.
+Also confirm that `/proc/version` names the expected compiler or CI build, that `git describe --dirty` matches the recorded local version, and that the deployed Image and DTB checksums match the build output.
+
+Exact `vermagic` contains more than just the release string. It may include SMP, preempt, module unload, modversions, architecture, and compiler-related metadata depending on kernel configuration and version. Treat mismatch as a compatibility warning. See [Example: Matching A Target Board To A Vendor Kernel](#example-matching-a-target-board-to-a-vendor-kernel) below for a worked comparison.
 
 ## Step 5: Understand Headers Versus Full Source
 
@@ -385,52 +352,11 @@ These are not normal source files. They come from configuration and build steps.
 
 If you build in-tree, generated files appear inside the source tree. If you build with `O=build-arm64`, they appear in the output directory.
 
-This distinction matters for external modules:
+This distinction matters for external modules: the `make -C` path must point at a prepared build tree that contains these generated files, not an arbitrary clean source checkout. The exact command forms are in [Kernel Build And Install Overview](kernel-build-and-install-overview.md#external-module-build).
 
-```sh
-make -C /path/to/kernel/build M=$PWD modules
-```
+## Step 7: Record Source Provenance
 
-The `-C` path should normally be the prepared build directory, not an arbitrary clean source checkout.
-
-For separated source and output trees:
-
-```sh
-make -C /path/to/linux-source O=/path/to/kernel-build M=$PWD modules
-```
-
-or, when the build directory has the right generated files and Makefile support:
-
-```sh
-make -C /path/to/kernel-build M=$PWD modules
-```
-
-Use the pattern expected by your kernel version and build framework, and verify it with the build logs.
-
-## Step 7: Prepare A Source Provenance Record
-
-For a product or lab, keep a short provenance file next to the build output:
-
-```text
-kernel_source_repo=https://example.com/vendor/linux.git
-kernel_branch=vendor-6.6.y
-kernel_commit=3f02c1d9c8a4d3b5e6f708192aabbccddeeff001
-kernel_describe=v6.6.32-product-17-g3f02c1d
-patch_stack=meta-product/recipes-kernel/linux/linux-product/*.patch
-defconfig=vendor_board_defconfig
-fragments=debug.config i2c-sensor.config
-output_dir=/work/build/kernel/build-arm64
-arch=arm64
-cross_compile=aarch64-linux-gnu-
-compiler=aarch64-linux-gnu-gcc 13.2.0
-kernel_release=6.6.32-product-g3f02c1d
-module_symvers_sha256=...
-config_sha256=...
-image_sha256=...
-dtb_sha256=...
-```
-
-This file does not replace CI metadata, but it gives a developer enough evidence to reproduce and debug a driver experiment.
+For a product or lab, record the repository, branch, commit, `git describe --dirty` string, and patch stack next to the build output. Use the [Example Artifact Manifest](index.md#example-artifact-manifest) format so that provenance and build artifacts are described in one file. It does not replace CI metadata, but it gives a developer enough evidence to reproduce and debug a driver experiment.
 
 ## Example: Matching A Target Board To A Vendor Kernel
 
@@ -506,50 +432,11 @@ but `uname -r` says:
 6.1.80-vendor-g9abc012
 ```
 
-the driver may not be the problem. The module was built against the wrong kernel.
+the driver may not be the problem. The module was built against the wrong kernel. The full diagnosis is in [Module Compatibility Checks](kernel-build-and-install-overview.md#module-compatibility-checks).
 
-## Example: Source Exists But The Driver Is Not Built
-
-Finding this file:
-
-```text
-drivers/i2c/busses/i2c-example.c
-```
-
-does not mean it is part of the target kernel.
-
-Trace it:
-
-```sh
-rg "i2c-example" drivers/i2c
-rg "CONFIG_I2C_EXAMPLE|config I2C_EXAMPLE" drivers/i2c
-grep '^CONFIG_I2C_EXAMPLE' build/.config
-```
-
-You need all of these to align:
-
-```text
-source file exists
-Kconfig symbol exists
-Kbuild rule references the object
-final .config enables the symbol
-build target includes built-in or module output
-deployed target uses that artifact
-```
+Finding a driver's source file in the right tree is also not proof that the target kernel contains it. Tracing a source file through Kconfig, Kbuild, and the final `.config` is covered in [Finding The Symbol For A Driver](kernel-configuration-and-tailoring.md#finding-the-symbol-for-a-driver).
 
 ## Source Acquisition By Environment
-
-### Development Host Running Its Own Kernel
-
-For a quick module experiment on your host:
-
-```sh
-uname -r
-ls /lib/modules/$(uname -r)/build
-make -C /lib/modules/$(uname -r)/build M=$PWD modules
-```
-
-This is useful for learning module mechanics. It does not validate compatibility with an embedded target.
 
 ### Vendor SDK
 
@@ -570,23 +457,7 @@ Record the SDK version. Vendor SDKs often pair a specific kernel, compiler, boot
 
 ### CI Build Artifact
 
-Ask for or archive:
-
-```text
-source commit
-patch list
-final .config
-Image or other boot image
-DTB/DTBO files
-modules directory
-Module.symvers
-vmlinux
-System.map
-build log
-compiler version
-```
-
-Without these, a field failure may be impossible to reproduce precisely.
+Ask for or archive everything listed in the [Example Artifact Manifest](index.md#example-artifact-manifest): source commit, patch list, final `.config`, boot image, DTB/DTBO files, modules, `Module.symvers`, `vmlinux`, `System.map`, build log, and compiler version. Without these, a field failure may be impossible to reproduce precisely.
 
 ## Common Failure Modes
 
@@ -649,19 +520,7 @@ Questions:
 - Is the Kconfig symbol identical?
 - Are there vendor-only patches?
 
-### Exercise 3: Prove Module Build Identity
-
-Build a trivial module and inspect it:
-
-```sh
-make -C /path/to/kernel/build M=$PWD modules
-modinfo ./hello.ko | grep vermagic
-make -C /path/to/kernel/build kernelrelease
-```
-
-Question:
-
-- Does module `vermagic` match the intended target?
+Module build identity is practiced in [Kernel Build And Install Overview](kernel-build-and-install-overview.md#exercise-3-build-an-external-module).
 
 ## Related Topics
 

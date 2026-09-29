@@ -47,7 +47,7 @@ Knowledge-guide companion: [Stage 1](knowledge-guide-companion.md#stage-1-develo
 
 ## Bugs, Regressions, And Security
 
-- [ ] **P0** [Debugging advice for kernel developers](https://docs.kernel.org/process/debugging/index.html)
+- [->] **P0** [Debugging advice for kernel developers](https://docs.kernel.org/process/debugging/index.html)
 - [x] **P1** [Handling regressions](https://docs.kernel.org/admin-guide/reporting-regressions.html)
 - [x] **P1** [Reporting issues](https://docs.kernel.org/admin-guide/reporting-issues.html)
 - [x] **P1** [Security bugs](https://docs.kernel.org/process/security-bugs.html)

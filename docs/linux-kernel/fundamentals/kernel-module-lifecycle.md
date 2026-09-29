@@ -350,38 +350,9 @@ Always read `dmesg` after a load failure:
 dmesg | tail -n 80
 ```
 
-The user-facing error often hides the exact kernel reason.
+The user-facing error often hides the exact kernel reason. The first two rows are build-identity problems, not lifecycle bugs; diagnose them with [Module Compatibility Checks](../source-build-and-tailoring/kernel-build-and-install-overview.md#module-compatibility-checks).
 
-## External Module Compatibility
-
-Check the running kernel:
-
-```sh
-uname -r
-cat /proc/version
-```
-
-Check the module:
-
-```sh
-modinfo hello.ko | grep vermagic
-```
-
-Check the build tree:
-
-```sh
-make -C /lib/modules/$(uname -r)/build kernelrelease
-```
-
-For embedded targets, do not accidentally build against host headers:
-
-```sh
-make -C /path/to/linux-source \
-  O=/path/to/build-arm64 \
-  ARCH=arm64 \
-  CROSS_COMPILE=aarch64-linux-gnu- \
-  M=$PWD modules
-```
+The Makefile above builds against the host kernel. For an embedded target, build against the target's prepared build tree as shown in [External Module Build](../source-build-and-tailoring/kernel-build-and-install-overview.md#external-module-build).
 
 ## Practice Exercises
 
