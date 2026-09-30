@@ -280,6 +280,17 @@ nav:
       - python/index.md
   - Build Systems:
       - Overview: build-systems/index.md
+      - Official Documentation Reading Checklist:
+          - Overview: build-systems/official-docs-reading/index.md
+          - Knowledge Guide Companion: build-systems/official-docs-reading/knowledge-guide-companion.md
+          - Compiler, Linker, And Build Graph Foundations: build-systems/official-docs-reading/01-compiler-linker-and-build-graph.md
+          - Build Orchestrators And Project Integration: build-systems/official-docs-reading/02-build-orchestrators-and-project-integration.md
+          - Cross-Compilation, Toolchains, And Sysroots: build-systems/official-docs-reading/03-cross-compilation-toolchains-and-sysroots.md
+          - Dependencies, Installation, Packaging, And ABI: build-systems/official-docs-reading/04-dependencies-installation-packaging-and-abi.md
+          - Embedded Distribution Build Systems: build-systems/official-docs-reading/05-embedded-distribution-build-systems.md
+          - Kernel, Bootloader, Device Tree, And Images: build-systems/official-docs-reading/06-kernel-bootloader-device-tree-and-images.md
+          - Debugging, Testing, Reproducibility, And CI: build-systems/official-docs-reading/07-debugging-testing-reproducibility-and-ci.md
+          - Product Builds, Supply Chain, And Release Delivery: build-systems/official-docs-reading/08-product-builds-supply-chain-and-release-delivery.md
       - Beginner:
           - Direct Compiler Invocation: build-systems/direct-compiler-invocation.md
           - Object Files And Linking: build-systems/object-files-and-linking.md

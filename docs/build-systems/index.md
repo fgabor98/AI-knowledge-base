@@ -12,6 +12,11 @@ Build system topics focused on C projects, cross-compilation, reproducibility, Y
 
 This section covers the tools and workflows that turn source code into native binaries, cross-compiled target binaries, kernel modules, packages, and embedded Linux images.
 
+## Reading Trackers
+
+- [Official Build Systems Documentation Reading Checklist](official-docs-reading/index.md)
+- [Knowledge Guide Companion Checklist](official-docs-reading/knowledge-guide-companion.md)
+
 ## Scope
 
 - direct compiler and linker invocation
