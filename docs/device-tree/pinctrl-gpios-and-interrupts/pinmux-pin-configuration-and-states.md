@@ -12,51 +12,62 @@ Pinmux chooses which internal signal reaches a package pad. Pin configuration co
 
 ## Provider Syntax Is Binding-Specific
 
-A consumer references states generically:
+A consumer references states generically. The AM62x LP SK MCU CAN controller has a normal and a wake-up state (`k3-am62-lp-sk.dts`):
 
 ```dts
-&uart3 {
-        pinctrl-names = "default", "sleep";
-        pinctrl-0 = <&uart3_default_pins>;
-        pinctrl-1 = <&uart3_sleep_pins>;
+&mcu_mcan0 {
+        pinctrl-names = "default", "wakeup";
+        pinctrl-0 = <&mcu_mcan0_tx_pins_default>, <&mcu_mcan0_rx_pins_default>;
+        pinctrl-1 = <&mcu_mcan0_tx_pins_default>, <&mcu_mcan0_rx_pins_wakeup>;
 };
 ```
 
-The provider-side state syntax varies by controller. An illustrative provider might use:
+The provider-side state syntax varies by controller. TI K3 SoCs use `pinctrl-single`, where each entry is a pad-register offset and a raw configuration value built with macros from `k3-pinctrl.h`:
 
 ```dts
-uart3_default_pins: uart3-default-pins {
-        pins = "PA4", "PA5";
-        function = "uart3";
-        bias-disable;
-        drive-strength = <8>;
+mcu_mcan0_rx_pins_default: mcu-mcan0-rx-default-pins {
+        pinctrl-single,pins = <
+                AM62X_IOPAD(0x038, PIN_INPUT, 0) /* (B3) MCU_MCAN0_RX */
+        >;
 };
 
-uart3_sleep_pins: uart3-sleep-pins {
-        pins = "PA4", "PA5";
-        function = "gpio";
-        bias-pull-up;
+mcu_mcan0_rx_pins_wakeup: mcu-mcan0-rx-wakeup-pins {
+        pinctrl-single,pins = <
+                AM62X_IOPAD(0x038, PIN_INPUT | PIN_WKUP_EN, 0) /* (B3) MCU_MCAN0_RX */
+        >;
 };
 ```
 
-Other bindings use `groups`, numeric pin tuples, vendor macros, nested mux/config nodes, or separate function and configuration references. Never copy provider syntax across SoC families without reading that pin controller's schema.
+Qualcomm SoCs use generic named pins and functions instead (`arch/arm64/boot/dts/qcom/sm8250.dtsi`):
+
+```dts
+qup_uart12_default: qup-uart12-default-state {
+        pins = "gpio34", "gpio35";
+        function = "qup12";
+};
+```
+
+Other bindings use `groups`, nested mux/config nodes, or vendor properties. Never copy provider syntax across SoC families without reading that pin controller's schema.
 
 ## Positional State Mapping
 
 `pinctrl-names` maps positionally to `pinctrl-N` properties:
 
-| Name index | Property | Meaning |
+| Name index | Property | Meaning on `mcu_mcan0` |
 |---:|---|---|
 | 0 | `pinctrl-0` | state named `default` |
-| 1 | `pinctrl-1` | state named `sleep` |
+| 1 | `pinctrl-1` | state named `wakeup` |
 
-Each `pinctrl-N` can reference more than one configuration node when several controllers or groups make up one logical state:
+Each `pinctrl-N` can reference more than one configuration node when several groups make up one logical state, as both CAN states do with separate TX and RX nodes. The AM642 SK Ethernet does the same across two RGMII groups:
 
 ```dts
-pinctrl-0 = <&uart3_data_pins &uart3_flow_control_pins>;
+&cpsw3g {
+        pinctrl-names = "default";
+        pinctrl-0 = <&rgmii1_pins_default>, <&rgmii2_pins_default>;
+};
 ```
 
-The state is the entire referenced set. Partial selection can leave a clock, chip select, or flow-control line in its boot mux.
+The state is the entire referenced set. Partial selection can leave a clock, data, or control line in its boot mux.
 
 ## Standard State Roles
 
@@ -67,7 +78,7 @@ Linux recognizes conventional names:
 - `idle`: lower-activity runtime state selected through PM helpers
 - `sleep`: system/runtime sleep configuration selected through PM helpers
 
-Names do not guarantee automatic use in every driver and power path. The device core binds standard states, but drivers and buses must invoke appropriate PM transitions. Verify actual selection at runtime.
+Other names are driver-defined. The `wakeup` state on the AM62x MCU CAN above is not a core state; the M_CAN driver (`drivers/net/can/m_can/m_can.c`) looks it up at probe and selects it when wake-up is enabled through the ethtool Wake-on-LAN setting, returning to `default` when it is disabled. Names do not guarantee automatic use in every driver and power path. The device core binds standard states, but drivers and buses must invoke appropriate PM transitions. Verify actual selection at runtime.
 
 `init` is useful when a driver must probe with safe pins before activating the full interface. It must not create an electrical glitch during the transition to `default`.
 

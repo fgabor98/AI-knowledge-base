@@ -13,34 +13,46 @@ A GPIO controller provides a local line-offset namespace. Its binding defines ea
 ## Provider Contract
 
 ```dts
-gpio0: gpio-controller@1000 {
-        compatible = "example,trainer-gpio";
-        reg = <0x1000 0x100>;
+/* k3-am62-main.dtsi */
+main_gpio0: gpio@600000 {
+        compatible = "ti,am64-gpio", "ti,keystone-gpio";
+        reg = <0x0 0x00600000 0x0 0x100>;
+        gpio-ranges = <&main_pmx0  0  0 32>,
+                      <&main_pmx0 32 33 38>,
+                      <&main_pmx0 70 72 22>;
         gpio-controller;
         #gpio-cells = <2>;
-        ngpios = <16>;
+        ti,ngpio = <92>;
+        ti,davinci-gpio-unbanked = <0>;
+        /* interrupts, power-domains, clocks ... */
 };
 ```
 
 `gpio-controller` and `#gpio-cells` were introduced in [GPIO And Interrupt Relationships](../provider-consumer-relationships/gpio-and-interrupt-relationships.md); this page covers the rest of the provider contract.
 
-`ngpios` limits valid offsets when the hardware bank is smaller than its register layout's natural width. Gaps can be described with `gpio-reserved-ranges` where the common binding permits it. Consumers must not target fused-off, unavailable, or package-unbonded lines.
+The generic `ngpios` property limits valid offsets when a bank is smaller than its register layout. TI's DaVinci/Keystone GPIO binding (`gpio-davinci.yaml`) predates it and requires the vendor property `ti,ngpio` instead; with `additionalProperties: false`, generic `ngpios` is not even accepted there. The same SoC IP reports 87 lines on AM64x `main_gpio0` and 92 on AM62x, so the count is integration data in the SoC DTSI. Gaps can be described with `gpio-reserved-ranges` where the binding permits it. Consumers must not target fused-off, unavailable, or package-unbonded lines.
 
 There is no stable global GPIO number encoded here. Linux GPIO chip numbering can change with probe order. Use provider identity plus controller-local offset, line names, and consumer relationships.
 
 ## Line Names
 
-`gpio-line-names` assigns board-facing names by offset:
+`gpio-line-names` assigns board-facing names by offset. The AM62x LP SK TCA6424 expander (`k3-am62-lp-sk.dts`, trimmed):
 
 ```dts
-gpio-line-names =
-        "status-led",       /* 0 */
-        "module-reset",     /* 1 */
-        "",                 /* 2 */
-        "service-button";   /* 3 */
+exp1: gpio@22 {
+        compatible = "ti,tca6424";
+        reg = <0x22>;
+        gpio-controller;
+        #gpio-cells = <2>;
+        gpio-line-names = "GPIO_CPSW2_RST", "GPIO_CPSW1_RST",
+                          "PRU_DETECT", "MMC1_SD_EN",
+                          /* ... */
+                          "MCASP1_FET_SEL", "UART1_FET_SEL",
+                          "", "IO_EXP_TEST_LED";
+};
 ```
 
-Empty strings preserve positional gaps. Names should identify the schematic net or board function, not the current Linux consumer. A line named `module-reset` can later show a consumer label such as `reset`; those are different fields.
+Empty strings preserve positional gaps: line 22 is unnamed so that `IO_EXP_TEST_LED` stays at offset 23. Names should identify the schematic net, as these do, not the current Linux consumer. A line named `MMC1_SD_EN` can later show a consumer label such as `vdd_mmc1`; those are different fields.
 
 Line names improve `gpioinfo` and diagnostics but do not reserve lines, create userspace ABI, or replace consumer phandles. Treat name changes as an operations/tooling consideration even though drivers should not locate fixed board wiring by arbitrary string search.
 
@@ -48,24 +60,23 @@ Line names improve `gpioinfo` and diagnostics but do not reserve lines, create u
 
 When pinctrl and GPIO number spaces differ, `gpio-ranges` maps them:
 
-```dts
-gpio-ranges = <&pinctrl 0 32 16>;
-```
-
-In the common linear form, this maps GPIO offsets 0–15 to pinctrl pins 32–47. The exact tuple is defined by the common GPIO and provider bindings; named or sparse range forms may also exist.
+The AM62x `main_gpio0` above uses three entries of the form `<&pinctrl gpio-offset pin-offset count>`: GPIO 0–31 map to pads 0–31, GPIO 32–69 to pads 33–70, and GPIO 70–91 to pads 72–93. The skipped pads (32 and 71) have no GPIO function. The exact tuple is defined by the common GPIO and provider bindings; named range forms also exist.
 
 This link allows gpiolib to coordinate GPIO requests with pinmux ownership. Without it, a descriptor may be requested successfully while the pad remains muxed to another peripheral, or conflicts may not be detected.
 
 ## GPIO Hogs
 
-A hog is a child of the GPIO controller that claims and configures a line when the controller registers:
+A hog is a child of the GPIO controller that claims and configures a line when the controller registers. The BeaglePlay OV5640 camera overlay drives a connector GPIO high so the module is enabled (`k3-am625-beagleplay-csi2-ov5640.dtso`):
 
 ```dts
-safe_enable_hog: safe-enable-hog {
-        gpio-hog;
-        gpios = <12 GPIO_ACTIVE_HIGH>;
-        output-low;
-        line-name = "expansion-enable";
+&main_gpio0 {
+        p11-hog {
+                /* P11 - CSI2_CAMERA_GPIO1 */
+                gpio-hog;
+                gpios = <11 GPIO_ACTIVE_HIGH>;
+                output-high;
+                line-name = "CSI2_CAMERA_GPIO1";
+        };
 };
 ```
 

@@ -12,11 +12,41 @@ Wakeup succeeds only when the signal remains electrically valid, its pad and int
 
 ## `wakeup-source` Expresses Capability
 
+Two real forms. The Toradex Verdin AM62 module marks one GPIO key as a wake source (`k3-am62-verdin.dtsi`), and the PHYTEC phyCORE-AM64x marks its RTC (`k3-am64-phycore-som.dtsi`):
+
 ```dts
-button {
+verdin_gpio_keys: gpio-keys {
         compatible = "gpio-keys";
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_ctrl_wake1_mico>;
+
+        verdin_key_wakeup: key-wakeup {
+                debounce-interval = <10>;
+                /* Verdin CTRL_WAKE1_MICO# (SODIMM 252) */
+                gpios = <&main_gpio0 32 GPIO_ACTIVE_LOW>;
+                label = "Wake-Up";
+                linux,code = <KEY_WAKEUP>;
+                wakeup-source;
+        };
+};
+
+i2c_som_rtc: rtc@52 {
+        compatible = "microcrystal,rv3028";
+        reg = <0x52>;
+        interrupt-parent = <&main_gpio1>;
+        interrupts = <70 IRQ_TYPE_EDGE_FALLING>;
         wakeup-source;
-        /* Binding-specific key and interrupt/GPIO properties follow. */
+};
+```
+
+TI's AM62x boards also use a phandle-list form that names the system low-power states in which a device can wake the system (`k3-am62-lp-sk.dts`, with the states defined in `k3-am62.dtsi`):
+
+```dts
+&mcu_mcan0 {
+        wakeup-source = <&system_partial_io>,
+                        <&system_deep_sleep>,
+                        <&system_mcu_only>,
+                        <&system_standby>;
 };
 ```
 
@@ -32,10 +62,10 @@ Separate:
 
 ## Active And Sleep Pinctrl States
 
+The AM62x MCU CAN wake state from [Pinmux, Pin Configuration, And States](pinmux-pin-configuration-and-states.md#provider-syntax-is-binding-specific) keeps the RX pad muxed to CAN and adds `PIN_WKUP_EN` so the always-on I/O logic can detect bus activity while the SoC sleeps:
+
 ```dts
-pinctrl-names = "default", "sleep";
-pinctrl-0 = <&button_active_pins>;
-pinctrl-1 = <&button_sleep_pins>;
+AM62X_IOPAD(0x038, PIN_INPUT | PIN_WKUP_EN, 0) /* (B3) MCU_MCAN0_RX */
 ```
 
 The sleep state must preserve the signal path needed for wake. Common mistakes are:
