@@ -12,44 +12,61 @@ GPIO and interrupt specifiers often refer to the same physical controller, but t
 
 ## GPIO Providers And Consumers
 
-A GPIO controller identifies itself and declares its specifier size:
+A GPIO controller identifies itself and declares its specifier size. AM64x has SoC GPIO banks and, on the EVM, an I2C GPIO expander:
 
 ```dts
-gpio0: gpio-controller@b000 {
-        compatible = "example,trainer-gpio";
+/* k3-am64-main.dtsi */
+main_gpio0: gpio@600000 {
+        compatible = "ti,am64-gpio", "ti,keystone-gpio";
         gpio-controller;
         #gpio-cells = <2>;
+        /* ... */
+};
+
+/* k3-am642-evm.dts, on main_i2c1 */
+exp1: gpio@22 {
+        compatible = "ti,tca6424";
+        reg = <0x22>;
+        gpio-controller;
+        #gpio-cells = <2>;
+        gpio-line-names = /* ... */ "GPIO_PCIe_RST_OUT", /* ... */ "GPIO_OLED_RESETn", /* ... */;
 };
 ```
 
-A consumer property uses the conventional `<function>-gpios` form:
+A consumer property uses the conventional `<function>-gpios` form. Two EVM consumers of the same expander:
 
 ```dts
-ethernet@2000 {
-        reset-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
+display@3c {
+        compatible = "solomon,ssd1306fb-i2c";
+        reset-gpios = <&exp1 14 GPIO_ACTIVE_LOW>;
+};
+
+&pcie0_rc {
+        reset-gpios = <&exp1 5 GPIO_ACTIVE_HIGH>;
 };
 ```
 
-For a conventional two-cell GPIO binding, the provider binding may define:
+Both providers use the conventional two-cell layout:
 
 ```text
 cell 0: line offset within this controller
-cell 1: electrical/logical flags
+cell 1: flags from dt-bindings/gpio/gpio.h
 ```
 
 That layout is common, not universal. Read the GPIO controller binding. Some providers add a bank or instance cell.
 
 ## Function Names And GPIO Lookup
 
-Linux GPIO lookup derives the property name from the driver's connection ID:
+Linux GPIO lookup derives the property name from the driver's connection ID. Both drivers above use the same call:
 
 ```c
-reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
+/* drivers/gpu/drm/solomon/ssd130x.c and drivers/pci/controller/cadence/pci-j721e.c */
+reset = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
 ```
 
-For Device Tree this normally finds `reset-gpios`. An indexed getter selects entries from a multi-GPIO property. The connection ID describes the signal's function at the consumer; it should not be a global GPIO number or provider pin name.
+For Device Tree this finds `reset-gpios`. The connection ID describes the signal's function at the consumer; it is not a global GPIO number or provider pin name.
 
-GPIO flags describe wiring semantics such as active-low. The driver works with logical active/inactive values through the descriptor API; it should not compensate by manually inverting a correctly described line.
+GPIO flags describe wiring semantics. The OLED reset is active-low and the PCIe reset output active-high, yet both drivers request `GPIOD_OUT_LOW` (logically deasserted) and work with logical values; neither inverts the line in code.
 
 ## GPIO Is Not Pinctrl
 
@@ -64,68 +81,79 @@ A reset GPIO can be correct while its pad remains muxed to another peripheral. C
 
 ## Interrupt Controllers
 
-An interrupt controller declares:
+An interrupt controller declares `interrupt-controller` and `#interrupt-cells`. AM64x chains three kinds (`k3-am64-main.dtsi`):
 
 ```dts
-intc: interrupt-controller@c000 {
-        compatible = "example,trainer-intc";
+gic500: interrupt-controller@1800000 {
+        compatible = "arm,gic-v3";
         interrupt-controller;
-        #interrupt-cells = <2>;
+        #interrupt-cells = <3>;           /* type, number, trigger flags */
+};
+
+main_gpio_intr: interrupt-controller@a00000 {
+        compatible = "ti,sci-intr";       /* interrupt router */
+        interrupt-controller;
+        interrupt-parent = <&gic500>;
+        #interrupt-cells = <1>;           /* router input */
+};
+
+main_gpio0: gpio@600000 {
+        interrupt-parent = <&main_gpio_intr>;
+        interrupts = <190>, <191>, <192>, <193>, <194>, <195>;
+        interrupt-controller;
+        #interrupt-cells = <2>;           /* GPIO line, trigger flags */
 };
 ```
 
-The provider binding defines the interrupt specifier. A common two-cell form is hardware interrupt number plus trigger flags, but other controllers use three or more cells for type, number, flags, CPU routing, or hierarchy data.
+The provider binding defines the specifier. Three, one, and two cells appear on one SoC.
 
 ## `interrupt-parent` And `interrupts`
 
-The traditional form separates provider selection from provider arguments:
+The traditional form separates provider selection from provider arguments. The AM642 SK Wi-Fi module's interrupt (`k3-am642-sk.dts`):
 
 ```dts
-device@3000 {
-        interrupt-parent = <&intc>;
-        interrupts = <17 IRQ_TYPE_LEVEL_HIGH>;
+wlcore: wlcore@2 {
+        compatible = "ti,wl1837";
+        interrupt-parent = <&main_gpio0>;
+        interrupts = <46 IRQ_TYPE_EDGE_FALLING>;
 };
 ```
 
-`interrupts` does not begin with a phandle. Its entry width comes from the selected interrupt parent's `#interrupt-cells`. `interrupt-parent` can be inherited through the Device Tree interrupt topology, so the property may be absent on the immediate consumer.
+`interrupts` does not begin with a phandle. Its entry width comes from the selected interrupt parent's `#interrupt-cells`. `interrupt-parent` can also be inherited: the AM64x root node sets `interrupt-parent = <&gic500>;`, so `main_uart0` simply writes `interrupts = <GIC_SPI 178 IRQ_TYPE_LEVEL_HIGH>;` with three cells.
 
 Do not decode `interrupts` using the structural parent unless the interrupt-parent rules actually select it.
 
 ## `interrupts-extended`
 
-The extended form places a provider phandle in every entry:
+The extended form places a provider phandle in every entry, so entries can come from different interrupt domains with different widths. The BeagleBoard-X15 UART3 has a normal interrupt and a pad wake-up interrupt (`arch/arm/boot/dts/ti/omap/am57xx-beagle-x15-common.dtsi`):
 
 ```dts
-interrupts-extended = <&intc 17 IRQ_TYPE_LEVEL_HIGH>,
-                      <&gpio0 6 IRQ_TYPE_EDGE_FALLING>;
-interrupt-names = "core", "wakeup";
+&uart3 {
+        interrupts-extended = <&crossbar_mpu GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>,
+                              <&dra7_pmx_core 0x3f8>;
+};
 ```
 
-This supports entries from different interrupt domains. Each tuple uses the referenced provider's `#interrupt-cells`, so entry widths can differ.
+`crossbar_mpu` (`ti,irq-crossbar`) uses three cells; `dra7_pmx_core` (`pinctrl-single` acting as a wake-up interrupt controller) uses one, the pad register offset. The `8250_omap.yaml` binding documents the second entry as the optional system wake-up IRQ.
 
 Do not normally combine `interrupts` and `interrupts-extended` for the same resource list unless the binding explicitly defines compatibility behavior.
 
 ## A GPIO Controller Can Also Be An Interrupt Controller
 
-One hardware block can advertise both roles:
+`main_gpio0` above advertises both roles. Consumers use separate namespaces on the same block. On the AM642 SK:
 
 ```dts
-gpio0: gpio-controller@b000 {
-        gpio-controller;
-        #gpio-cells = <2>;
-        interrupt-controller;
-        #interrupt-cells = <2>;
+wlan_en: regulator-4 {
+        gpio = <&main_gpio0 48 GPIO_ACTIVE_HIGH>;      /* GPIO role */
+};
+
+wlcore: wlcore@2 {
+        interrupt-parent = <&main_gpio0>;
+        interrupts = <46 IRQ_TYPE_EDGE_FALLING>;      /* interrupt role */
 };
 ```
 
-These consumer properties use separate namespaces:
-
-```dts
-enable-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
-interrupts-extended = <&gpio0 6 IRQ_TYPE_EDGE_RISING>;
-```
-
-The same line can sometimes serve both roles, but the hardware and bindings decide whether that is valid. `#gpio-cells` never decodes an interrupt specifier.
+Both happen to use two cells with a line number first, but the second cells come from different headers (`gpio.h` versus `irq.h`). `#gpio-cells` never decodes an interrupt specifier.
 
 ## Trigger Flags Describe Hardware Signaling
 
@@ -141,7 +169,7 @@ Use binding constants from the relevant `dt-bindings/interrupt-controller/...` h
 
 ## Interrupt Names And Driver Lookup
 
-Multiple interrupts should have stable semantic names in `interrupt-names`, as in the `interrupts-extended` example above. Drivers request a named IRQ through platform helpers; as with clocks and resets, the names map positionally and form part of the binding ABI.
+Multiple interrupts should have stable semantic names. The AM64x MCAN node lists `interrupt-names = "int0", "int1";` and `drivers/net/can/m_can/m_can_platform.c` requests `platform_get_irq_byname(pdev, "int0")`. As with clocks and resets, the names map positionally and form part of the binding ABI.
 
 ## Debugging Checklist
 
@@ -166,10 +194,10 @@ Multiple interrupts should have stable semantic names in `interrupt-names`, as i
 
 ## Exercises
 
-1. Decode two `interrupts-extended` entries whose providers use two and three cells.
+1. Decode both `interrupts-extended` entries of the BeagleBoard-X15 `uart3`, whose providers use three and one cells.
 2. Explain why `reset-gpios` maps to connection ID `reset`.
 3. Separate polarity semantics of GPIO output and IRQ trigger configuration.
-4. List the additional checks for an interrupt supplied by an I2C GPIO expander.
+4. List the additional checks for an interrupt supplied by an I2C GPIO expander, such as the AM62x SK HDMI bridge whose `interrupt-parent` is the `exp1` expander.
 5. Explain why the same numeric line can appear in both GPIO and interrupt specifiers without making the specifiers interchangeable.
 
 ## References And Next Step

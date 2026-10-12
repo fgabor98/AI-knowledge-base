@@ -12,68 +12,67 @@ These resources frequently come from one SoC system controller, but they remain 
 
 ## Clock Relationships
 
-A clock provider declares `#clock-cells`; a consumer lists clock specifiers:
+A clock provider declares `#clock-cells`; a consumer lists clock specifiers. On AM64x almost every clock comes from the TI-SCI firmware provider (`k3-am64-main.dtsi`):
 
 ```dts
-clock_controller: clock-controller@8000 {
-        compatible = "example,trainer-clocks";
-        #clock-cells = <1>;
-};
-
-serial@1000 {
-        clocks = <&clock_controller 3>,
-                 <&clock_controller 7>;
-        clock-names = "bus", "core";
+icssg0: icssg@30000000 {
+        clocks = <&k3_clks 81 0>,  /* icssg0_core_clk */
+                 <&k3_clks 81 3>,  /* icssg0_iep_clk */
+                 <&k3_clks 81 16>, /* icssg0_rgmii_mhz_250_clk */
+                 /* ... */
+                 <&k3_clks 81 20>; /* icssg0_iclk */
+        assigned-clocks = <&k3_clks 81 0>;
+        assigned-clock-parents = <&k3_clks 81 2>;
 };
 ```
 
-The provider binding defines IDs 3 and 7. A shared `dt-bindings/clock/...h` header may expose readable constants:
+The provider binding (`ti,k2g-sci-clk`) defines the cells as TI-SCI device ID 81 and clock IDs 0, 3, 16, …; the IDs themselves come from the SoC's TI-SCI firmware documentation. K3 sources use raw numbers with comments. Other SoC families provide headers under `include/dt-bindings/clock/` with named constants; either way the source compiles to provider-defined cells.
 
-```dts
-clocks = <&clock_controller TRAINER_CLK_UART_BUS>,
-         <&clock_controller TRAINER_CLK_UART_CORE>;
-```
-
-The macro improves readability but still compiles to provider-defined cells.
-
-Clock relationships describe which signals feed the consumer. They do not by themselves define a desired rate, parent selection, or enable policy. Properties such as `assigned-clocks`, `assigned-clock-parents`, and `assigned-clock-rates` have distinct binding semantics and must be used deliberately.
+Clock relationships describe which signals feed the consumer. They do not by themselves define a desired rate, parent selection, or enable policy. The `assigned-clocks`/`assigned-clock-parents` pair above, and `assigned-clock-rates = <60000000>;` on the AM64x ADC (`tscadc0`), have distinct binding semantics; see [Clock Trees, Consumers, And Assignments](../clocks-resets-regulators-and-power/clock-trees-consumers-and-assignments.md#consumption-versus-assignment).
 
 ## Reset Relationships
 
-Reset controllers advertise `#reset-cells`:
+Reset controllers advertise `#reset-cells`. AM64x has both a firmware reset provider and a local one in the SERDES wrapper:
 
 ```dts
-reset_controller: reset-controller@9000 {
-        compatible = "example,trainer-resets";
-        #reset-cells = <1>;
+k3_reset: reset-controller {
+        compatible = "ti,sci-reset";
+        #reset-cells = <2>;
 };
 
-serial@1000 {
-        resets = <&reset_controller 2>;
-        reset-names = "core";
+serdes_wiz0: wiz@f000000 {
+        #reset-cells = <1>;
+
+        serdes0: serdes@f000000 {
+                resets = <&serdes_wiz0 0>;
+                reset-names = "torrent_reset";
+        };
+};
+
+main_r5fss0_core0: r5f@78000000 {
+        resets = <&k3_reset 121 1>;
 };
 ```
 
-The argument can identify a line, bank/bit pair, or composite reset control depending on the provider binding. It does not universally equal a register bit.
+For `k3_reset` the arguments are a TI-SCI device ID and a reset mask; for the WIZ wrapper a single local reset index. Neither universally equals a register bit.
 
 The Linux reset framework distinguishes exclusive, shared, and pulse/reset controls. Device Tree describes the hardware connection; the consumer driver and binding determine the safe operation model.
 
 ## Power-Domain Relationships
 
-A provider can expose one or more power domains:
+`k3_pds` uses two cells: a TI-SCI device ID and an ownership flag defined in `dt-bindings/soc/ti,sci_pm_domain.h`:
 
 ```dts
-power_controller: power-controller@a000 {
-        compatible = "example,trainer-power";
-        #power-domain-cells = <1>;
+main_uart0: serial@2800000 {
+        power-domains = <&k3_pds 146 TI_SCI_PD_EXCLUSIVE>;
 };
 
-serial@1000 {
-        power-domains = <&power_controller 4>;
+crypto: crypto@40900000 {
+        power-domains = <&k3_pds 133 TI_SCI_PD_SHARED>;
 };
 ```
 
-The specifier selects the provider-defined domain. Some providers use zero cells because the provider node represents one domain; others use multiple cells for domain and performance-state or hierarchy information if their binding defines it.
+The SA2UL crypto engine is marked shared because system firmware and OP-TEE also use it; upstream commit `49611f43e035` (“Do not exclusively claim SA2UL”, AM65x) explains that an exclusive request from Linux fails, and AM64x took the shared flag from the start. Other providers use zero cells because the provider node represents one domain, or one cell for a domain index.
 
 Power-domain membership is not the same as a regulator supply. A domain often controls shared isolation, clocks, or switches around several integrated blocks, while a regulator models an electrical supply rail.
 
@@ -98,15 +97,7 @@ Power domains are often attached by platform/framework code rather than looked u
 
 ## Dependency Sequencing Is Not Encoded By Property Order
 
-This source order:
-
-```dts
-resets = <&reset_controller 2>;
-clocks = <&clock_controller 3>;
-power-domains = <&power_controller 4>;
-```
-
-does not prescribe “reset, then clock, then power.” Property order is style. Frameworks, bindings, and drivers implement safe sequencing. If hardware requires a special sequence, model all hardware dependencies completely and use the appropriate subsystem rather than relying on DTS line order.
+The AM64x R5F cluster places `power-domains = <&k3_pds 119 TI_SCI_PD_EXCLUSIVE>;` on the `r5fss` node and `resets = <&k3_reset 121 1>;` on each core node. Neither the node structure nor property order prescribes “power, then reset.” Property order is style. Frameworks, bindings, and drivers (here `ti_k3_r5_remoteproc.c` together with TI-SCI firmware) implement safe sequencing. If hardware requires a special sequence, model all hardware dependencies completely and use the appropriate subsystem rather than relying on DTS line order.
 
 ## Debugging Checklist
 
@@ -130,7 +121,7 @@ For a failed clock, reset, or domain:
 
 ## Exercises
 
-1. Decode three properties targeting one system controller with different cell counts.
+1. Decode `clocks`, `resets`, and `power-domains` entries that all target children of the AM64x `dmsc` node, and explain what the second cell means in each.
 2. Explain why `assigned-clock-rates` is not equivalent to `clocks`.
 3. Distinguish a reset line, reset control, and reset provider.
 4. List evidence that separates disabled provider from unregistered provider.

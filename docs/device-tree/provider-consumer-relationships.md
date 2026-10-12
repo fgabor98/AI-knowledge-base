@@ -38,7 +38,7 @@ Complete [Syntax, Values, And Source Composition](syntax-values-and-source-compo
 
 ## The Core Decoding Algorithm
 
-For any phandle-array property such as `clocks = <&osc>, <&clock_controller 4 1>;`:
+For any phandle-array property such as `clocks = <&k3_clks 162 0>, <&k3_clks 162 1>, <&serdes_refclk>;` on the AM64x SERDES wrapper:
 
 1. Read the consumer binding to learn the property, entry count, order, and names.
 2. Resolve the next phandle to its provider node.
