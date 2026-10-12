@@ -42,7 +42,7 @@ You do not need prior Device Tree experience or kernel-driver experience.
 3. [Tree Anatomy And Vocabulary](foundations/tree-anatomy-and-vocabulary.md) — nodes, properties, values, names, paths, labels, aliases, and phandles.
 4. [First Device Tree Lab](foundations/first-device-tree-lab.md) — compile, inspect, modify, and diagnose a small tree.
 
-Follow the pages in order on a first pass. The examples deliberately reuse one fictional board so that each page adds a new layer without changing the hardware model.
+Follow the pages in order on a first pass. The examples reuse one real board—the TI AM642 SK from mainline Linux—so that each page adds a new layer without changing the hardware model.
 
 ## The Core Mental Model
 
@@ -99,8 +99,8 @@ You are ready for the next module when you can answer all of these without refer
 2. What is the difference between a binding and a driver?
 3. Which artifact does a bootloader normally pass to Linux?
 4. Why can editing a DTS have no effect on the running target?
-5. How do `uart0:`, `/soc/serial@1000`, and `serial0` differ?
-6. Why does `clocks = <&osc 0>;` require the clock provider's binding to decode?
+5. How do `main_uart0:`, `/bus@f4000/serial@2800000`, and `serial2` differ?
+6. Why does `clocks = <&k3_clks 146 0>;` require the clock provider's binding to decode?
 7. What are the major blocks inside a flattened DTB?
 
 ## Authoritative References

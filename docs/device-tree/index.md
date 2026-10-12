@@ -12,6 +12,12 @@ Device Tree topics focused on describing embedded hardware for Linux, U-Boot, fi
 
 Device Tree appears in kernel, U-Boot, TI SDK, board porting, pinmux, clocks, regulators, networking, storage, and remoteproc work. This section is the standalone roadmap for learning it systematically.
 
+## Real Hardware Examples
+
+Examples use real upstream sources wherever possible, primarily the TI AM64x family and its AM642 SK and AM642 EVM boards, with AM62x boards where AM64x lacks the hardware (display, camera, audio, CPU frequency scaling). Unless stated otherwise, DTS excerpts come from mainline Linux `arch/arm64/boot/dts/ti/` (v6.19-rc1), bindings from `Documentation/devicetree/bindings/`, and U-Boot examples from TI U-Boot. Excerpts are trimmed: `/* ... */` marks omitted properties or nodes. Clock and power-domain specifiers such as `<&k3_clks 146 0>` and `<&k3_pds 146 TI_SCI_PD_EXCLUSIVE>` are TI-SCI system-firmware device and clock IDs.
+
+Where a page teaches an anti-pattern or a deliberately broken description, the example is marked as invented.
+
 ## Learning Materials
 
 1. [Official Device Tree Documentation Reading Checklist](official-docs-reading/index.md)

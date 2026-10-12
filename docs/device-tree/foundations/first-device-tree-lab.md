@@ -10,22 +10,23 @@ last_reviewed: null
 
 ## Goal
 
-Build a small standalone tree, inspect its binary form, make controlled changes, and distinguish source syntax errors from semantic errors. This lab does not require a development board or kernel source tree.
+Build a small standalone tree taken from the TI AM642 SK description, inspect its binary form, make controlled changes, distinguish source syntax errors from semantic errors, and then compare the trimmed tree with the real board DTB built from mainline Linux. No development board is required.
 
 ## Expected Outcome
 
 At the end, you will have:
 
-- compiled `trainer-board.dts` into `trainer-board.dtb`
+- compiled `am642-sk-mini.dts` into a DTB
 - decompiled the DTB into a source-like representation
 - inspected strings, cells, paths, and phandles
 - demonstrated that comments and labels are not preserved like ordinary properties
 - introduced and diagnosed both a compiler error and a semantic error
+- built the real `k3-am642-sk.dtb` and located the same UART in it
 - recorded evidence that identifies a specific DTB artifact
 
 ## Requirements
 
-Install the Device Tree Compiler package supplied by your development distribution. Confirm the required commands:
+Install the Device Tree Compiler package supplied by your distribution, or use the `dtc`/`fdtget` binaries from a TI Processor SDK host sysroot. Confirm the required commands:
 
 ```sh
 dtc --version
@@ -35,147 +36,85 @@ command -v fdtget
 sha256sum --version
 ```
 
-Some packages do not install every `libfdt` utility. `dtc` is required; `fdtdump` and `fdtget` are strongly recommended. Work in a disposable directory, not in a production kernel tree.
+Some packages do not install every `libfdt` utility. `dtc` is required; `fdtdump` and `fdtget` are strongly recommended. Steps 10 and 11 also need a mainline Linux checkout and a host `cpp`. Work in a disposable directory, not in a production kernel tree.
 
 ## Step 1: Create The Source
 
-Create `trainer-board.dts` with this content:
-
-```dts
-/dts-v1/;
-
-/ {
-        model = "Example Trainer Board";
-        compatible = "example,trainer-board";
-        #address-cells = <1>;
-        #size-cells = <1>;
-
-        aliases {
-                serial0 = &uart0;
-        };
-
-        chosen {
-                stdout-path = "serial0:115200n8";
-        };
-
-        osc: clock-24000000 {
-                compatible = "fixed-clock";
-                #clock-cells = <0>;
-                clock-frequency = <24000000>;
-        };
-
-        soc {
-                compatible = "simple-bus";
-                #address-cells = <1>;
-                #size-cells = <1>;
-                ranges;
-
-                uart0: serial@1000 {
-                        compatible = "example,trainer-uart";
-                        reg = <0x1000 0x100>;
-                        clocks = <&osc>;
-                        status = "okay";
-                };
-        };
-};
-```
+Create `am642-sk-mini.dts` from the tree in [Tree Anatomy And Vocabulary](tree-anatomy-and-vocabulary.md#start-with-one-tree). It is a trimmed excerpt of `k3-am64.dtsi`, `k3-am64-main.dtsi`, and `k3-am642-sk.dts` with macros expanded.
 
 Before compiling, predict:
 
-- the path of the UART
-- the number of address/size pairs in `reg`
-- the path stored in the `serial0` alias
+- the path of the console UART
+- the number of address/size pairs in its `reg`
+- the path stored in the `serial2` alias and in `/chosen/stdout-path`
 - which node will receive a generated phandle
 
 ## Step 2: Compile The DTB
 
 ```sh
-dtc -I dts -O dtb -o trainer-board.dtb trainer-board.dts
+dtc -I dts -O dtb -o am642-sk-mini.dtb am642-sk-mini.dts
 ```
 
 Confirm that the output exists and capture its identity:
 
 ```sh
-ls -l trainer-board.dts trainer-board.dtb
-sha256sum trainer-board.dtb
+ls -l am642-sk-mini.dts am642-sk-mini.dtb
+sha256sum am642-sk-mini.dtb
 ```
 
-No compiler output usually means syntax compilation succeeded. It does not mean that the fictional compatible strings have real bindings or drivers.
+No compiler output usually means syntax compilation succeeded. It does not mean that the trimmed tree satisfies the real bindings: `8250_omap.yaml`, for example, requires `interrupts`, which this excerpt omits.
 
 ## Step 3: Decompile It
 
 ```sh
-dtc -I dtb -O dts -o trainer-board.decompiled.dts trainer-board.dtb
-```
-
-Inspect the result:
-
-```sh
-sed -n '1,200p' trainer-board.decompiled.dts
+dtc -I dtb -O dts -o am642-sk-mini.decompiled.dts am642-sk-mini.dtb
+sed -n '1,200p' am642-sk-mini.decompiled.dts
 ```
 
 Look for these transformations:
 
-- source comments are absent
-- formatting may differ
-- label names are not ordinary node names
-- `&uart0` in `/aliases` became a path string
-- `&osc` became a numeric phandle reference
-- the provider node gained a numeric `phandle` property
+- source comments such as `/* First peripheral window */` are absent
+- cell values are printed in hexadecimal, so `48000000` becomes `0x2dc6c00`
+- the string list prints as `"ti,am64-uart\0ti,am654-uart"`
+- `&main_uart0` in `/aliases` and `/chosen` became the path string `/bus@f4000/serial@2800000`
+- `<&k3_clks 146 0>` became `<0x01 0x92 0x00>`
+- the `clock-controller` node gained `phandle = <0x01>`
 
-Do not treat the decompiled file as the maintainable original source. It is useful evidence of what the DTB contains.
+Do not treat the decompiled file as the maintainable original source. It is evidence of what the DTB contains.
 
 ## Step 4: Inspect The Flattened Layout
 
-If `fdtdump` is available:
-
 ```sh
-fdtdump trainer-board.dtb
+fdtdump am642-sk-mini.dtb | sed -n '1,20p'
 ```
 
-Find the header fields and the decoded tree. Relate the reported offsets and sizes to:
+Find the header fields—`magic`, `totalsize`, `off_dt_struct`, `off_dt_strings`, `off_mem_rsvmap`, `version`—and relate them to the header, memory reservation block, structure block, and strings block.
 
-- header
-- memory reservation block
-- structure block
-- strings block
-
-Then view the first bytes without trying to parse the whole blob manually:
+Then view the first bytes without parsing the whole blob manually:
 
 ```sh
-od -Ax -tx1z -N 64 trainer-board.dtb
+od -Ax -tx1z -N 64 am642-sk-mini.dtb
 ```
 
-The first four bytes should contain the FDT magic in big-endian order. The rest of the header contains big-endian fields; raw host-order interpretation is unsafe.
+The first four bytes are the FDT magic `d0 0d fe ed` in big-endian order. The rest of the header is also big-endian; raw host-order interpretation is unsafe.
 
 ## Step 5: Query Individual Properties
 
-Read string properties:
-
 ```sh
-fdtget trainer-board.dtb / model
-fdtget trainer-board.dtb / compatible
-fdtget trainer-board.dtb /aliases serial0
-fdtget trainer-board.dtb /chosen stdout-path
+fdtget am642-sk-mini.dtb / model
+fdtget am642-sk-mini.dtb / compatible
+fdtget am642-sk-mini.dtb /aliases serial2
+fdtget am642-sk-mini.dtb /chosen stdout-path
+
+fdtget -tx am642-sk-mini.dtb /bus@f4000/serial@2800000 reg
+fdtget -tu am642-sk-mini.dtb /bus@f4000/serial@2800000 clock-frequency
+fdtget -tx am642-sk-mini.dtb /bus@f4000/serial@2800000 clocks
+
+fdtget -l am642-sk-mini.dtb /bus@f4000
+fdtget -p am642-sk-mini.dtb /bus@f4000/serial@2800000
 ```
 
-Read cells as hexadecimal values:
-
-```sh
-fdtget -tx trainer-board.dtb /soc/serial@1000 reg
-fdtget -tx trainer-board.dtb /clock-24000000 clock-frequency
-fdtget -tx trainer-board.dtb /soc/serial@1000 clocks
-```
-
-List nodes and properties:
-
-```sh
-fdtget -l trainer-board.dtb /
-fdtget -l trainer-board.dtb /soc
-fdtget -p trainer-board.dtb /soc/serial@1000
-```
-
-If your `fdtget` version uses different option spelling, consult `fdtget --help`; utility versions vary more than the underlying DTB concepts.
+`clocks` prints `1 92 0`: phandle 1, TI-SCI device `0x92` (146), clock 0. If your `fdtget` version uses different option spelling, consult `fdtget --help`.
 
 ## Step 6: Prove Label, Path, Alias, And Phandle Roles
 
@@ -183,80 +122,121 @@ Record all four UART identities:
 
 | Form | Expected value | Where it matters |
 |---|---|---|
-| source label | `uart0` | source references |
-| node name | `serial@1000` | child identity under `/soc` |
-| full path | `/soc/serial@1000` | logical tree lookup |
-| alias | `serial0` | shorthand understood by consumers |
+| source label | `main_uart0` | source references from `k3-am642-sk.dts` |
+| node name | `serial@2800000` | child identity under `bus@f4000` |
+| full path | `/bus@f4000/serial@2800000` | logical tree lookup |
+| alias | `serial2` | shorthand understood by consumers |
 
-Now record the oscillator's numeric phandle and the UART's `clocks` value. They should match within this blob. Recompile after an unrelated source reordering and observe that relying on a particular numeric phandle would be unsafe.
+Record the clock controller's numeric phandle and the first cell of the UART's `clocks` value. They match within this blob. In Step 11 you will see that the full board DTB assigns a different number to the same node.
 
 ## Step 7: Make A Controlled Hardware Change
 
-Change the oscillator frequency from 24 MHz to 25 MHz:
+Suppose a custom board uses UART1 as its console. Add the node exactly as `k3-am64-main.dtsi` defines it, inside `bus@f4000`:
 
 ```dts
-clock-frequency = <25000000>;
+main_uart1: serial@2810000 {
+        compatible = "ti,am64-uart", "ti,am654-uart";
+        reg = <0x00 0x02810000 0x00 0x100>;
+        clock-frequency = <48000000>;
+        clocks = <&k3_clks 152 0>;
+        clock-names = "fclk";
+        status = "okay";
+};
 ```
 
-Recompile to a second artifact:
+Point the console at it:
+
+```dts
+chosen {
+        stdout-path = &main_uart1;
+};
+```
+
+Recompile to a second artifact and compare:
 
 ```sh
-dtc -I dts -O dtb -o trainer-board-25mhz.dtb trainer-board.dts
-sha256sum trainer-board.dtb trainer-board-25mhz.dtb
-fdtget -tu trainer-board-25mhz.dtb /clock-24000000 clock-frequency
+dtc -I dts -O dtb -o am642-uart1.dtb am642-sk-mini.dts
+sha256sum am642-sk-mini.dtb am642-uart1.dtb
+fdtget am642-uart1.dtb /chosen stdout-path
+fdtget -tx am642-uart1.dtb /bus@f4000/serial@2810000 clocks
 ```
 
 Expected result:
 
 - the hashes differ
-- the queried value is `25000000`
-- the node name remains `clock-24000000`, which is now misleading
+- `stdout-path` is now `/bus@f4000/serial@2810000`
+- the new UART's clock specifier is `1 98 0` (device 152)
 
-Rename the node to `clock-25000000`, rebuild, and confirm that the UART reference still resolves because source refers to the `osc` label rather than the old path.
-
-This demonstrates why labels are useful during source composition and why descriptive node names should remain accurate.
+The source changed only label references; the compiler produced the paths and phandles.
 
 ## Step 8: Diagnose A Syntax Error
 
-Temporarily remove the semicolon after `status = "okay"` and compile:
+Temporarily remove the semicolon after `status = "okay"` in `serial@2800000` and compile:
 
 ```sh
-dtc -I dts -O dtb -o broken.dtb trainer-board.dts
+dtc -I dts -O dtb -o broken.dtb am642-sk-mini.dts
 ```
 
-Record:
-
-- the line reported by `dtc`
-- whether the actual omission is on that line or immediately before it
-- whether `broken.dtb` was produced
-
-Restore the semicolon before continuing.
+`dtc` reports `syntax error` at the line of the following `};`, not at the line where the semicolon is missing, and exits with `FATAL ERROR: Unable to parse input tree`. Record whether `broken.dtb` was produced. Restore the semicolon.
 
 ## Step 9: Diagnose A Semantic Error
 
-Change the UART register property to:
+Change the UART register property to a one-cell-per-field form:
 
 ```dts
-reg = <0x1000>;
+reg = <0x02800000 0x100>;
 ```
 
-The parent declares one address cell and one size cell, so this no longer contains a complete address/size pair. Compile it.
-
-Depending on warning options and compiler version, `dtc` may warn or may still produce a blob. This is the lesson: the compiler cannot prove all binding semantics from source syntax alone.
-
-Restore the property, then compile with explicit warnings where supported:
+The parent declares two address cells and two size cells, so these two cells form only half of an address/size pair. Compile it:
 
 ```sh
-dtc -I dts -O dtb -Waddress_cells_is_cell \
-    -Wsize_cells_is_cell -Wreg_format \
-    -o trainer-board.dtb trainer-board.dts
+dtc -I dts -O dtb -o bad-reg.dtb am642-sk-mini.dts
+echo "exit status: $?"
 ```
 
-In a Linux kernel tree, schema validation adds binding knowledge that standalone syntax compilation lacks. That workflow is covered in [Writing And Validating Binding Schemas](../writing-and-validating-binding-schemas.md).
+`dtc` prints `Warning (reg_format): ... property has invalid length (8 bytes) (#address-cells == 2, #size-cells == 2)` plus dependent warnings, yet exits 0 and writes `bad-reg.dtb`. This is the lesson: a blob can be produced from a structurally wrong description. Restore the property.
 
-## Step 10: Build An Evidence Record
+Binding schemas catch far more than `dtc` can; that workflow is covered in [Writing And Validating Binding Schemas](../writing-and-validating-binding-schemas.md).
 
-Write a short record containing:
+## Step 10: Build The Real Board DTB
+
+From a mainline Linux checkout, the normal command is:
+
+```sh
+make ARCH=arm64 defconfig
+make ARCH=arm64 ti/k3-am642-sk.dtb
+```
+
+If the full Kbuild prerequisites (for example `flex` and `bison`) are unavailable, reproduce the essential pipeline by hand:
+
+```sh
+cd linux
+cpp -nostdinc -I scripts/dtc/include-prefixes -I arch/arm64/boot/dts/ti \
+    -undef -D__DTS__ -x assembler-with-cpp \
+    -o /tmp/k3-am642-sk.pp.dts arch/arm64/boot/dts/ti/k3-am642-sk.dts
+dtc -@ -I dts -O dtb -o /tmp/k3-am642-sk.dtb /tmp/k3-am642-sk.pp.dts
+```
+
+The manual command is illustrative; Kbuild adds dependency tracking and warning flags. Record which method produced your artifact.
+
+## Step 11: Compare Trimmed And Real Trees
+
+```sh
+fdtget /tmp/k3-am642-sk.dtb / compatible
+fdtget /tmp/k3-am642-sk.dtb /chosen stdout-path
+fdtget -tx /tmp/k3-am642-sk.dtb /bus@f4000/serial@2800000 clocks
+fdtget -tx /tmp/k3-am642-sk.dtb /bus@f4000/serial@2800000 interrupts
+fdtget -l /tmp/k3-am642-sk.dtb /bus@f4000 | head -20
+```
+
+Observe:
+
+- the root compatible and console path are identical to the trimmed tree
+- `clocks` still decodes to device 146, clock 0, but the phandle number differs because the full tree contains more nodes
+- `interrupts` is `0 b2 4`: `GIC_SPI`, SPI 178, `IRQ_TYPE_LEVEL_HIGH`, decoded with the GIC's `#interrupt-cells = <3>`
+- the real `bus@f4000` contains dozens of controllers that the trimmed tree omits
+
+## Step 12: Build An Evidence Record
 
 ```text
 source path:
@@ -269,39 +249,34 @@ model property:
 root compatible list:
 UART path:
 UART reg cells:
-oscillator frequency:
+UART clock specifier (decoded):
 ```
 
-This habit scales directly to deployed boards. A useful debugging statement is “the running tree contains X from artifact hash Y,” not merely “I changed the DTS.”
+A useful debugging statement is “the running tree contains X from artifact hash Y,” not merely “I changed the DTS.”
 
 ## Optional Exercise: Compile With Symbols
 
-Compile with symbol generation:
-
 ```sh
-dtc -@ -I dts -O dtb -o trainer-board-symbols.dtb trainer-board.dts
-dtc -I dtb -O dts -o trainer-board-symbols.dts trainer-board-symbols.dtb
+dtc -@ -I dts -O dtb -o am642-sk-mini-symbols.dtb am642-sk-mini.dts
+fdtget -p am642-sk-mini-symbols.dtb /__symbols__
+fdtget am642-sk-mini-symbols.dtb /__symbols__ main_uart0
 ```
 
-Inspect the generated `__symbols__` node and compare it with the blob built without `-@`. Explain why overlays targeting labels need symbol information in the base blob.
+Compare it with the blob built without `-@`. Explain why overlays that target `&main_uart0` need this symbol table in the base blob.
 
 ## Troubleshooting
 
 ### `dtc: command not found`
 
-Install your distribution's Device Tree Compiler package. Do not substitute a random prebuilt binary in a production workflow without recording its version and provenance.
+Install your distribution's Device Tree Compiler package or use the one in a TI SDK host sysroot. Do not substitute a random prebuilt binary in a production workflow without recording its version and provenance.
 
 ### `fdtget: command not found`
 
 Your package may split `libfdt` utilities or omit them. Complete the compile/decompile steps with `dtc`, then install the matching utilities package if available.
 
-### Warning About `clocks` Or A Missing Provider Property
+### Real Board Source Fails With Standalone `dtc`
 
-Check that the provider has `#clock-cells = <0>` and that the consumer references it as `<&osc>` with no extra specifier cells.
-
-### Source Builds In Kernel But Not Standalone
-
-Kernel DTS files commonly rely on C preprocessing, generated include paths, and headers containing symbolic constants. Reproduce the kernel build rule or inspect its preprocessed source rather than deleting includes until standalone `dtc` accepts it.
+`k3-am642-sk.dts` relies on C preprocessing and headers such as `dt-bindings/gpio/gpio.h` and `k3-pinctrl.h`. Run the `cpp` step from Step 10 rather than deleting includes until standalone `dtc` accepts it.
 
 ## Completion Checklist
 
@@ -311,13 +286,13 @@ Kernel DTS files commonly rely on C preprocessing, generated include paths, and 
 - [ ] I can explain why decompilation is not a source round trip.
 - [ ] I can identify the flattened DTB's major blocks.
 - [ ] I can demonstrate a case that compiles but is semantically wrong.
+- [ ] I can build the real AM642 SK DTB and find the same node in it.
 - [ ] I can record enough evidence to identify one exact build artifact.
-- [ ] I understand why schema validation and runtime inspection are separate steps.
 
 ## References And Next Steps
 
 - [Devicetree Specification](https://www.devicetree.org/specifications/)
-- [Device Tree Compiler source and documentation](https://github.com/dgibson/dtc)
+- [Device Tree Compiler source and documentation](https://git.kernel.org/pub/scm/utils/dtc/dtc.git/)
 - [Device Tree Builds](../../build-systems/advanced/linux-kernel/device-tree-builds.md)
 - [Build And Diagnostic Tools](../build-and-diagnostic-tools.md)
 - [Runtime Inspection](../runtime-inspection.md)

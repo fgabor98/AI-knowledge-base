@@ -46,29 +46,31 @@ It should not normally answer Linux implementation questions:
 - Which user-space pathname should an application use?
 - Which workaround should a particular driver execute without a hardware distinction?
 
-Compare these conceptual properties:
+Compare a real node from the AM642 SK board (`arch/arm64/boot/dts/ti/k3-am642-sk.dts` in mainline Linux) with an invented anti-pattern:
 
 ```dts
-/* Hardware facts described by a binding. */
-temperature-sensor@48 {
-        compatible = "example,tmp123";
+/* Hardware facts: a TMP100 temperature sensor wired to I2C1 at address 0x48. */
+&main_i2c1 {
+        /* SoC power supply temperature */
+        tmp100@48 {
+                compatible = "ti,tmp100";
+                reg = <0x48>;
+        };
+};
+```
+
+```dts
+/* Invented for contrast: policy and implementation leakage. */
+tmp100@48 {
+        compatible = "ti,tmp100";
         reg = <0x48>;
-        interrupt-parent = <&gpio0>;
-        interrupts = <7 IRQ_TYPE_LEVEL_LOW>;
-        vdd-supply = <&reg_3v3>;
-};
-```
-
-```dts
-/* Suspicious policy or implementation leakage. */
-temperature-sensor@48 {
         linux,probe-first;
-        driver-name = "tmp123_driver";
-        userspace-path = "/dev/board-temperature";
+        driver-name = "lm75";
+        userspace-path = "/dev/soc-supply-temperature";
 };
 ```
 
-The second form tries to control a particular software implementation. A reusable binding describes the component and its wiring; compatible software decides how to use it.
+The second form tries to control a particular software implementation. The real node only states which part is fitted and where; Linux happens to drive it with the `lm75` hwmon driver, but nothing in the tree says so.
 
 ## Bindings Give Properties Meaning
 
@@ -80,19 +82,10 @@ Device Tree syntax only tells you that a node contains named byte sequences. A b
 - child-node rules
 - relationships to clocks, regulators, GPIOs, interrupts, and other providers
 
-For example, this is syntactically plausible:
+For the SK sensor above, correctness depends on two bindings:
 
-```dts
-sensor@48 {
-        compatible = "example,tmp123";
-        reg = <0x48>;
-};
-```
-
-Whether it is correct depends on at least two bindings:
-
-1. The parent bus binding determines how to interpret `reg`.
-2. The `example,tmp123` binding determines which other properties are required.
+1. The parent bus binding (`ti,omap4-i2c` via `i2c-controller.yaml`) says that `reg = <0x48>` is a 7-bit I2C target address, not a register offset.
+2. The device binding (`Documentation/devicetree/bindings/hwmon/lm75.yaml`, which covers `ti,tmp100`) says that only `compatible` and `reg` are required, that a `vs-supply` regulator is optional, and that `interrupts` is allowed for `ti,tmp100` but forbidden for several sibling parts.
 
 Never infer a property's complete meaning from its name. `reg`, `interrupts`, `clocks`, and GPIO specifiers are all decoded using context established elsewhere in the tree and in bindings.
 
@@ -146,40 +139,48 @@ The platform architecture and firmware ecosystem usually decide which model appl
 
 ## A Small End-To-End Example
 
-Assume a board contains a UART at SoC offset `0x1000`, connected to interrupt 5 and an oscillator:
+The AM642 SK console UART is described in three layers. Trimmed excerpts from mainline Linux:
 
 ```dts
-/dts-v1/;
-
+/* k3-am64.dtsi: the SoC and its main interconnect */
 / {
-        compatible = "example,trainer-board";
-        #address-cells = <1>;
-        #size-cells = <1>;
+        compatible = "ti,am642";
+        interrupt-parent = <&gic500>;
+        #address-cells = <2>;
+        #size-cells = <2>;
 
-        osc: clock-24000000 {
-                compatible = "fixed-clock";
-                #clock-cells = <0>;
-                clock-frequency = <24000000>;
-        };
-
-        soc {
+        cbass_main: bus@f4000 {
                 compatible = "simple-bus";
-                #address-cells = <1>;
-                #size-cells = <1>;
-                ranges;
-
-                serial@1000 {
-                        compatible = "example,trainer-uart";
-                        reg = <0x1000 0x100>;
-                        interrupts = <5>;
-                        clocks = <&osc>;
-                        status = "okay";
-                };
+                #address-cells = <2>;
+                #size-cells = <2>;
+                ranges = /* ... */
+                         <0x00 0x01000000 0x00 0x01000000 0x00 0x02330400>; /* First peripheral window */
         };
+};
+
+/* k3-am64-main.dtsi: the UART block exists in silicon but is not yet wired */
+&cbass_main {
+        main_uart0: serial@2800000 {
+                compatible = "ti,am64-uart", "ti,am654-uart";
+                reg = <0x00 0x02800000 0x00 0x100>;
+                interrupts = <GIC_SPI 178 IRQ_TYPE_LEVEL_HIGH>;
+                clock-frequency = <48000000>;
+                power-domains = <&k3_pds 146 TI_SCI_PD_EXCLUSIVE>;
+                clocks = <&k3_clks 146 0>;
+                clock-names = "fclk";
+                status = "disabled";
+        };
+};
+
+/* k3-am642-sk.dts: this board routes UART0 to pins and uses it as console */
+&main_uart0 {
+        status = "okay";
+        pinctrl-names = "default";
+        pinctrl-0 = <&main_uart0_pins_default>;
 };
 ```
 
-This does not say “load a serial driver.” It states that a compatible UART exists at a particular location with particular connections. Software that understands all referenced bindings can interpret those facts.
+None of this says “load a serial driver.” It states that a UART compatible with the AM654 programming model sits at physical address `0x2800000`, raises GIC SPI 178, takes its functional clock and power domain from the TI-SCI system firmware (device ID 146), and is pinned out on this board.
 
 ## Review Questions
 
