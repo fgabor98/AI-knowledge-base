@@ -14,7 +14,7 @@ Linux unflattens DT nodes into `struct device_node` objects. Separate population
 
 ```bash
 dtroot=/sys/firmware/devicetree/base
-node="$dtroot/soc/device@48000000"
+node="$dtroot/bus@f4000/mmc@fa00000"
 
 test -d "$node"
 tr '\0' '\n' <"$node/compatible"
@@ -61,7 +61,7 @@ Depending on kernel/subsystem, related firmware-node links may have different na
 Given a device directory:
 
 ```bash
-dev=/sys/devices/platform/soc/48000000.device
+dev=/sys/devices/platform/bus@f4000/fa00000.mmc
 
 readlink -f "$dev/subsystem"
 readlink -f "$dev/driver" 2>/dev/null
@@ -116,7 +116,7 @@ This avoids blaming a child compatible when the controller never registered its 
 Platform device names can include translated addresses, node names, or platform-specific naming. Treat them as Linux device-model identifiers, not DT ABI. Always prove with `of_node`:
 
 ```bash
-readlink -f /sys/bus/platform/devices/DEVICE/of_node
+readlink -f /sys/bus/platform/devices/fa00000.mmc/of_node   # .../bus@f4000/mmc@fa00000
 ```
 
 Hard-coding a platform device name into long-lived diagnostics can break when hierarchy or naming changes while the hardware binding remains valid.

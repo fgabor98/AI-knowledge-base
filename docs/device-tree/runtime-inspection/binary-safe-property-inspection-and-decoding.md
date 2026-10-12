@@ -39,10 +39,10 @@ Ordered string list:
 
 ```bash
 tr '\0' '\n' \
-  </sys/firmware/devicetree/base/soc/device@48000000/compatible
+  </sys/firmware/devicetree/base/bus@f4000/serial@2800000/compatible
 ```
 
-Use newline replacement for lists. `tr -d '\0'` would concatenate `"acme,axc200"` and `"acme,axc100"` into a false single string.
+Use newline replacement for lists. `tr -d '\0'` would concatenate `"ti,am64-uart"` and `"ti,am654-uart"` into the false single string `ti,am64-uartti,am654-uart`.
 
 Verify termination and hidden bytes when evidence matters:
 
@@ -57,12 +57,12 @@ Do not use `echo $(cat property)`; command substitution drops NUL bytes and perf
 A boolean is true by presence and normally has zero bytes:
 
 ```bash
-prop=/sys/firmware/devicetree/base/soc/device@48000000/dma-coherent
+prop=/sys/firmware/devicetree/base/bus@f4000/mmc@fa10000/non-removable
 
 if [[ -e "$prop" ]]; then
-        printf '%s\n' 'dma-coherent present'
+        printf '%s\n' 'non-removable present'
 else
-        printf '%s\n' 'dma-coherent absent'
+        printf '%s\n' 'non-removable absent'
 fi
 ```
 
@@ -73,7 +73,7 @@ An empty read is not false; it is the encoding of a present boolean. Confirm the
 DT cells are big-endian. Display exact bytes grouped in fours:
 
 ```bash
-prop=/sys/firmware/devicetree/base/soc/device@48000000/reg
+prop=/sys/firmware/devicetree/base/bus@f4000/mmc@fa00000/reg
 size=$(wc -c <"$prop")
 printf 'length=%s\n' "$size"
 xxd -p -c 4 "$prop"
@@ -84,7 +84,7 @@ Each eight-hex-digit line is one 32-bit cell in byte order. Avoid native-endian 
 Where possible, capture/reconstruct a DTB and use:
 
 ```bash
-fdtget -tx live.dtb /soc/device@48000000 reg
+fdtget -tx live.dtb /bus@f4000/mmc@fa00000 reg     # 0 fa00000 0 260 0 fa08000 0 134
 ```
 
 Then group cells by binding context.
@@ -97,14 +97,14 @@ Combine multi-cell addresses and sizes as described in [Decode Cells Mechanicall
 
 ```bash
 hexdump -Cv \
-  /sys/firmware/devicetree/base/soc/ethernet@10000000/local-mac-address
+  /sys/firmware/devicetree/base/bus@f4000/ethernet@8000000/ethernet-ports/port@1/mac-address
 ```
 
 For exact compact hex:
 
 ```bash
 xxd -p \
-  /sys/firmware/devicetree/base/soc/ethernet@10000000/local-mac-address
+  /sys/firmware/devicetree/base/bus@f4000/ethernet@8000000/ethernet-ports/port@1/mac-address
 ```
 
 Do not interpret arbitrary byte arrays as text. Redact secrets and privacy-sensitive identifiers according to field-log policy.
@@ -116,7 +116,7 @@ Display raw cells in big-endian order, then apply the [standard decoding algorit
 ## Status And Availability
 
 ```bash
-node=/sys/firmware/devicetree/base/soc/device@48000000
+node=/sys/firmware/devicetree/base/bus@f4000/mmc@fa00000
 
 if [[ -e "$node/status" ]]; then
         tr -d '\0' <"$node/status"

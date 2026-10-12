@@ -97,8 +97,8 @@ Whole-tree diffs are noisy. Query important invariants:
 fdtget live-tree.dtb / model
 fdtget live-tree.dtb / compatible
 fdtget live-tree.dtb /chosen stdout-path
-fdtget live-tree.dtb /soc/device@48000000 status
-fdtget -tx live-tree.dtb /soc/device@48000000 clocks
+fdtget live-tree.dtb /bus@f4000/mmc@fa00000 status
+fdtget -tx live-tree.dtb /bus@f4000/mmc@fa00000 clocks
 ```
 
 Use exact node paths discovered from the capture. Build a table of expected values and owners.

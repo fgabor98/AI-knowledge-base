@@ -8,151 +8,152 @@ last_reviewed: null
 
 # Runtime Device Tree And Probe Forensics Lab
 
-This lab diagnoses a capture engine whose node exists, module is loaded, and device is registered, but no driver is bound. The visible consumer failure is two supplier levels away and was introduced by a bootloader overlay. The correct fix is not a manual bind or a live binary edit.
+This lab diagnoses an SD card controller on a TI AM642 SK whose node exists, driver is built in, and device is registered, but no driver is bound. The visible consumer failure is two supplier levels away and was introduced by a bootloader overlay. The correct fix is not a manual bind or a live binary edit.
+
+The board, nodes, drivers, and log messages are real (mainline `k3-am642-sk.dts`, `sdhci_am654`, `reg-fixed-voltage`, `pca953x`). The product overlays and manifest are a hypothetical product built on that board.
 
 ## Incident
 
-Acme Falcon revision B contains an AXC200 capture engine powered by a fixed regulator. The regulator enable is connected to GPIO line 3 of an I2C expander.
+On the AM642 SK, the SD card slot (`sdhci1`, `mmc@fa00000`) is powered by a TPS2051BD load switch modeled as the fixed regulator `vdd_mmc1`. Its enable input is line 3 of the PCA9538 GPIO expander `exp1` at I2C address `0x70` on `main_i2c1`.
 
-After a product-profile update:
+The lab unit boots with an NFS root filesystem. After a product-profile update:
 
-- `/sys/firmware/devicetree/base/soc/capture@48000000` exists
-- `ax_capture` appears in `lsmod`
-- no capture interface appears in `/sys/class/acme-capture`
-- the platform device exists but has no `driver` symlink
+- `/sys/firmware/devicetree/base/bus@f4000/mmc@fa00000` exists
+- `sdhci_am654` is built into the kernel (`CONFIG_MMC_SDHCI_AM654=y`) and `/sys/bus/platform/drivers/sdhci-am654` exists
+- no `mmcblk1` device appears when a card is inserted
+- the platform device `fa00000.mmc` exists but has no `driver` symlink
 - an engineer proposes forcing a bind and then editing the live tree
 
 ## Intended Source
 
+From `arch/arm64/boot/dts/ti/k3-am642-sk.dts` (trimmed):
+
 ```dts
 / {
-        model = "Acme Falcon revision B";
-        compatible = "acme,falcon-revb", "acme,falcon";
+        compatible = "ti,am642-sk", "ti,am642";
+        model = "Texas Instruments AM642 SK";
 
-        capture_3v3: regulator-capture-3v3 {
+        vdd_mmc1: regulator-2 {
+                /* TPS2051BD */
                 compatible = "regulator-fixed";
-                regulator-name = "capture-3v3";
+                regulator-name = "vdd_mmc1";
                 regulator-min-microvolt = <3300000>;
                 regulator-max-microvolt = <3300000>;
-                gpio = <&ioexp 3 0>;
+                regulator-boot-on;
                 enable-active-high;
+                vin-supply = <&vcc_3v3_sys>;
+                gpio = <&exp1 3 GPIO_ACTIVE_HIGH>;
         };
 };
 
-&i2c2 {
+&main_i2c1 {
         status = "okay";
+        clock-frequency = <400000>;
 
-        ioexp: gpio@20 {
-                compatible = "acme,gpio16";
-                reg = <0x20>;
+        exp1: gpio@70 {
+                compatible = "nxp,pca9538";
+                reg = <0x70>;
                 gpio-controller;
                 #gpio-cells = <2>;
+                gpio-line-names = "GPIO_CPSW2_RST", "GPIO_CPSW1_RST",
+                                  "PRU_DETECT", "MMC1_SD_EN", /* ... */;
         };
 };
 
-&capture0 {
-        compatible = "acme,axc200";
-        interrupts = <80>, <81>;
-        interrupt-names = "completion", "error";
-        clocks = <&ccu 12>, <&capture_clk>;
-        clock-names = "bus", "sample";
-        resets = <&resetc 7>;
-        reset-names = "core";
-        vdd-supply = <&capture_3v3>;
+&sdhci1 {
         status = "okay";
+        vmmc-supply = <&vdd_mmc1>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&main_mmc1_pins_default>;
+        disable-wp;
 };
 ```
 
-Assume provider cell formats and omitted controller resources are valid in the real binding.
+The SoC node in `k3-am64-main.dtsi` supplies `compatible = "ti,am64-sdhci-4bit"`, two `reg` windows, one interrupt, `clocks = <&k3_clks 58 3>, <&k3_clks 58 4>` with names `clk_ahb` and `clk_xin`, and `power-domains = <&k3_pds 58 TI_SCI_PD_EXCLUSIVE>`.
 
 ## Boot Composition
 
-The product applies:
+The product applies (hypothetical overlays):
 
 ```text
-falcon-revb.dtb
-  -> factory-camera.dtbo
+k3-am642-sk.dtb
+  -> product-sdcard.dtbo
   -> low-power-profile.dtbo
   -> board identity and /chosen fixups
 ```
 
-The low-power profile was intended for a product without the expander. It contains:
+The low-power profile was written for a product variant without the expander. It contains:
 
 ```dts
 /dts-v1/;
 /plugin/;
 
-&i2c2 {
+&main_i2c1 {
         status = "disabled";
 };
 ```
 
-The manifest incorrectly permits it with `factory-camera.dtbo`.
+The manifest incorrectly permits it together with `product-sdcard.dtbo`.
 
 ## Collected Runtime Observations
 
 Root:
 
 ```text
-/model: Acme Falcon revision B
-/compatible: acme,falcon-revb, acme,falcon
+/model: Texas Instruments AM642 SK
+/compatible: ti,am642-sk, ti,am642
 ```
 
 Live nodes:
 
 ```text
-/soc/capture@48000000/status = okay
-/soc/i2c@30000000/status = disabled
-/soc/i2c@30000000/gpio@20/status = absent
-/regulator-capture-3v3/status = absent
+/bus@f4000/mmc@fa00000/status = okay
+/bus@f4000/i2c@20010000/status = disabled
+/bus@f4000/i2c@20010000/gpio@70/status = absent
+/regulator-2/status = absent
 ```
 
 Device-model observations:
 
 ```text
-platform device 48000000.capture exists
-48000000.capture/of_node resolves to /soc/capture@48000000
-48000000.capture/modalias is an OF alias for acme,axc200
-48000000.capture/driver is absent
+platform device fa00000.mmc exists
+fa00000.mmc/of_node resolves to /bus@f4000/mmc@fa00000
+fa00000.mmc/modalias is of:NmmcT(null)Cti,am64-sdhci-4bit
+fa00000.mmc/driver is absent
 
-platform device regulator-capture-3v3 exists
-regulator-capture-3v3/driver is absent
+platform device regulator-2 exists
+regulator-2/driver is absent
 
-no I2C client device exists for address 0x20 on the expected bus
-the I2C2 controller platform device has no bound driver because the node is unavailable
+no I2C client 1-0070 exists, and no 1-0048/1-0049 temperature sensors either
+platform device 20010000.i2c is not created because its node is disabled
 ```
 
-Module observations:
+Driver observations:
 
 ```text
-modprobe --resolve-alias <capture modalias> -> ax_capture
-ax_capture is loaded
-the AXC200 compatible appears in modinfo -F alias ax_capture
+/sys/bus/platform/drivers/sdhci-am654 exists (built in)
+/sys/bus/platform/drivers/reg-fixed-voltage exists (built in)
+/sys/bus/i2c/drivers/pca953x exists (built in)
 ```
 
-Deferred diagnostics, with wording simplified:
+Deferred diagnostics (`/sys/kernel/debug/devices_deferred`; exact text depends on kernel version and `fw_devlink`):
 
 ```text
-regulator-capture-3v3  GPIO provider not ready
-48000000.capture       supplier regulator not ready
+regulator-2     can't get GPIO
+fa00000.mmc     vmmc regulator not available
 ```
 
-Relevant log sequence:
-
-```text
-reg-fixed-voltage regulator-capture-3v3: error -EPROBE_DEFER: failed to get enable GPIO
-ax-capture 48000000.capture: error -EPROBE_DEFER: failed to get vdd supply
-```
+The reasons come from `dev_err_probe()` calls in `drivers/regulator/fixed.c` and `drivers/mmc/core/regulator.c`.
 
 Hashes:
 
 ```text
-built revision-B DTB                   H_BUILD
-host merge: base + factory-camera      H_CAMERA
-host merge: base + camera + low-power  H_LOWPOWER
-U-Boot pre-handoff FDT                 H_HANDOFF
-/sys/firmware/fdt                      H_HANDOFF
-reconstructed live-tree.dtb            H_REBUILT_LIVE
+built k3-am642-sk.dtb                   H_BUILD
+host merge: base + product-sdcard       H_SDCARD
+host merge: base + sdcard + low-power   H_LOWPOWER
+U-Boot pre-handoff FDT                  H_HANDOFF
+/sys/firmware/fdt                       H_HANDOFF
+reconstructed live-tree.dtb             H_REBUILT_LIVE
 ```
 
 `H_HANDOFF` equals `H_LOWPOWER` except for documented identity and `/chosen` fixups. `H_REBUILT_LIVE` is different at byte level.
@@ -193,16 +194,16 @@ Decode from the live tree:
 
 - ordered compatible strings
 - status and its absence semantics
-- two interrupts and their names
+- the interrupt
 - two clocks and their names
-- reset and reset name
-- `vdd-supply`
+- the power domain
+- `vmmc-supply`
 
 For each phandle array, name the provider cell count/binding needed. Do not equate DT interrupt cells with Linux IRQ numbers.
 
 ## Task 3: Resolve The Supply Chain
 
-Starting from `capture@48000000/vdd-supply`:
+Starting from `mmc@fa00000/vmmc-supply`:
 
 1. resolve the regulator node
 2. find its Linux platform device
@@ -244,7 +245,7 @@ Then classify the regulator, GPIO expander, and I2C controller separately. One l
 
 ## Task 6: Evaluate Manual Binding
 
-Should the engineer write `48000000.capture` to the AX driver `bind` file? Should they set `driver_override`? Should they unbind/rebind the regulator?
+Should the engineer write `fa00000.mmc` to the `sdhci-am654` driver's `bind` file? Should they set `driver_override`? Should they unbind/rebind the regulator?
 
 For each action, state:
 
@@ -260,14 +261,14 @@ Compare:
 
 ```text
 built base
-host camera merge
-host camera + low-power merge
+host SD-card merge
+host SD-card + low-power merge
 U-Boot pre-handoff
 raw boot FDT
 live tree
 ```
 
-Name the first checkpoint at which the intended camera product becomes invalid. Distinguish the immediate consumer symptom from the product-policy root cause.
+Name the first checkpoint at which the intended SD-card product becomes invalid. Distinguish the immediate consumer symptom from the product-policy root cause.
 
 ## Task 8: Define The Fix
 
@@ -280,7 +281,7 @@ Design:
 - hardware functional tests
 - rollback behavior
 
-Do not “fix” the incident by making the capture driver ignore its supply.
+Do not “fix” the incident by removing `vmmc-supply`, marking the regulator always-on, or making the driver ignore its supply.
 
 ## Reference Analysis
 
@@ -301,29 +302,28 @@ journalctl -k -b 0 -o short-monotonic > kernel-boot.log
 sudo cat /sys/kernel/debug/devices_deferred > devices-deferred.txt
 ```
 
-Also copy/hash raw files for consumer `compatible`, `status`, `interrupts`, `interrupt-names`, `clocks`, `clock-names`, `resets`, `reset-names`, and `vdd-supply`; supplier GPIO and compatible properties; root identity; and non-sensitive `/chosen` fields.
+Also copy/hash raw files for consumer `compatible`, `status`, `interrupts`, `clocks`, `clock-names`, `power-domains`, and `vmmc-supply`; supplier GPIO and compatible properties; root identity; and non-sensitive `/chosen` fields.
 
 Capture:
 
 ```bash
-readlink -f /sys/bus/platform/devices/48000000.capture/of_node
-readlink -f /sys/bus/platform/devices/48000000.capture/subsystem
-readlink -f /sys/bus/platform/devices/48000000.capture/driver 2>/dev/null || true
-cat /sys/bus/platform/devices/48000000.capture/modalias
-cat /sys/bus/platform/devices/48000000.capture/uevent
+readlink -f /sys/bus/platform/devices/fa00000.mmc/of_node
+readlink -f /sys/bus/platform/devices/fa00000.mmc/subsystem
+readlink -f /sys/bus/platform/devices/fa00000.mmc/driver 2>/dev/null || true
+cat /sys/bus/platform/devices/fa00000.mmc/modalias
+cat /sys/bus/platform/devices/fa00000.mmc/uevent
 ```
 
-Repeat for regulator and controller devices using discovered paths. Save module `modinfo`, alias resolution, debugfs regulator/GPIO state, `/proc/interrupts`, and supplier/consumer links. Redact seeds, secrets, and product identifiers according to policy.
+Repeat for regulator and controller devices using discovered paths. Save driver registration evidence, debugfs regulator/GPIO state, `/proc/interrupts`, and supplier/consumer links. Redact seeds, secrets, and product identifiers according to policy.
 
 ### Binary-Safe Decode
 
 Use NUL-aware output for names:
 
 ```bash
+node=/sys/firmware/devicetree/base/bus@f4000/mmc@fa00000
 tr '\0' '\n' <"$node/compatible"
-tr '\0' '\n' <"$node/interrupt-names"
 tr '\0' '\n' <"$node/clock-names"
-tr '\0' '\n' <"$node/reset-names"
 ```
 
 Use byte grouping or the reconstructed DTB for cells:
@@ -331,65 +331,65 @@ Use byte grouping or the reconstructed DTB for cells:
 ```bash
 xxd -p -c 4 "$node/interrupts"
 xxd -p -c 4 "$node/clocks"
-xxd -p -c 4 "$node/resets"
-xxd -p -c 4 "$node/vdd-supply"
+xxd -p -c 4 "$node/power-domains"
+xxd -p -c 4 "$node/vmmc-supply"
 
-fdtget -tx live-tree.dtb /soc/capture@48000000 clocks
-fdtget -tx live-tree.dtb /soc/capture@48000000 vdd-supply
+fdtget -tx live-tree.dtb /bus@f4000/mmc@fa00000 clocks
+fdtget -tx live-tree.dtb /bus@f4000/mmc@fa00000 vmmc-supply
 ```
 
-Decode `clocks` using each referenced provider's `#clock-cells`, `resets` using `#reset-cells`, `interrupts` through effective interrupt parent and `#interrupt-cells`, and the supply as a regulator phandle. Pair entries with binding-defined names.
+Decode `clocks` with `k3_clks`' `#clock-cells = <2>` (device 58, clocks 3 and 4), `power-domains` with `k3_pds`, `interrupts` through the inherited GIC parent and its three cells, and the supply as a bare regulator phandle. Pair entries with binding-defined names.
 
 ### Recursive Supplier Trace
 
 | Stage | Live node | Linux device | Driver state | Evidence/conclusion |
 |---|---|---|---|---|
-| capture consumer | present, okay | platform device present | deferred/no link | waits on `vdd-supply` |
-| fixed regulator | present, available | platform device present | deferred/no link | waits on enable GPIO provider |
-| GPIO expander | present, available locally | no I2C client | none | parent bus unavailable, so child not enumerated |
-| I2C2 controller | present, disabled | no bound controller | unavailable | low-power overlay changed `status` |
+| SD controller `fa00000.mmc` | present, okay | platform device present | deferred/no link | “vmmc regulator not available” |
+| `vdd_mmc1` (`regulator-2`) | present, available | platform device present | deferred/no link | “can't get GPIO”: `exp1` does not exist |
+| `exp1` (`gpio@70`) | present, available locally | no I2C client `1-0070` | none | parent bus unavailable, so child not enumerated |
+| `main_i2c1` (`i2c@20010000`) | present, disabled | no platform device | unavailable | low-power overlay changed `status` |
 
 The expander's missing `status` normally makes it available relative to its own node, but its disabled parent prevents the bus/controller path required to create the I2C client.
 
-The first missing runtime transition is I2C2 availability/population. Everything above it defers correctly.
+The first missing runtime transition is `main_i2c1` availability/population. Everything above it defers correctly.
 
 ### Boot Versus Live Interpretation
 
 `H_HANDOFF == hash(/sys/firmware/fdt)` strongly supports byte-identical exported boot input. `H_REBUILT_LIVE` differs because `dtc -I fs` serializes a new blob without original header layout, padding, or FDT reservation map and may order content differently.
 
-Because raw boot FDT already contains `i2c2/status = "disabled"`, the low-power overlay applied before Linux. With a later runtime overlay, live semantics could diverge while `/sys/firmware/fdt` remains the boot snapshot.
+Because the raw boot FDT already contains `status = "disabled"` on `i2c@20010000`, the low-power overlay applied before Linux. With a later runtime overlay, live semantics could diverge while `/sys/firmware/fdt` remains the boot snapshot.
 
 Compare both captures semantically with the same `dtc` version and focused property queries.
 
 ### State Classification
 
-- capture node: present and available
-- capture device: created on platform bus
-- capture match/module: alias resolves and module/driver are available
-- capture probe: deferred on regulator; not terminally failed and not bound
-- regulator: device created, probe deferred on GPIO provider
-- GPIO expander: node present/locally available, but no I2C device populated
-- I2C2: node unavailable due final `status = "disabled"`; controller path not bound/populated
-- subsystem: no functional capture interface, as expected downstream of deferral
+- SD controller node: present and available
+- SD controller device: created on the platform bus
+- SD controller match: the built-in `sdhci-am654` driver matches `ti,am64-sdhci-4bit`
+- SD controller probe: deferred on its vmmc regulator; not terminally failed and not bound
+- regulator: device created, probe deferred on its GPIO provider
+- GPIO expander: node present and locally available, but no I2C device populated
+- `main_i2c1`: node unavailable due to final `status = "disabled"`; no controller device
+- subsystem: no MMC host and no `mmcblk1`, as expected downstream of deferral; the TMP100 sensors and the LED expander on the same bus are missing too
 
 ### Manual Bind Decision
 
-Do not force-bind capture. Normal matching already succeeds far enough to run probe, which deliberately defers. A manual bind retries the same missing supply and adds noise.
+Do not force-bind the SD controller. Normal matching already succeeds far enough to run probe, which deliberately defers. A manual bind retries the same missing supply and adds noise.
 
 Do not set `driver_override`; match metadata is proven correct, and bypassing it cannot create the supplier.
 
-Do not unbind/rebind the regulator; it is not bound. Its deferral is valid. Forcing or bypassing the enable GPIO would violate the hardware power contract.
+Do not unbind/rebind the regulator; it is not bound. Its deferral is valid. Forcing or bypassing the enable GPIO would leave the card unpowered or violate the hardware power contract.
 
 The safe read-only test is to trace and decode the supplier chain, compare final-tree checkpoints, and reproduce the overlay composition on the host. Correct the manifest and reboot with a valid immutable final tree.
 
 ### First Divergence And Root Cause
 
-The base plus camera overlay is valid. The first invalid checkpoint is host-equivalent composition after `low-power-profile.dtbo`, where I2C2 becomes disabled despite the camera stack requiring its GPIO expander.
+The base plus SD-card overlay is valid. The first invalid checkpoint is host-equivalent composition after `low-power-profile.dtbo`, where `main_i2c1` becomes disabled although the SD card power path requires its GPIO expander.
 
 Immediate symptom:
 
 ```text
-capture probe defers because vdd regulator is unavailable
+SD controller probe defers because its vmmc regulator is unavailable
 ```
 
 Dependency cause:
@@ -401,9 +401,9 @@ regulator defers because its GPIO provider device does not exist
 Root cause:
 
 ```text
-product manifest permits conflicting camera and low-power overlays;
-boot selection applies both without checking the camera -> regulator -> GPIO
-expander -> I2C2 dependency
+product manifest permits conflicting SD-card and low-power overlays;
+boot selection applies both without checking the sdhci1 -> vdd_mmc1 -> exp1
+-> main_i2c1 dependency
 ```
 
 ### Fix And Regression Gates
@@ -411,9 +411,9 @@ expander -> I2C2 dependency
 Manifest rules:
 
 ```text
-factory-camera requires i2c2-expander and capture-3v3
-low-power-no-expander conflicts factory-camera
-camera composition must leave i2c2 status okay
+product-sdcard requires main_i2c1, exp1, and vdd_mmc1
+low-power-no-expander conflicts product-sdcard
+SD-card composition must leave main_i2c1 status okay
 ```
 
 Boot behavior:
@@ -425,26 +425,26 @@ Boot behavior:
 
 Final-tree CI assertions:
 
-- I2C2 available
-- expander child present at address `0x20`
-- regulator supply phandle resolves to correct node
-- regulator GPIO resolves to expander line 3 with correct flags
-- capture resources/names match AXC200 schema
+- `main_i2c1` available
+- expander child present at address `0x70`
+- `vmmc-supply` resolves to `regulator-2`
+- regulator GPIO resolves to `exp1` line 3, `GPIO_ACTIVE_HIGH`
+- SD controller resources and names pass the `sdhci-am654.yaml` schema
 - every supported merged tree passes schema and product dependency checks
-- rejected camera+low-power combination fails deterministically
+- the rejected SD-card + low-power combination fails deterministically
 
 Runtime gates:
 
 - no target devices remain in `devices_deferred` after expected module/coldplug completion
-- capture, regulator, expander, and I2C controller have expected driver links
-- capture class/interface appears
-- regulator enable, capture transfer, IRQ/error recovery, suspend/resume, and reboot are tested
+- SD controller, regulator, expander, and I2C controller have expected driver links
+- an MMC host appears and an inserted card enumerates as `mmcblk1`
+- card power-up, read/write integrity, hot insertion, suspend/resume, and reboot are tested
 
 Rollback must choose a mutually compatible base, overlay set, kernel, modules, and firmware; it must not reintroduce the invalid profile pairing.
 
 ## Completion Criteria
 
-You have completed the lab when you can prove the consumer's DT and match data are correct, recursively locate the disabled I2C parent as the first missing runtime transition, and attribute that state to the pre-boot overlay manifest rather than forcing the capture driver.
+You have completed the lab when you can prove the consumer's DT and match data are correct, recursively locate the disabled I2C parent as the first missing runtime transition, and attribute that state to the pre-boot overlay manifest rather than forcing the SD controller driver.
 
 ## Authoritative References
 

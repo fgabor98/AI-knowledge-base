@@ -13,7 +13,7 @@ Once a Linux device exists, its bus attempts to match registered drivers. For a 
 ## Inspect The Device
 
 ```bash
-dev=/sys/bus/platform/devices/48000000.device
+dev=/sys/bus/platform/devices/fa00000.mmc
 
 cat "$dev/modalias"
 cat "$dev/uevent"
@@ -92,7 +92,7 @@ dmesg --time-format=rel > kernel-boot.log
 Then filter the captured copy:
 
 ```bash
-rg -i '48000000|acme|probe|defer|clock|regulator|reset|irq' kernel-boot.log
+rg -i 'fa00000|sdhci|mmc1|probe|defer|clock|regulator|irq' kernel-boot.log
 ```
 
 Kernel ring buffers can wrap, rate-limit, or omit debug messages. A missing log line is not proof that probe never ran.

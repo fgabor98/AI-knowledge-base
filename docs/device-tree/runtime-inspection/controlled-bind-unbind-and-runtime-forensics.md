@@ -45,7 +45,7 @@ If any item is unknown, stop and inspect source/subsystem documentation.
 ## Snapshot Before Action
 
 ```bash
-dev=/sys/bus/platform/devices/48000000.device
+dev=/sys/bus/platform/devices/fa00000.mmc
 driver=$(basename "$(readlink -f "$dev/driver")")
 
 printf 'device=%s driver=%s\n' "$(basename "$dev")" "$driver"
