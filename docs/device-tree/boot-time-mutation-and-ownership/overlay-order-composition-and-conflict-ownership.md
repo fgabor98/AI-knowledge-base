@@ -71,7 +71,7 @@ An independently shipped overlay depends on base labels, paths, and property con
 
 Boot-time overlays produce a static tree before Linux unflattens it. Linux runtime overlays have additional device-population, driver binding, removal, and lifetime concerns. Do not infer runtime removal safety from successful U-Boot composition.
 
-Use the later [Overlays In Depth](../overlays-in-depth.md) module for dynamic lifecycle treatment.
+[Overlays In Depth](../overlays-in-depth.md) covers the dynamic lifecycle.
 
 ## Authoritative References
 

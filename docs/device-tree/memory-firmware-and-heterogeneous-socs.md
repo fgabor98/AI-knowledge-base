@@ -72,7 +72,7 @@ If any cell is unknown, the DTS is not yet the right place to guess.
 
 ## Completion Check
 
-You are ready for [U-Boot And Bootloader Device Tree](u-boot-and-bootloader-device-tree.md) when you can:
+You are ready for [Binding Design And Stable ABI](binding-design-and-stable-abi.md) when you can:
 
 - account for every byte excluded from Linux and name its owner, purpose, and lifecycle
 - translate one shared buffer across CPU, DMA/IOMMU, and remote-core address spaces

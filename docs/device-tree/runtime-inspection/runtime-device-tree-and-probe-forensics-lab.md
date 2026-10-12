@@ -456,4 +456,4 @@ You have completed the lab when you can prove the consumer's DT and match data a
 
 ## Next Step
 
-Continue with [Security And Production Lifecycle](../security-and-production-lifecycle.md), treating DTB identity, overlay selection, runtime access, update compatibility, and forensic evidence as security-controlled product interfaces.
+Continue with [Pinctrl, GPIOs, And Interrupts](../pinctrl-gpios-and-interrupts.md), using this module's live-tree, device-model, and deferred-probe evidence during pin, GPIO, and interrupt bring-up.

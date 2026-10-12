@@ -312,4 +312,4 @@ The lab is complete when you can provide:
 
 ## Continue
 
-Proceed to [Pinctrl, GPIOs, And Interrupts](../pinctrl-gpios-and-interrupts.md).
+Proceed to [Runtime Inspection](../runtime-inspection.md).

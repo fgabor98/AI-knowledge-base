@@ -103,7 +103,7 @@ Decompiled, sorted diffs contain noise from phandle renumbering, generated symbo
 - live-tree property equals handoff capture?
 - device created, matched, deferred, or failed?
 
-The next module expands runtime inspection.
+[Runtime Inspection](../runtime-inspection.md) covers this layer in depth.
 
 ## Property Assertions
 

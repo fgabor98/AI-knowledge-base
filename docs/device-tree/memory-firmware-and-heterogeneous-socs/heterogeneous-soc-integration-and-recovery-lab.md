@@ -263,4 +263,4 @@ The lab is complete when you can provide:
 
 ## Continue
 
-Proceed to [U-Boot And Bootloader Device Tree](../u-boot-and-bootloader-device-tree.md).
+Proceed to [Binding Design And Stable ABI](../binding-design-and-stable-abi.md).

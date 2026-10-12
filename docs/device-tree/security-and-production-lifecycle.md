@@ -32,7 +32,8 @@ After completing this module, you should be able to:
 
 ## Prerequisites
 
-Complete [Runtime Inspection](runtime-inspection.md), [Overlays In Depth](overlays-in-depth.md), and [Build And Diagnostic Tools](build-and-diagnostic-tools.md). You should already be able to prove artifact identity at each boot checkpoint and distinguish the boot FDT from the live Linux tree.
+Complete [Build And Diagnostic Tools](build-and-diagnostic-tools.md), [Boot-Time Mutation And Ownership](boot-time-mutation-and-ownership.md), and [Overlays In Depth](overlays-in-depth.md). You should already be able to prove artifact identity at each boot checkpoint and distinguish the boot FDT from the live Linux tree.
+
 
 ## Learning Path
 

@@ -31,7 +31,7 @@ After completing this module, you should be able to:
 
 ## Prerequisites
 
-Complete [Writing And Validating Binding Schemas](writing-and-validating-binding-schemas.md). You should be able to validate final DTBs, decode phandles and provider specifiers, distinguish source labels from runtime properties, and reason about boot-time mutation ownership.
+Complete [Writing And Validating Binding Schemas](writing-and-validating-binding-schemas.md). You should be able to validate final DTBs, decode phandles and provider specifiers, and distinguish source labels from runtime properties. Bootloader-specific application is covered next in [U-Boot And Bootloader Device Tree](u-boot-and-bootloader-device-tree.md).
 
 ## Learning Path
 
@@ -113,7 +113,7 @@ The overlay core prevents removal beneath a directly stacked overlay, but it can
 
 ## Completion Check
 
-You are ready for [Build And Diagnostic Tools](build-and-diagnostic-tools.md) when you can:
+You are ready for [U-Boot And Bootloader Device Tree](u-boot-and-bootloader-device-tree.md) when you can:
 
 - reconstruct an overlay's fragment targets and local/external reference graph from a DTBO dump
 - explain exactly why the base needs symbols for a label-targeted overlay

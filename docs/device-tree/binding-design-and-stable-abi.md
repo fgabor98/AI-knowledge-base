@@ -29,7 +29,8 @@ After completing this module, you should be able to:
 
 ## Prerequisites
 
-Complete [Boot-Time Mutation And Ownership](boot-time-mutation-and-ownership.md). You should understand compatible matching, provider-consumer relationships, final-tree provenance, and the difference between a compiled source tree and the DTB a kernel actually receives.
+Complete [Memory, Firmware, And Heterogeneous SoCs](memory-firmware-and-heterogeneous-socs.md). You should understand compatible matching, provider-consumer relationships, the hardware subsystems covered so far, and the difference between a compiled source tree and the DTB a kernel actually receives.
+
 
 ## Learning Path
 

@@ -328,4 +328,4 @@ The lab is complete when you can provide:
 
 ## Continue
 
-Proceed to [Binding Design And Stable ABI](../binding-design-and-stable-abi.md).
+Proceed to [Build And Diagnostic Tools](../build-and-diagnostic-tools.md).

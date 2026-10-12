@@ -507,4 +507,4 @@ You have completed the lab when you can identify the packaging step—not the DT
 
 ## Next Step
 
-Continue with [Runtime Inspection](../runtime-inspection.md), applying the same checkpoint discipline to `/proc/device-tree`, sysfs, device-model state, and driver probe evidence.
+Continue with [Security And Production Lifecycle](../security-and-production-lifecycle.md), treating DTB identity, overlay selection, mutation, and update compatibility as security-controlled product interfaces.

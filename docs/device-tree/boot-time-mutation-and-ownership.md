@@ -103,7 +103,7 @@ Measure or log both ordered inputs and the final tree when provenance matters. R
 
 ## Completion Check
 
-You are ready for [Binding Design And Stable ABI](binding-design-and-stable-abi.md) when you can:
+You are ready for [Build And Diagnostic Tools](build-and-diagnostic-tools.md) when you can:
 
 - reproduce the final DTB from versioned inputs and an ordered mutation manifest
 - identify every writer and reject duplicate ownership of a property

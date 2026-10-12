@@ -509,4 +509,4 @@ You have completed the lab when you can:
 
 ## Next Step
 
-Continue with [Build And Diagnostic Tools](../build-and-diagnostic-tools.md), where the compiler, dump, query, mutation, overlay, and libfdt tools are treated as a unified engineering workflow.
+Continue with [U-Boot And Bootloader Device Tree](../u-boot-and-bootloader-device-tree.md), where overlays are applied to the bootloader's working FDT before Linux starts.

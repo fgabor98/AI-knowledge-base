@@ -32,7 +32,8 @@ After completing this module, you should be able to:
 
 ## Prerequisites
 
-Complete [Overlays In Depth](overlays-in-depth.md). You should understand DTS composition, DTB structure, schemas, phandles, overlays, boot-time mutation, and the distinction between the source tree and the final live tree.
+Complete [Boot-Time Mutation And Ownership](boot-time-mutation-and-ownership.md). You should understand DTS composition, DTB structure, schemas, phandles, overlays, boot-time mutation, and the distinction between the source tree and the final live tree.
+
 
 ## Learning Path
 
@@ -99,7 +100,7 @@ Never use `fdtput` or an in-memory `fdt set` as an undocumented substitute for c
 
 ## Completion Check
 
-You are ready for [Runtime Inspection](runtime-inspection.md) when you can:
+You are ready for [Security And Production Lifecycle](security-and-production-lifecycle.md) when you can:
 
 - reproduce the exact preprocessing and `dtc` command that built one target DTB
 - identify every included/generated input from Kbuild evidence
