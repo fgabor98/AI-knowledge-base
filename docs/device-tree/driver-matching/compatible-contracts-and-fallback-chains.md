@@ -107,10 +107,9 @@ For each list:
 
 1. Find the schema that permits the exact sequence.
 2. Identify the real hardware named by the first string.
-3. For every fallback, name the old driver behavior expected to work.
-4. Compare registers, required resources, errata, and initialization ordering.
-5. Test the new DTB with the oldest supported kernel and the old DTB with the newest kernel.
-6. Remove any fallback whose safety cannot be demonstrated.
+3. For every fallback, name the old driver behavior expected to work and compare registers, required resources, errata, and initialization ordering.
+4. Test both update directions (see [Compatibility In Both Directions](compatible-evolution-and-stable-abi-decisions.md#compatibility-in-both-directions)).
+5. Remove any fallback whose safety cannot be demonstrated.
 
 ## Common Failures
 

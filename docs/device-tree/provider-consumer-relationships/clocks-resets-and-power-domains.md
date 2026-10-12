@@ -77,26 +77,6 @@ The specifier selects the provider-defined domain. Some providers use zero cells
 
 Power-domain membership is not the same as a regulator supply. A domain often controls shared isolation, clocks, or switches around several integrated blocks, while a regulator models an electrical supply rail.
 
-## One Node, Several Provider Classes
-
-Hardware can combine controls:
-
-```dts
-system_controller: system-controller@8000 {
-        #clock-cells = <2>;
-        #reset-cells = <1>;
-        #power-domain-cells = <1>;
-};
-
-accelerator@4000 {
-        clocks = <&system_controller 2 6>;
-        resets = <&system_controller 9>;
-        power-domains = <&system_controller 3>;
-};
-```
-
-The clock tuple has two arguments, while reset and power-domain tuples have one. The same phandle target does not imply a shared namespace.
-
 ## Acquisition And Probe Ordering
 
 A consumer may fail or defer when:
@@ -112,16 +92,9 @@ Linux can infer supplier links from many firmware relationships, but `-EPROBE_DE
 
 ## Names And Driver APIs
 
-Consumer names connect binding entries to framework lookups:
+Clock and reset lookups use the consumer names described in [Specifier Decoding And Resource Names](specifier-decoding-and-resource-names.md#names-and-linux-lookup). If a binding defines only one unnamed clock or reset, the driver may request by index or `NULL` name.
 
-```c
-bus = devm_clk_get(dev, "bus");
-rst = devm_reset_control_get_exclusive(dev, "core");
-```
-
-If a binding defines only one unnamed clock or reset, the driver may request by index or `NULL` name. Multiple resources should normally have explicit, stable semantic names.
-
-Power domains are often attached by platform/framework code rather than manually looked up by an ordinary peripheral driver. A driver should follow its subsystem and binding model instead of parsing phandles ad hoc.
+Power domains are often attached by platform/framework code rather than looked up by the peripheral driver. A driver should follow its subsystem and binding model instead of parsing phandles ad hoc.
 
 ## Dependency Sequencing Is Not Encoded By Property Order
 
@@ -139,15 +112,11 @@ does not prescribe “reset, then clock, then power.” Property order is style.
 
 For a failed clock, reset, or domain:
 
-1. inspect the runtime consumer property
-2. resolve the phandle to the runtime provider
-3. confirm the matching `#*-cells`
-4. decode arguments using the provider binding/header
-5. verify provider `status` and ancestors
-6. confirm provider compatible and kernel configuration
-7. inspect provider probe logs and framework debug data
-8. confirm the consumer uses the binding-defined name
-9. distinguish absent, invalid, deferred, and permission errors
+1. decode the runtime consumer entry with the [decoding worksheet](specifier-decoding-and-resource-names.md#a-mechanical-decoding-worksheet)
+2. verify provider `status`, ancestors, compatible, and kernel configuration
+3. inspect provider probe logs and framework debug data
+4. confirm the consumer uses the binding-defined name
+5. distinguish absent, invalid, deferred, and permission errors
 
 ## Common Errors
 

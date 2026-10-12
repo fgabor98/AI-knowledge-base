@@ -81,15 +81,7 @@ Built-in drivers do not need module loading, but keeping correct device-table me
 
 ## Selecting The Match
 
-For a node:
-
-```dts
-compatible = "acme,ax200-uart", "acme,ax100-uart";
-```
-
-a table containing both entries should select AX200 data. An older driver containing only AX100 can match the fallback. If a driver's table accidentally has duplicate entries for the same compatible, table order can influence the tie; duplicates should be removed rather than used as control flow.
-
-Do not treat the match table as a version comparison. Every supported literal string must appear explicitly or be represented by a legitimate fallback in the DT list.
+For `compatible = "acme,ax200-uart", "acme,ax100-uart";` a table containing both entries selects AX200 data, while an older driver containing only AX100 matches the fallback ([How Linux Uses A List](compatible-contracts-and-fallback-chains.md#how-linux-uses-a-list)). Remove duplicate entries for the same compatible rather than relying on table order, and list every supported literal string explicitly; the table is not a version comparison.
 
 ## Variant Data Design
 

@@ -85,7 +85,7 @@ Labels such as `bridge_in` aid source readability but do not carry direction sem
 
 ## Graph Is Not Containment
 
-A panel can be a root-level platform device while its endpoint connects to an I²C-controlled bridge. Moving the panel under the bridge to make the source look like a pipeline would falsely claim containment. Keep each device at its real firmware/bus location and connect only endpoints.
+Keep each device at its real firmware/bus location and connect only endpoints ([Three Different Structures](../graph-bindings-and-complex-data-paths.md#three-different-structures)). Moving a root-level panel under its I²C-controlled bridge to make the source look like a pipeline would falsely claim containment.
 
 ## Review Algorithm
 

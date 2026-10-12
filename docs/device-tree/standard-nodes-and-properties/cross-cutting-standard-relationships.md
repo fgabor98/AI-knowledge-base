@@ -12,7 +12,7 @@ Several standard properties describe dependencies or address-space crossings out
 
 ## `interrupts-extended`
 
-`interrupts-extended` puts an interrupt-parent phandle directly in every entry:
+`interrupts-extended` puts an interrupt-parent phandle directly in every entry, so entries from different parents can have different widths and meanings:
 
 ```dts
 device@1000 {
@@ -21,17 +21,7 @@ device@1000 {
 };
 ```
 
-Decode one entry at a time:
-
-1. Resolve the phandle.
-2. Read that provider's `#interrupt-cells`.
-3. Consume exactly that many argument cells.
-4. Interpret them using that interrupt-controller binding.
-5. Repeat at the next phandle.
-
-The two entries can have different widths and meanings. The numbers above are illustrative; interrupt number spaces and flag encodings are provider-specific.
-
-`interrupts-extended` is useful when a device has interrupts from different parents or when an explicit parent per entry is clearer. If both `interrupts` and `interrupts-extended` exist, the specification gives `interrupts-extended` precedence, but bindings should normally avoid such ambiguity.
+Decode it with the [standard phandle-array algorithm](../provider-consumer-relationships.md#the-core-decoding-algorithm), using each provider's `#interrupt-cells`. The numbers above are illustrative; interrupt number spaces and flag encodings are provider-specific. If both `interrupts` and `interrupts-extended` exist, the specification gives `interrupts-extended` precedence, but bindings should normally avoid such ambiguity.
 
 ## Interrupt Nexus Mapping
 
@@ -89,46 +79,20 @@ This is a hardware fact, not a performance toggle. Adding it to hide missing cac
 
 Some bus bindings allow coherency to be inherited from a parent. Check the architecture and bus binding before relying on inheritance. Coherency also does not remove the need for the DMA API: address translation, barriers, ownership transitions, and device-specific ordering still matter.
 
-## `iommus`
+## `iommus`, `phys`, And `phy-names`
 
-`iommus` associates a device with one or more IOMMU specifiers:
+These are ordinary phandle arrays decoded through `#iommu-cells` and `#phy-cells`; see [DMA, IOMMU, PHY, And Regulator Dependencies](../provider-consumer-relationships/dma-iommu-phy-and-regulator-dependencies.md). Two standard-level cautions apply:
 
-```dts
-accelerator@4000 {
-        iommus = <&smmu 0x42>;
-};
-```
-
-The provider's `#iommu-cells` and binding define `0x42`—perhaps a stream ID, but never assume that generically. An IOMMU relationship does not prove that isolation is enabled at boot, that the correct domain is attached, or that all DMA paths pass through that IOMMU. Validate firmware bypass state, requester identifiers, grouping, and runtime domain attachment.
-
-Bus-level mapping properties such as `iommu-map` may translate child requester IDs through a nexus. That deeper address/requester mapping belongs with the relevant bus binding; do not replace it casually with per-device `iommus` properties.
-
-## `phys` And `phy-names`
-
-`phys` is a phandle array decoded through each provider's `#phy-cells`. `phy-names` labels entries positionally:
-
-```dts
-usb@5000 {
-        phys = <&usb2_phy 0>, <&usb3_phy 1>;
-        phy-names = "usb2", "usb3";
-};
-```
-
-The consumer binding defines the allowed names and order; the provider binding defines each numeric argument. Names are API tokens, not prose. Changing them can break driver lookup even if the phandles remain correct.
-
-A PHY relationship describes a logical hardware resource. It does not replace pinctrl, clocks, resets, regulators, connector graph links, or protocol configuration when those are separately required.
+- An IOMMU relationship does not prove that isolation is enabled at boot, that the correct domain is attached, or that all DMA paths pass through that IOMMU. Validate firmware bypass state, requester identifiers, grouping, and runtime domain attachment. Bus-level `iommu-map` translations belong with the bus binding; do not replace them casually with per-device `iommus`.
+- A PHY relationship describes a logical hardware resource. It does not replace pinctrl, clocks, resets, regulators, connector graph links, or protocol configuration when those are separately required.
 
 ## A Unified Review Method
 
-For each cross-cutting property:
+For each cross-cutting property, decode every entry in the final DTB with the [decoding worksheet](../provider-consumer-relationships/specifier-decoding-and-resource-names.md#a-mechanical-decoding-worksheet), then:
 
-1. Read the consumer binding for allowed properties, cardinality, and names.
-2. Resolve every phandle in the final DTB.
-3. Read the referenced provider's cell count.
-4. Decode arguments with the provider binding.
-5. Check nexus translations along the actual path.
-6. Verify that firmware and kernel drivers enable the described hardware behavior.
-7. Inspect runtime subsystem state rather than equating DT presence with enforcement.
+1. Check nexus translations along the actual path.
+2. Verify that firmware and kernel drivers enable the described hardware behavior.
+3. Inspect runtime subsystem state rather than equating DT presence with enforcement.
 
 ## Failure Patterns Worth Recognizing
 

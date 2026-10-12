@@ -29,7 +29,7 @@ I²C does not enumerate ordinary targets. DT must identify every fixed device, i
 };
 ```
 
-For a normal 7-bit target, `reg` is the unshifted address shown in the binding/datasheet. Do not encode the address byte with the R/W bit. Ten-bit addresses require the generic binding's flag encoding and controller support.
+For a normal 7-bit target, `reg` is the unshifted address without the R/W bit; ten-bit addresses need the generic binding's flag encoding ([I2C Children](../addressing-and-bus-modeling/bus-specific-child-addressing.md#i2c-children)).
 
 `clock-frequency` is a bus limit/request, not proof every child tolerates it. The slowest target, rise time, pull-ups, capacitance, clock stretching, controller limitations, and level shifters determine a safe rate.
 

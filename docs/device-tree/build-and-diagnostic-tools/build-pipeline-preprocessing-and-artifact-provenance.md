@@ -10,33 +10,9 @@ last_reviewed: null
 
 The file an engineer edits is rarely the complete source compiled by `dtc`. Kernel-style builds combine a board entry point, DTSI includes, C-preprocessor headers/macros, generated files, architecture include paths, and build flags. Prove that chain before interpreting the output.
 
-## Two Include Mechanisms
+## Preprocessing Recap
 
-| Source form | Processor | Typical use |
-|---|---|---|
-| `/include/ "file.dtsi"` | `dtc` | native DTS source inclusion |
-| `#include "file.dtsi"` or `<dt-bindings/...>` | C preprocessor | kernel-style composition, constants, macros |
-
-The C preprocessor runs before `dtc`; native includes are consumed by `dtc`. A missing or shadowed file can therefore arise at different stages.
-
-Do not infer precedence from the editor's include search. Capture the exact build command and include directories.
-
-## Simplified Standalone Pipeline
-
-For controlled experiments, a kernel-like preprocessing command is conceptually:
-
-```bash
-cpp -nostdinc -undef -D__DTS__ -x assembler-with-cpp \
-  -I include \
-  -I arch/arm64/boot/dts \
-  board.dts > board.preprocessed.dts
-
-dtc -I dts -O dtb -o board.dtb board.preprocessed.dts
-```
-
-This is illustrative, not a substitute for the target tree's build rule. Kernel builds add generated include paths, dependency generation, warning flags, symbol options, and architecture-specific behavior.
-
-Never feed untrusted macros or paths into an ad hoc shell command. Preserve the preprocessed output as a diagnostic artifact, not the maintainable source.
+The C preprocessor (`#include`, macros, `dt-bindings` constants) runs before `dtc`, which then consumes native `/include/` directives, so a missing or shadowed file can arise at different stages. [Includes, Preprocessing, And Macros](../syntax-values-and-source-composition/includes-preprocessing-and-macros.md) shows a simplified standalone `cpp` + `dtc` pipeline; it is illustrative only. For provenance, capture the target tree's real build rule as described below, and preserve the preprocessed output as a diagnostic artifact, not maintainable source.
 
 ## Kbuild Is The Reproducible Entry Point
 

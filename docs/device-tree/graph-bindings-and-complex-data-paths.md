@@ -56,25 +56,7 @@ A bridge can be an I²C child for control, a regulator consumer for power, and a
 
 ## Generic Shape
 
-```dts
-source {
-        port {
-                source_out: endpoint {
-                        remote-endpoint = <&sink_in>;
-                };
-        };
-};
-
-sink {
-        port {
-                sink_in: endpoint {
-                        remote-endpoint = <&source_out>;
-                };
-        };
-};
-```
-
-The two endpoint nodes describe opposite views of one physical link. Their properties must agree where they describe shared wiring, while each side can also carry local interface configuration defined by its binding.
+Each device exposes `port` nodes containing `endpoint` nodes, and two endpoints that reference each other through `remote-endpoint` describe opposite views of one physical link ([Endpoint Links And Interface Contracts](graph-bindings-and-complex-data-paths/endpoint-links-and-interface-contracts.md#reciprocal-links)).
 
 ## Graphs Describe Hardware, Not Active Routes
 

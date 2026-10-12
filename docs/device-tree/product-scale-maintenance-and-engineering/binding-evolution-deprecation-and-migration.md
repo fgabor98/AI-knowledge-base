@@ -45,21 +45,7 @@ Unsafe evolution makes a new property required for an old compatible and then fa
 
 ## Choose A New Compatible When Meaning Changes
 
-Use a new specific compatible when:
-
-- register programming model differs
-- property interpretation would differ
-- required resources or sequencing change incompatibly
-- a hardware revision cannot safely use the old behavior
-- fallback is not truly programming-compatible
-
-Example:
-
-```dts
-compatible = "acme,axc-capture-v4", "acme,axc-capture-v3";
-```
-
-Include the fallback only if v4 hardware can operate correctly under the v3 programming contract. A fallback is an executable compatibility claim, not version decoration.
+Use a new specific compatible when programming model, property interpretation, or required resources change incompatibly ([Compatible Evolution And Stable ABI Decisions](../driver-matching/compatible-evolution-and-stable-abi-decisions.md)). Include a fallback such as `"acme,axc-capture-v4", "acme,axc-capture-v3"` only if v4 hardware operates correctly under the v3 contract.
 
 ## Model A Migration Window
 
@@ -77,18 +63,7 @@ Source migration and runtime support removal are different decisions. Removing t
 
 ## Build A Deployed-Artifact Inventory
 
-Before tightening a schema or removing support, search:
-
-- all maintained upstream/downstream branches
-- shipped DTB and DTBO manifests
-- bootloader-embedded trees
-- recovery images
-- factory and service media
-- hypervisor/firmware-provided trees
-- third-party boards using the binding
-- overlay repositories and customer extensions
-
-Exact artifact hashes and release-set records from the security lifecycle chapter make this tractable.
+Before tightening a schema or removing support, inventory the [compatibility population](../binding-design-and-stable-abi/backward-compatibility-deprecation-and-migration.md#define-the-compatibility-population) at product scale: maintained branches, shipped DTB/DTBO manifests, bootloader-embedded trees, recovery, factory, and service media, firmware-provided trees, third-party boards, and overlay repositories. Exact artifact hashes and release-set records from the security lifecycle chapter make this tractable.
 
 ## Use Schema Deprecation Carefully
 
@@ -106,17 +81,7 @@ Deprecation should not make known old DTBs fail validation unexpectedly unless t
 
 ## Migrate Property Encodings Without Ambiguity
 
-Avoid supporting two properties with unclear precedence forever. Define:
-
-- which compatibles permit each form
-- whether both may coexist
-- precedence if coexistence is temporarily allowed
-- how disagreement is handled
-- old-driver behavior with new DTB
-- new-driver behavior with old DTB
-- removal criteria for transitional parsing
-
-Often a new compatible plus one unambiguous encoding is safer than probing for multiple interpretations.
+Avoid supporting two properties with unclear precedence forever. Define the [dual-property precedence](../binding-design-and-stable-abi/backward-compatibility-deprecation-and-migration.md#dual-property-precedence), which compatibles permit each form, and removal criteria for transitional parsing. Often a new compatible plus one unambiguous encoding is safer than probing for multiple interpretations.
 
 ## Coordinate Across Components
 
@@ -137,14 +102,7 @@ Partial migrations cause failures far from the patch that introduced them.
 
 ## Test The Compatibility Quadrants
 
-```text
-old DTB + old kernel  -> baseline
-old DTB + new kernel  -> normally required stable direction
-new DTB + new kernel  -> target
-new DTB + old kernel  -> required only if product update policy promises it
-```
-
-Add old/new bootloader, overlays, and firmware when they participate. Record explicit expected results, including intentional rejection.
+Test the old/new DTB × old/new kernel quadrants ([Compatibility In Both Directions](../driver-matching/compatible-evolution-and-stable-abi-decisions.md#compatibility-in-both-directions)), adding old/new bootloader, overlays, and firmware when they participate. Old DTB + new kernel is normally required; new DTB + old kernel only if the product update policy promises it. Record explicit expected results, including intentional rejection.
 
 ## Handle Existing Invalid Trees
 

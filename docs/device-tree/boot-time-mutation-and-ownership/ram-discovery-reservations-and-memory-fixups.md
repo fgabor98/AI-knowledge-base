@@ -42,19 +42,7 @@ Represent only addressable, successfully initialized RAM. If DRAM has holes or m
 
 ## Correct Cell Encoding
 
-For a root with two address and two size cells:
-
-```dts
-memory@80000000 {
-        device_type = "memory";
-        reg = <0x0 0x80000000 0x0 0x40000000>,
-              <0x1 0x00000000 0x0 0x80000000>;
-};
-```
-
-This is illustrative. Mutator code must construct big-endian cells with appropriate helpers and check address-width overflow. Truncating a 64-bit size into one cell can create a plausible but dangerous smaller/larger range.
-
-Prefer one generic helper with tests over board-local hand encoding.
+Memory `reg` tuples use the root cell counts ([The `/memory` Node](../standard-nodes-and-properties/cpus-topology-and-memory.md#the-memory-node)). Mutator code must construct big-endian cells with tested generic helpers and check address-width overflow; truncating a 64-bit size into one cell can create a plausible but dangerous range.
 
 ## Reservations Must Track Ownership
 

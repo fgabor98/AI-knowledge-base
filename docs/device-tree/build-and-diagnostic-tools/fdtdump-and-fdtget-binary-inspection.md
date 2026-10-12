@@ -114,28 +114,7 @@ size    = 0x0000000000001000
 
 ## Decode Phandle Arrays
 
-For:
-
-```dts
-clocks = <&ccu 12>, <&osc>;
-```
-
-Retrieve raw cells:
-
-```bash
-fdtget -tx board.dtb /soc/device@48000000 clocks
-```
-
-Then:
-
-1. read the first phandle
-2. locate its provider node
-3. read provider `#clock-cells`
-4. consume that many argument cells
-5. repeat at the next phandle
-6. pair entries with `clock-names`
-
-Do not assume every tuple has the same width when providers differ.
+Retrieve raw cells with `fdtget -tx board.dtb /soc/device@48000000 clocks`, then split them with the [standard decoding algorithm](../provider-consumer-relationships.md#the-core-decoding-algorithm); tuple widths differ when providers differ.
 
 ## Resolve A Numeric Phandle
 
@@ -148,22 +127,11 @@ Do not assume every tuple has the same width when providers differ.
 
 Numeric phandles are artifact-local. Never compare them across independently compiled trees as stable identities.
 
-## Strings Are NUL-Terminated
+## Strings And Reservations
 
-A string list is stored as adjacent NUL-terminated strings. `fdtget` string output is safer than `cat` or line-oriented text tools. If inspecting filesystem-exported live properties later, use NUL-aware tools.
+`fdtget` string output respects NUL-separated list boundaries; `cat`, line-oriented text tools, and `strings` do not (see [Binary-Safe Property Inspection](../runtime-inspection/binary-safe-property-inspection-and-decoding.md#single-strings-and-string-lists)).
 
-Do not use `strings` as proof of property boundaries or list order; it discards structure.
-
-## Reservation Inspection
-
-The FDT memory reservation block is distinct from `/reserved-memory`. `fdtdump` can show both. Account for:
-
-- header reservation-map entries
-- `/reserved-memory` child nodes
-- ordinary `/memory` banks
-- bootloader/firmware mutations
-
-Use half-open intervals `[base, base + size)` and check every overlap.
+`fdtdump` shows both the header reservation map and `/reserved-memory` nodes. Check them against `/memory` banks and bootloader mutations using half-open intervals, as in [Reserved Memory](../standard-nodes-and-properties/reserved-memory.md#runtime-diagnosis).
 
 ## Error Discipline
 

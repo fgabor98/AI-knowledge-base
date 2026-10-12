@@ -58,13 +58,11 @@ For every peripheral, answer six questions:
 | policy boundary | Which properties are hardware facts, and which behavior belongs in a driver or user space? |
 | runtime proof | Which sysfs, debugfs, subsystem tool, trace, or measurement proves operation? |
 
-The same property name can mean different things under different buses. An I²C child `reg` is normally a bus address; an SPI child `reg` selects a chip select; a PCI child address encodes PCI address-space information. Decode it in parent-bus context.
+Decode every `reg` in parent-bus context ([Bus-Specific Child Addressing](addressing-and-bus-modeling/bus-specific-child-addressing.md)).
 
 ## Discovery Boundaries
 
-I²C and SPI devices generally do not self-enumerate, so firmware must describe populated devices. USB and PCIe normally enumerate downstream devices, so DT primarily describes the host/controller, fixed wiring, non-discoverable platform constraints, or devices that must exist before enumeration. MDIO sits between these models: PHY IDs can be read, but the bus topology, address, resets, delays, and board wiring often still need DT.
-
-Do not describe a hot-pluggable USB device as a permanent child merely because one unit was attached during development. Conversely, do not expect scanning to discover an I²C sensor safely.
+I²C and SPI devices do not self-enumerate, so firmware must describe populated devices; USB and PCIe enumerate downstream devices, so DT primarily describes the controller and non-discoverable integration. MDIO sits between these models: PHY IDs can be read, but bus topology, address, resets, delays, and board wiring often still need DT. Do not describe a hot-pluggable USB device as a permanent child merely because one unit was attached during development, and do not expect scanning to discover an I²C sensor safely.
 
 ## Completion Check
 

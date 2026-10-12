@@ -41,68 +41,15 @@ For each input, define authenticity, supported versions, and fallback. Directory
 
 ## Dependency And Conflict Graph
 
-Model:
-
-```text
-requires(A, B)
-before(B, C)
-conflicts(C, D)
-supports(overlay, base-family, revision-range)
-```
-
-Then compute one canonical ordered list. Reject:
-
-- missing requirements
-- cycles
-- duplicate overlays
-- mutually exclusive modules
-- unsupported base versions
-- multiple owners for one exclusive resource
-
-Store stable overlay IDs and hashes, not only filenames that can be renamed.
-
-## Structural Versus Hardware Conflicts
-
-Libfdt can merge phandles and properties but cannot decide whether the result is electrically valid. Add semantic checks for:
-
-- GPIO/pin ownership
-- chip-select/address duplication
-- regulator voltage/current compatibility
-- clocks and exclusive rates
-- reset ownership
-- overlapping `reg` or reserved-memory ranges
-- DMA/IOMMU stream IDs
-- connector/lane routing
-- aliases and default console
-
-Schema validation catches many shapes, but product-resource conflict checks remain necessary.
+Model `requires`, `before`, `conflicts`, and base support as an explicit graph and compute one canonical ordered list, rejecting missing requirements, cycles, duplicates, mutually exclusive modules, unsupported bases, and multiple owners for one exclusive resource ([Model Four Relations](../overlays-in-depth/stacking-dependencies-conflicts-and-removal-order.md#model-four-relations), [Canonical Application Order](../overlays-in-depth/stacking-dependencies-conflicts-and-removal-order.md#canonical-application-order)). Store stable overlay IDs and hashes, not only filenames that can be renamed. Libfdt merges structure but cannot judge electrical validity, so add the [hardware conflict checks](../overlays-in-depth/stacking-dependencies-conflicts-and-removal-order.md#hardware-conflict-inventory) on top of schema validation.
 
 ## Operations On The Same Property
 
-Overlays can replace a property by setting it again. The final value depends on order:
-
-```text
-revision overlay: status = "okay"
-policy overlay:   status = "disabled"
-```
-
-If this is intentional, the policy layer owns final `status` and the manifest must express that. If not, reject the combination.
-
-Deletion requires even more care: a later overlay that references a deleted node can fail or bind elsewhere after restructuring. Prefer complete, positive hardware descriptions over chains of delete/re-add operations.
+When two overlays set the same property (for example `status`), the later one wins. If that is intentional, the manifest must name the owning layer; otherwise reject the combination ([Property Collision](../overlays-in-depth/stacking-dependencies-conflicts-and-removal-order.md#property-collision)). Prefer complete, positive hardware descriptions over chains of delete/re-add operations.
 
 ## Atomic Application
 
-Validate all inputs before applying any:
-
-1. authenticate base, manifest, and overlays
-2. resolve compatibility/dependency/order
-3. calculate maximum capacity
-4. copy the base to a disposable working buffer
-5. apply in canonical order, checking every result
-6. validate expected postconditions and final schema
-7. publish the new working tree only on success
-
-U-Boot documents that application errors can invalidate base and overlay blobs. Preserve pristine copies or reload capability.
+Authenticate and resolve the complete input set before applying anything, then apply to a disposable working copy and publish it only on success, as in the [safe U-Boot pattern](../u-boot-and-bootloader-device-tree/bootloader-overlay-application-and-working-fdt-safety.md#failure-is-not-transactional-recovery). Application errors can invalidate base and overlay blobs, so preserve pristine copies or reload capability.
 
 ## Checkpoints And Hashes
 
@@ -116,36 +63,9 @@ In development, save after each overlay to find the first unexpected change. In 
 
 Because later `/chosen` seeds make the final blob intentionally nondeterministic, also compute a hardware-composition hash before ephemeral handoff data or use a redacted canonical form.
 
-## Overlay ABI
+## Overlay ABI And Combination Testing
 
-An independently shipped overlay depends on base targets, labels/symbols, and property contracts. Treat these as a compatibility ABI:
-
-- version supported base families
-- retain required labels or target stable paths carefully
-- test overlay against every supported base release
-- update base and overlay atomically where possible
-- do not promise indefinite compatibility accidentally
-
-A base DTS refactor that preserves runtime hardware semantics can still break label-based overlays.
-
-## CI Combination Testing
-
-Exhaustive combinations grow exponentially. Reduce them with the declared dependency/conflict model, then test every supported combination:
-
-```sh
-fdtoverlay -i base.dtb -o merged.dtb rev4.dtbo module-x.dtbo
-dtc -I dtb -O dts -o merged.dts merged.dtb
-```
-
-Run:
-
-- schema validation
-- resource-conflict checks
-- required-node assertions
-- semantic diff against approved baseline
-- kernel/U-Boot smoke boot where representative
-
-Also test every rejected combination and verify a deterministic safe failure.
+An independently shipped overlay depends on base labels, paths, and property contracts; a base refactor that preserves runtime semantics can still break label-based overlays ([Base Compatibility, Versioning, And Overlay ABI](../overlays-in-depth/base-compatibility-versioning-and-overlay-abi.md)). Reduce combinations with the declared dependency/conflict model, then merge and validate every supported combination and every intentionally rejected one ([Validation, Security, And Product Architecture](../overlays-in-depth/validation-security-and-product-architecture.md)).
 
 ## Runtime Overlay Boundary
 

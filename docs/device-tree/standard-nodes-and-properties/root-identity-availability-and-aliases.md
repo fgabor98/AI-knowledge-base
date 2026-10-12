@@ -84,16 +84,7 @@ The `/aliases` node maps a name to an absolute node path:
 };
 ```
 
-In DTS source, `&uart2` is resolved by the compiler to the full path stored in the property. The resulting DTB does not preserve that expression as an alias-to-label relationship.
-
-Keep the concepts separate:
-
-| Construct | Scope | Purpose |
-|---|---|---|
-| `uart2:` label | source composition | target a node while compiling |
-| phandle | compiled tree | identify a node numerically |
-| `/soc/serial@...` path | tree structure | identify a node by location |
-| `serial0` alias | logical tree | provide a short, named path |
+In DTS source, `&uart2` is resolved by the compiler to the full path stored in the property; the DTB does not preserve an alias-to-label relationship. [Tree Anatomy And Vocabulary](../foundations/tree-anatomy-and-vocabulary.md#aliases) compares labels, phandles, paths, and aliases.
 
 Aliases are used by firmware and some Linux subsystems, and may influence instance numbering. That behavior is subsystem-specific. Do not promise that `/aliases` alone creates a permanent userspace device name; use an explicit userspace naming policy where a stable ABI is required.
 

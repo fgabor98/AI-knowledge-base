@@ -70,42 +70,11 @@ if (IS_ERR(reset))
 
 ## Compatible-Conditional Requirements
 
-Variants can require different resources:
-
-```yaml
-allOf:
-  - if:
-      properties:
-        compatible:
-          contains:
-            const: acme,ax200-uart
-    then:
-      required:
-        - resets
-```
-
-The corresponding AX200 match data and probe path must acquire that reset. Review the fallback chain: if AX200 also claims AX100 compatibility but cannot work without AX200-aware reset handling, the fallback may be unsafe.
+When a schema requires extra resources for one variant (see the `if`/`then` example in [Schema-Compatible Lists](compatible-evolution-and-stable-abi-decisions.md#schema-compatible-lists)), that variant's match data and probe path must acquire them. If AX200 also falls back to AX100 but cannot work without AX200-aware reset handling, the fallback is unsafe.
 
 ## Probe Deferral
 
-`-EPROBE_DEFER` means a required supplier is expected but not ready. It is not a generic “try again” response for malformed DT data or permanent hardware failure.
-
-Use `dev_err_probe()` to preserve the error and record a deferral reason. Linux can expose deferred devices and reasons through debugfs when enabled:
-
-```sh
-cat /sys/kernel/debug/devices_deferred
-```
-
-Repeated deferral is often caused by:
-
-- provider node absent or disabled
-- provider driver not enabled or not packaged
-- wrong provider compatible
-- bad phandle or specifier
-- circular dependency
-- provider probe failure hidden earlier in the log
-
-Increasing initcall priority or adding arbitrary retries usually hides the dependency defect.
+`-EPROBE_DEFER` means a required supplier is expected but not ready. It is not a generic “try again” response for malformed DT data or permanent hardware failure. Use `dev_err_probe()` to preserve the error and record a deferral reason; [Probe Deferral, Supplier Links, And Resource State](../runtime-inspection/probe-deferral-supplier-links-and-resource-state.md) shows how to trace a persistent deferral to its supplier. Increasing initcall priority or adding arbitrary retries usually hides the dependency defect.
 
 ## Probe Failure Must Unwind
 

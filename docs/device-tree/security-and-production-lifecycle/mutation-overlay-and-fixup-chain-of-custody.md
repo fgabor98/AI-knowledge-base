@@ -12,19 +12,7 @@ Authentication proves the bytes that were covered at verification time. Bootload
 
 ## Build A Transformation Ledger
 
-Record the boot pipeline as explicit states:
-
-```text
-D0  packaged base DTB
-D1  selected authenticated base
-D2  authenticated overlays applied in declared order
-D3  board identity and memory fixups
-D4  /chosen boot arguments and initrd bounds
-D5  reserved-memory / firmware handoff fixups
-D6  random seed and measurement-log metadata
-D7  final FDT passed to Linux
-D8  Linux live tree after any runtime overlays
-```
+Use the checkpoint timeline from [Boot-Time Mutation And Ownership](../boot-time-mutation-and-ownership.md#treat-the-dtb-as-a-build-product-with-a-timeline), extended to the Linux live tree after any runtime overlays. Its [mutation record](../boot-time-mutation-and-ownership.md#mutation-record) captures ownership; security review adds authorization, determinism, and measurement.
 
 For each transition capture:
 
@@ -40,40 +28,17 @@ For each transition capture:
 
 ## Classify Mutations
 
-### Deterministic release transformations
+Use the data classes in [Classify The Data](../boot-time-mutation-and-ownership/mutation-provenance-authorities-and-checkpoints.md#classify-the-data). Their security treatment differs:
 
-Compile-time includes and overlays built from versioned source can be reproducible and authenticated as release inputs.
-
-### Device-identity transformations
-
-Serial numbers, MAC addresses, calibration values, and board revisions often come from EEPROM, OTP, or a secure element. Validate structure, authenticity, uniqueness, product binding, and bounds. Do not assume physical proximity makes EEPROM data trusted.
-
-### Hardware-discovery transformations
-
-DRAM size, disabled cores, reserved firmware regions, and detected peripherals may be supplied by trusted firmware. Define the firmware interface and reject overlaps or impossible values before editing `memory`, `/reserved-memory`, or CPU nodes.
-
-### Ephemeral transformations
-
-Random seeds, initrd locations, and event-log addresses vary per boot. They can be legitimate without reproducible final DTB bytes. Record their origin and measure the relevant final handoff when attestation matters.
-
-### Operator- or environment-driven transformations
-
-Boot arguments, overlay lists, and addresses derived from mutable environment are high risk. Authenticate or constrain the policy rather than trusting arbitrary strings.
+- **Deterministic release transformations** (includes, versioned overlays) can be reproduced and authenticated as release inputs.
+- **Device-identity transformations** (serials, MACs, calibration, board revision) need structure, authenticity, uniqueness, product-binding, and bounds checks; physical proximity does not make EEPROM data trusted.
+- **Hardware-discovery transformations** (DRAM size, disabled cores, firmware reservations) need a defined trusted-firmware interface and rejection of overlaps or impossible values.
+- **Ephemeral transformations** (seeds, initrd location, event-log addresses) are legitimate without reproducible final bytes; record their origin and measure the final handoff when attestation matters.
+- **Operator- or environment-driven transformations** (boot arguments, overlay lists, environment-derived addresses) are high risk; authenticate or constrain the policy rather than trusting arbitrary strings.
 
 ## Overlay Trust Rules
 
-An overlay can rewrite security-relevant properties as effectively as a replacement base DTB. A production overlay policy should define:
-
-- authorized overlay identities and signer
-- compatible base release or stable overlay ABI
-- allowed target nodes/properties
-- permitted combinations and application order
-- conflict and dependency rules
-- board identity/feature entitlement requirements
-- whether removal or runtime application is allowed
-- final measurement and field reporting
-
-Including base and overlays in one signed FIT configuration authenticates the declared composition. Manually loading a `.dtbo` after that verification creates a new trust edge that needs separate enforcement.
+An overlay can rewrite security-relevant properties as effectively as a replacement base DTB. Production policy must authenticate its identity, base compatibility, allowed targets, order, conflicts, entitlement, lifecycle, and measurement ([Trust Boundary](../overlays-in-depth/validation-security-and-product-architecture.md#trust-boundary)). Including base and overlays in one signed FIT configuration authenticates the declared composition; manually loading a `.dtbo` after that verification creates a new trust edge that needs separate enforcement.
 
 ## Constrain Mutation Scope
 
@@ -93,23 +58,9 @@ The values must be cryptographically bound to the release or derived from authen
 
 ## Validate High-Risk Fixups
 
-### Memory and reserved memory
-
-Check:
-
-- integer overflow and address-cell width
-- containment within installed physical memory
-- overlap among kernel, initrd, FDT, firmware, DMA pools, and protected regions
-- alignment and architecture constraints
-- whether a region must be `no-map`, reusable, or assigned to one owner
-
-### Boot arguments
-
-Prefer a signed allowlisted template plus narrow device-specific fields. Review parameters that affect root selection, integrity enforcement, IOMMU behavior, debug facilities, module loading, lockdown, console, and memory limits.
-
-### Identity and calibration
-
-Check format and range before injection. Treat secret provisioning material separately: the live Device Tree is commonly visible to privileged software and is not a secret store.
+- **Memory and reserved memory:** apply the overflow, containment, overlap, alignment, and ownership checks in [Deliberate Failure Checks](../boot-time-mutation-and-ownership/ram-discovery-reservations-and-memory-fixups.md#deliberate-failure-checks).
+- **Boot arguments:** prefer a signed allowlisted template plus narrow device-specific fields ([`bootargs`](../boot-time-mutation-and-ownership/chosen-bootargs-initrd-console-and-seeds.md#bootargs)); review parameters affecting root selection, integrity enforcement, IOMMU, debug, module loading, lockdown, console, and memory limits.
+- **Identity and calibration:** check format and range before injection; the live Device Tree is visible to privileged software and is not a secret store.
 
 ## Integrity Is Not Confidentiality
 

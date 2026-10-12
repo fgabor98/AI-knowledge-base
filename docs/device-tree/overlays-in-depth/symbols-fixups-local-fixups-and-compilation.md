@@ -136,17 +136,7 @@ Tool output format varies, and decompilation is not a byte-for-byte source recon
 
 ## Symbol Names Are Case-Sensitive Interfaces
 
-Renaming `spi2` to `spi_2`, moving a label to another node, or building without `-@` breaks independently compiled overlays. The underlying node can have identical runtime properties and still be overlay-incompatible.
-
-Define exported labels deliberately:
-
-- stable label name
-- stable hardware meaning
-- expected provider `#*-cells`
-- supported base versions
-- consumers allowed to depend on it
-
-Avoid exporting every incidental internal label as an accidental long-term promise.
+Renaming `spi2` to `spi_2`, moving a label to another node, or building without `-@` breaks independently compiled overlays even when the node's runtime properties are identical. Export labels deliberately and avoid exporting incidental internal labels; [Labels Are Exported Interfaces](base-compatibility-versioning-and-overlay-abi.md#labels-are-exported-interfaces) defines what a stable label promises.
 
 ## Paths Inside Fixup Metadata
 

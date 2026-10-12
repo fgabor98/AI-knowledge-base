@@ -20,14 +20,7 @@ sensor@48 {
 };
 ```
 
-Linux descriptor lookup uses the consumer prefix:
-
-```c
-reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
-enable = devm_gpiod_get(dev, "enable", GPIOD_OUT_LOW);
-```
-
-`"reset"` maps to `reset-gpios`; `"enable"` maps to `enable-gpios`. The binding, not driver preference, decides whether those properties are required, optional, singular, or arrays.
+Descriptor lookup maps connection ID `"reset"` to `reset-gpios` and `"enable"` to `enable-gpios` ([Function Names And GPIO Lookup](../provider-consumer-relationships/gpio-and-interrupt-relationships.md#function-names-and-gpio-lookup)). The binding, not driver preference, decides whether those properties are required, optional, singular, or arrays.
 
 Legacy singular `*-gpio` spellings exist in old bindings, but new bindings normally use `*-gpios`. Do not rename deployed properties without preserving ABI support.
 
@@ -105,9 +98,7 @@ Software cannot eliminate a hardware glitch that occurs before it controls the p
 
 ## Optional GPIOs And Errors
 
-Use optional descriptor getters only when the binding makes absence valid. An optional getter can return no descriptor for absence, but malformed specifiers, unavailable providers, and deferral remain errors.
-
-Do not convert every error to “GPIO not fitted.” That hides disabled controllers and broken phandles. Use `dev_err_probe()` and preserve `-EPROBE_DEFER`.
+Use optional descriptor getters only when the binding makes absence valid, and preserve real errors and `-EPROBE_DEFER` as described in [Optional And Required Resources](../provider-consumer-relationships/specifier-decoding-and-resource-names.md#optional-and-required-resources). Converting every error to “GPIO not fitted” hides disabled controllers and broken phandles.
 
 ## Reset Cleanup And Ownership
 

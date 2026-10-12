@@ -27,7 +27,7 @@ pcie@80000000 {
 };
 ```
 
-The three-cell PCI child address includes flags plus bus/device/function and register information. `ranges` describes outbound CPU access to PCI I/O or memory space. `dma-ranges` describes inbound DMA translation. Their encodings are not ordinary simple-bus tuples; review them against the generic host-bridge schema and platform address map.
+The three-cell child address, `ranges`, `dma-ranges`, INTx, and MSI encodings are explained in [PCI Host Bridges, Address Windows, And Interrupts](../addressing-and-bus-modeling/pci-host-bridges-address-windows-and-interrupts.md). This page focuses on the controller integration around them.
 
 ## Root-Complex Resources
 
@@ -53,13 +53,9 @@ Properties such as `num-lanes` and `max-link-speed` should reflect routed/suppor
 
 ## Interrupts And Requester IDs
 
-MSI/MSI-X messages must reach the correct interrupt domain. `msi-parent` suits simple relationships; `msi-map` translates PCI requester IDs where required. Similarly, `iommu-map` translates requester IDs to IOMMU stream IDs. Masks and ranges must cover every possible BDF created by the topology.
+`msi-map` and `iommu-map` masks and ranges must cover every BDF the topology can create. An endpoint can enumerate and perform MMIO while DMA fails because the IOMMU map is wrong, and MSI failure can fall back to legacy INTx and conceal the mapping error. Inspect interrupt mode and IOMMU groups explicitly.
 
-An endpoint can enumerate and perform MMIO while DMA fails because the IOMMU map is wrong. MSI failure can fall back to legacy INTx on some devices and conceal the mapping error. Inspect interrupt mode and IOMMU groups explicitly.
-
-## Fixed Downstream Devices
-
-DT child nodes under a PCI host or bridge are reserved for cases needing firmware-described properties not discoverable from PCI configuration space, or for platform-specific relationships defined by bindings. The child's unit address encodes its BDF. Do not list ordinary cards merely to force driver loading.
+Fixed DT child nodes under a host or bridge are only for firmware-described properties that PCI configuration space cannot provide. Do not list ordinary cards merely to force driver loading.
 
 ## Runtime Diagnosis
 

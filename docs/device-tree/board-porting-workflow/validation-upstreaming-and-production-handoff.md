@@ -100,33 +100,9 @@ If conservative settings remain for signal integrity or safety, document them as
 
 ## Structure An Upstreamable Series
 
-A typical shape:
+Order the series as described in [Patch Dependency Graph](../binding-design-and-stable-abi/review-strategy-and-upstream-submission-order.md#patch-dependency-graph): bindings and constants first, driver support preserving old bindings, then SoC/package data, module/carrier common hardware, the custom board, and later board features in logical patches. Binding/driver and DTS patches may travel through different maintainer trees, so keep dependencies explicit and every intermediate patch buildable and bisectable.
 
-```text
-1. dt-bindings: document new device/board compatibles
-2. dt-bindings: add constants if necessary
-3. subsystem: add driver support preserving old bindings
-4. arm64: dts: vendor: add SoC/package data
-5. arm64: dts: vendor: add module/carrier common hardware
-6. arm64: dts: vendor: add custom board
-7. arm64: dts: vendor: enable later board features in logical patches
-```
-
-Binding/driver and DTS patches may travel through different maintainer trees. Keep dependencies explicit, use documented fallback compatibility only when real, and make intermediate patches buildable/bisectable.
-
-## Write Board Patches For Review
-
-Commit messages should state:
-
-- physical hardware/change being described
-- board/revision identity
-- important topology and reference differences
-- why compatible fallback is valid
-- boot/peripheral functionality reached
-- validation performed
-- dependency on binding/driver series
-
-Do not post a monolithic “add board support” patch containing unrelated bindings, driver hacks, generated binaries, and formatting churn.
+Board commit messages should state the physical hardware and revision, important differences from the reference board, why any compatible fallback is valid, the functionality reached, validation performed, and dependencies on binding/driver series ([Cover Letter Content](../binding-design-and-stable-abi/review-strategy-and-upstream-submission-order.md#cover-letter-content)). Do not post a monolithic “add board support” patch containing unrelated bindings, driver hacks, generated binaries, and formatting churn.
 
 ## Define Product Qualification
 
@@ -170,19 +146,7 @@ Production should not depend on the bring-up engineer's shell history.
 
 ## Prepare Support Evidence
 
-Automate read-only collection of:
-
-- unit product/revision/option identity
-- release-set and artifact manifest identity
-- bootloader/kernel/module/firmware versions
-- boot FDT and live-tree identity/capture per policy
-- target device/of_node/driver relationships
-- deferred probes and relevant logs
-- memory reservations and IOMMU/remoteproc state
-- subsystem health/error counters
-- reboot/rollback reason
-
-Protect serials, keys, seeds, memory contents, and customer data.
+Automate read-only collection of the [runtime evidence bundle](../runtime-inspection.md#snapshot-before-mutation) plus unit product/revision/option identity, release-set identity, and reboot/rollback reason. Protect serials, keys, seeds, memory contents, and customer data.
 
 ## Define Regression Gates
 

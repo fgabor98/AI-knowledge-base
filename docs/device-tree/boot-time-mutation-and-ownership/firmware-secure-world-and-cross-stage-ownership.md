@@ -109,17 +109,7 @@ Every new boot must rebuild or validate checkpoints, clear one-time seeds, and r
 
 ## Measured And Verified Boot
 
-If a stage verifies a base tree and a later trusted stage mutates it, attestation should describe the final state or authorized transformation sequence.
-
-Possible measurements:
-
-- base and ordered overlay hashes
-- normalized firmware reservation manifest
-- board identity/policy version
-- hardware-composition tree before ephemeral secrets
-- final redacted/canonical DTB
-
-Never measure and publish secret seed bytes. Define how dynamic but legitimate hardware changes affect expected measurements.
+If a stage verifies a base tree and a later trusted stage mutates it, attestation must describe the final state or the authorized transformation sequence; choose between component-ledger and final-handoff measurement as described in [Measure Components Or Final State](../security-and-production-lifecycle/measured-boot-attestation-and-runtime-evidence.md#measure-components-or-final-state). Never measure and publish secret seed bytes.
 
 ## Failure Escalation
 

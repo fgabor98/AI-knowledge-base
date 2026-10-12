@@ -109,19 +109,7 @@ if (ret != 0)
         return ret;
 ```
 
-The destination interval must actually be allocated/reserved and nonoverlapping with source, kernel, initrd, firmware, stacks, DMA, and decompression destinations.
-
-Capacity budget:
-
-```text
-validated input totalsize
-+ worst-case overlay growth
-+ bootloader/firmware properties and nodes
-+ bounded future margin
-<= destination capacity
-```
-
-Do not merely write a larger totalsize into a header.
+The destination interval must actually be allocated and nonoverlapping, sized from the worst-case budget in [Calculate Capacity](../boot-time-mutation-and-ownership/libfdt-capacity-relocation-and-failure-atomicity.md#calculate-capacity). Do not merely write a larger totalsize into a header.
 
 ## Mutations
 
@@ -168,37 +156,9 @@ Preserve the numeric error and context. Common classes include:
 
 Do not continue with a default after a mandatory mutation fails.
 
-## Failure Atomicity
+## Failure Atomicity, Overlays, And Packing
 
-For multi-step product mutation:
-
-1. preserve immutable source artifacts
-2. validate all inputs and policy first
-3. open/copy base into a disposable destination
-4. apply changes in canonical order
-5. stop on first failure
-6. discard destination on any failure
-7. validate and publish only the complete result
-
-Rollback by writing “old values” is fragile because later operations may have moved nodes, consumed external state, or failed before logging their exact prior state.
-
-## Overlay Application
-
-`fdt_overlay_apply()` mutates base and overlay state as part of resolution/application. U-Boot's overlay guidance warns that failures can invalidate both blobs. Use writable disposable copies and never reuse a failed buffer as a trustworthy input.
-
-Validate symbols, compatibility, order, and destination capacity before calling it. A zero return says the structural operation succeeded, not that schemas or hardware constraints pass.
-
-## Pack Only At The End
-
-`fdt_pack()` removes unused space and compacts the blob. This is useful for final serialization/hash/storage. After packing, further mutations may fail for lack of room, and all earlier pointers/offsets must be considered stale.
-
-Record whether the release hash covers:
-
-- packed used blob
-- totalsize including deterministic padding
-- a larger container entry
-
-Mixing these definitions causes false hash mismatches.
+Multi-step product mutation follows the disposable-copy pattern in [Atomicity And Rollback](../boot-time-mutation-and-ownership/libfdt-capacity-relocation-and-failure-atomicity.md#atomicity-and-rollback); rollback by writing “old values” is fragile because later operations may have moved nodes or failed before logging prior state. `fdt_overlay_apply()` can invalidate both base and overlay on failure, and a zero return proves only structural success. Call `fdt_pack()` only at the end and treat all earlier pointers/offsets as stale afterward; define whether release hashes cover the packed blob, deterministic padding, or a container entry ([Packing And Hashing](../boot-time-mutation-and-ownership/libfdt-capacity-relocation-and-failure-atomicity.md#packing-and-hashing)).
 
 ## Concurrency And Ownership
 

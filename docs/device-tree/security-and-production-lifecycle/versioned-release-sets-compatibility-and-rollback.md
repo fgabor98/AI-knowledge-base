@@ -99,45 +99,11 @@ Return to the previously bootable slot when health checks fail. This preserves a
 
 Reject releases below a protected security floor. This prevents booting a known-vulnerable but correctly signed image.
 
-They can conflict. If the new release raises the protected floor before proving healthy, the device may be unable to boot its old slot. A safe lifecycle typically:
+They can conflict: if the new release raises the protected floor before proving healthy, the device may be unable to boot its old slot. Advance the floor only after the trial slot is accepted and an authorized recovery version meets it; [Write Inactive, Verify, Then Select](field-updates-recovery-and-key-rotation.md#write-inactive-verify-then-select) and [Anti-Rollback Transaction](field-updates-recovery-and-key-rotation.md#anti-rollback-transaction) give the full sequence.
 
-1. installs and verifies the candidate in the inactive slot
-2. boots it under a trial state
-3. runs bounded health and hardware checks
-4. commits the slot as accepted
-5. advances the protected minimum only under a separately proven policy
-6. retains an authorized recovery version compatible with the new floor
+## Preserve Binding Compatibility And Gate Activation
 
-Exact ordering depends on the platform's monotonic storage and threat model.
-
-## Preserve Binding Compatibility
-
-The kernel generally treats DT bindings as ABI. Production rules include:
-
-- never repurpose an existing property with incompatible meaning
-- append fallback compatible strings when the binding defines that relationship
-- keep drivers tolerant of older valid DTBs within the supported window
-- introduce new required behavior with explicit compatibility strategy
-- version product-private protocols or manifests, not standard bindings arbitrarily
-- declare overlay/base compatibility and reject untested pairs
-
-Authentication must not become an excuse to ship a lockstep-only DT ABI without understanding recovery and staged update needs.
-
-## Gate Activation With Hardware-Critical Tests
-
-A process merely reaching userspace is insufficient. Before accepting a DT-affecting release, test:
-
-- console and recovery input
-- boot storage and root integrity
-- watchdog service and reboot reason
-- regulators, clocks, thermal controls, and fans
-- network needed for fleet recovery
-- update storage write/read integrity
-- DMA/IOMMU-critical peripherals
-- board revision and option-specific devices
-- suspend/resume or poweroff when operationally required
-
-Health checks must complete before the trial-attempt budget expires and must not mark success early.
+Release sets inherit the binding ABI rules in [Backward Compatibility, Deprecation, And Migration](../binding-design-and-stable-abi/backward-compatibility-deprecation-and-migration.md) and must declare overlay/base compatibility. Authentication must not become an excuse to ship a lockstep-only DT ABI without understanding recovery and staged updates. Reaching userspace is insufficient for acceptance; run the [DT-aware health checks](field-updates-recovery-and-key-rotation.md#make-health-dt-aware) before the trial-attempt budget expires and never mark success early.
 
 ## Release-Set Acceptance Contract
 

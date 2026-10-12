@@ -12,15 +12,7 @@ A digest detects changed bytes when compared with a trusted expected digest. A s
 
 ## Understand FIT Roles
 
-A Flattened Image Tree can contain:
-
-- image nodes for kernels, DTBs, ramdisks, firmware, and other payloads
-- hash nodes describing payload digests
-- signature nodes
-- configuration nodes that select a set of images
-- a default or explicitly requested configuration
-
-The FIT is itself encoded as an FDT, but its schema describes a boot container rather than hardware.
+FIT images, hash nodes, signature nodes, and configurations are introduced in [FIT Configurations, DTB Selection, And Verified Boot](../u-boot-and-bootloader-device-tree/fit-configurations-dtb-selection-and-verified-boot.md). The FIT is encoded as an FDT, but its schema describes a boot container rather than hardware.
 
 ## Hashes Are Not Authorization
 
@@ -146,7 +138,7 @@ Expected behavior must be rejection or entry into authenticated recovery—not a
 
 A correctly signed old release remains authentic. Anti-rollback needs protected monotonic state such as a fuse, secure element, TPM NV counter, replay-protected storage, or platform update framework. Bind a signed security version to the release and compare it against protected minimum state before activation or boot.
 
-Never advance the minimum version until the new slot has proved bootable and the recovery design remains valid. The exact transaction is platform-specific.
+Never advance the minimum version until the new slot has proved bootable and the recovery design remains valid ([Anti-Rollback Transaction](field-updates-recovery-and-key-rotation.md#anti-rollback-transaction)).
 
 ## Key Policy
 

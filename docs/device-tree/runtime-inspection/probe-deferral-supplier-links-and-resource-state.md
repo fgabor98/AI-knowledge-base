@@ -138,9 +138,7 @@ Do not use a shorter timeout to hide a missing mandatory supplier. Fix provider 
 
 ## Probe Ordering Is Not DTS Line Order
 
-Moving provider text above consumer text does not create a reliable probe order. Device registration, driver registration, asynchronous probe, modules, and dependency links determine timing.
-
-Model the hardware relationship accurately and let frameworks express dependency. If a driver reads a phandle manually and returns a guessed error, improve its probe diagnostics rather than ordering source files.
+Moving provider text above consumer text does not create a reliable probe order; device and driver registration, asynchronous probe, modules, and dependency links determine timing. Model the hardware relationship accurately and let frameworks express dependency.
 
 ## Recursive Diagnosis Worksheet
 

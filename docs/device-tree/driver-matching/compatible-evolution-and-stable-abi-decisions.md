@@ -116,15 +116,7 @@ Existing properties may fully describe some changes, allowing common drivers wit
 
 ## Deprecation And Migration
 
-Once deployed, a misspelled or poorly designed compatible may still be ABI. Migration normally requires:
-
-1. document the corrected/new compatible
-2. teach new kernels both old and new strings where safe
-3. update DTS producers to emit the new string
-4. preserve old-DTB support for the product's lifetime policy
-5. remove support only with explicit ecosystem agreement
-
-Silently changing a string in DTS and driver together passes same-tree testing but breaks independent upgrades.
+Once deployed, a misspelled or poorly designed compatible may still be ABI. Silently changing a string in DTS and driver together passes same-tree testing but breaks independent upgrades. [Backward Compatibility, Deprecation, And Migration](../binding-design-and-stable-abi/backward-compatibility-deprecation-and-migration.md#incorrect-compatible) gives the migration procedure.
 
 ## Senior Review Questions
 

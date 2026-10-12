@@ -10,21 +10,23 @@ last_reviewed: null
 
 ## A Phandle Is Only The Start Of An Entry
 
-Consider:
-
-```dts
-clocks = <&osc>, <&clock_controller 4 1>;
-```
-
-The source punctuation does not define two universal clock tuples. Each entry begins with a phandle, then carries the number of argument cells declared by the referenced provider:
+Each entry in a phandle array begins with a phandle, then carries the number of argument cells declared by the referenced provider:
 
 ```dts
 osc: clock-24000000 {
         #clock-cells = <0>;
 };
 
+pll: clock-controller@7000 {
+        #clock-cells = <1>;
+};
+
 clock_controller: clock-controller@8000 {
         #clock-cells = <2>;
+};
+
+device@1000 {
+        clocks = <&osc>, <&pll 3>, <&clock_controller 4 1>;
 };
 ```
 
@@ -32,8 +34,11 @@ The effective entries are:
 
 ```text
 &osc                         provider + 0 arguments
-&clock_controller 4 1       provider + 2 arguments
+&pll 3                       provider + 1 argument
+&clock_controller 4 1        provider + 2 arguments
 ```
+
+A parser therefore advances by a different length for each entry. The commas are source formatting only; a raw cell dump loses them, so resolve each phandle before advancing. Never parse a compiled array as fixed pairs such as `(phandle, ID)` unless every permitted provider binding proves that shape.
 
 The provider binding, not the consumer and not `dtc`, defines whether `4` is an output ID, bank, port, or something else and whether `1` is a flag, selector, or sub-index.
 
@@ -62,41 +67,19 @@ system_controller: system-controller@8000 {
         #reset-cells = <1>;
         #power-domain-cells = <1>;
 };
+
+accelerator@4000 {
+        clocks = <&system_controller 2 6>;
+        resets = <&system_controller 9>;
+        power-domains = <&system_controller 3>;
+};
 ```
 
-Never substitute one count for another merely because the phandle target is the same node.
+The clock tuple has two arguments, while reset and power-domain tuples have one. The same phandle target does not imply a shared namespace or a shared cell count.
 
 ## Zero-Cell Providers
 
-A zero-cell provider needs no selector because the phandle uniquely identifies the resource:
-
-```dts
-osc: clock-24000000 {
-        compatible = "fixed-clock";
-        #clock-cells = <0>;
-        clock-frequency = <24000000>;
-};
-
-device@1000 {
-        clocks = <&osc>;
-};
-```
-
-Zero cells does not mean zero resources or an empty property. The phandle itself is still present. Adding an invented `0` would create an extra cell and violate the provider binding.
-
-## Multi-Provider Lists Have Variable Entry Widths
-
-This property can be valid:
-
-```dts
-clocks = <&osc>,
-         <&pll 3>,
-         <&clock_controller 4 1>;
-```
-
-If the providers use 0, 1, and 2 argument cells respectively, the parser advances by different lengths. A raw dump of numeric cells loses visible tuple boundaries, so resolve each phandle before advancing.
-
-Do not parse a compiled array as fixed pairs such as `(phandle, ID)` unless every permitted provider binding proves that shape.
+A zero-cell provider such as `osc` needs no selector because the phandle uniquely identifies the resource. The phandle itself is still present; adding an invented `0`, as in `<&osc 0>`, creates an extra cell that the parser reads as the start of the next entry.
 
 ## Consumer Binding And Provider Binding Have Different Jobs
 

@@ -141,15 +141,7 @@ Use binding constants from the relevant `dt-bindings/interrupt-controller/...` h
 
 ## Interrupt Names And Driver Lookup
 
-Multiple interrupts should have stable semantic names:
-
-```dts
-interrupts = <17 IRQ_TYPE_LEVEL_HIGH>,
-             <18 IRQ_TYPE_EDGE_RISING>;
-interrupt-names = "core", "wakeup";
-```
-
-Drivers can request a named IRQ through platform helpers. As with clocks and resets, the names list maps positionally and forms part of the binding ABI.
+Multiple interrupts should have stable semantic names in `interrupt-names`, as in the `interrupts-extended` example above. Drivers request a named IRQ through platform helpers; as with clocks and resets, the names map positionally and form part of the binding ABI.
 
 ## Debugging Checklist
 

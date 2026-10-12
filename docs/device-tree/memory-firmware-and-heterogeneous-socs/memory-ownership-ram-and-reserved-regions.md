@@ -23,41 +23,9 @@ Build the map from the SoC reference manual, board population, boot firmware, li
 
 Check for overlap, alignment, address-cell width, and boot-stage changes. A 64-bit root typically requires two cells for an address and size; copying a four-cell `reg` tuple into a subtree with different cell counts changes its meaning.
 
-## `/memory` Describes Usable Hardware Capacity
+## `/memory` And `/reserved-memory` Stay Separate
 
-A normal RAM node uses `device_type = "memory"` and one or more `reg` ranges:
-
-```dts
-memory@80000000 {
-        device_type = "memory";
-        reg = <0x0 0x80000000 0x0 0x80000000>;
-};
-```
-
-Platform firmware can adjust installed size before Linux boots. Confirm the final DTB and early boot log rather than assuming the checked-in DTS is the delivered map.
-
-Do not subtract every carveout manually from the `/memory` node. The reserved-memory mechanism exists so RAM topology and exclusions remain independently auditable. Platform-specific firmware may impose additional reservations, but those should also be visible through an authoritative handoff mechanism.
-
-## `/reserved-memory` Is A Container
-
-The conventional shape is:
-
-```dts
-reserved-memory {
-        #address-cells = <2>;
-        #size-cells = <2>;
-        ranges;
-
-        r5f_fw: r5f-firmware@9d000000 {
-                reg = <0x0 0x9d000000 0x0 0x00800000>;
-                no-map;
-        };
-};
-```
-
-The empty `ranges` establishes direct translation into the parent address space. Child nodes describe either a statically placed region with `reg` or a dynamically allocated region with `size` and optional placement constraints. They do not use both.
-
-The node name should describe purpose and include the unit address when `reg` is present. Labels such as `r5f_fw` are source conveniences, not ABI or proof of ownership.
+`/memory` and the `/reserved-memory` container are described in [CPUs, Topology, And Memory](../standard-nodes-and-properties/cpus-topology-and-memory.md#the-memory-node) and [Reserved Memory](../standard-nodes-and-properties/reserved-memory.md). Do not subtract every carveout manually from `/memory`: the reserved-memory mechanism exists so RAM topology and exclusions remain independently auditable, and firmware may adjust installed size before Linux boots. Name each child by purpose with its unit address; labels such as `r5f_fw` are source conveniences, not ABI or proof of ownership.
 
 ## `memory-region` Connects A Device To A Region
 
@@ -76,9 +44,7 @@ One phandle also does not prove exclusive ownership. Audit every consumer and ev
 
 ## `no-map` Is Narrower Than “Private”
 
-`no-map` tells the OS not to create its normal linear mapping of the region and not to permit speculative access through that mapping. A driver may still deliberately map a permitted region using an appropriate API if the platform contract allows it.
-
-Use `no-map` when the binding and security or hardware contract require it, not as decoration on every carveout. It does not:
+[`no-map`](../standard-nodes-and-properties/reserved-memory.md#static-reserved-memory-regions) only removes the OS's normal linear mapping; a driver may still deliberately map a permitted region. Use it when the binding, security, or hardware contract requires it, not as decoration on every carveout. It does not:
 
 - configure a firewall or memory protection controller
 - stop another DMA master
@@ -86,11 +52,9 @@ Use `no-map` when the binding and security or hardware contract require it, not 
 - encrypt or erase contents
 - transfer ownership between boot stages
 
-Those are separate mechanisms.
-
 ## Fixed Placement Versus Allocated Placement
 
-A fixed `reg` region is appropriate when firmware link addresses, hardware windows, secure configuration, or inter-processor ABI require exact placement. A `size`-based reservation lets the early allocator choose a suitable address, optionally restricted by `alignment` and `alloc-ranges`.
+Use a fixed `reg` only when firmware link addresses, hardware windows, secure configuration, or inter-processor ABI require exact placement; otherwise a [dynamically placed region](../standard-nodes-and-properties/reserved-memory.md#dynamically-placed-regions) avoids hard-coded maps.
 
 Ask whether the address is truly ABI:
 
@@ -119,16 +83,7 @@ For each transition, define who quiesces writers, flushes or invalidates caches,
 
 ## Runtime Evidence
 
-Useful evidence includes:
-
-```sh
-cat /proc/iomem
-cat /proc/meminfo
-dmesg | grep -Ei 'reserved memory|cma|memblock|memory'
-ls -l /sys/firmware/devicetree/base/reserved-memory
-```
-
-On a development system, compare these with the decompiled live DTB and bootloader memory map. `/proc/iomem` is an OS view, not a complete security audit.
+Collect the views listed in [Reserved Memory: Runtime Diagnosis](../standard-nodes-and-properties/reserved-memory.md#runtime-diagnosis) and compare them with the decompiled live DTB and bootloader memory map. `/proc/iomem` is an OS view, not a complete security audit.
 
 ## Review Checklist
 

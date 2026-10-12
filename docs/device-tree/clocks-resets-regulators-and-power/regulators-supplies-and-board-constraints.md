@@ -12,20 +12,7 @@ The regulator graph describes electrical rails and their consumers. It also cons
 
 ## Consumer Supply Properties
 
-A consumer binding defines semantic properties ending in `-supply`:
-
-```dts
-sensor@1a {
-        compatible = "example,temp-sensor";
-        reg = <0x1a>;
-        vdd-supply = <&reg_3v3_sensor>;
-        vddio-supply = <&reg_1v8_io>;
-};
-```
-
-The property stem matches the consumer driver's supply name. It need not match the regulator node name, PMIC output name, or schematic rail label. A driver asking for `vddio` resolves `vddio-supply`.
-
-Each phandle identifies a regulator provider. Unlike clocks, ordinary supply references have no specifier cells after the phandle.
+Consumers name their rails with binding-defined `*-supply` properties that carry a bare regulator phandle ([Regulator Supplies](../provider-consumer-relationships/dma-iommu-phy-and-regulator-dependencies.md#regulator-supplies)). The stem matches the driver's supply name (`vddio` resolves `vddio-supply`), not the regulator node name, PMIC output name, or schematic rail label.
 
 ## Fixed Regulators
 

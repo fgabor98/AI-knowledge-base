@@ -12,18 +12,7 @@ Memory ownership errors often look nondeterministic because one agent corrupts a
 
 ## Name Every Address Space
 
-Distinguish:
-
-```text
-CPU physical address
-bus/DMA address seen by a device
-I/O virtual address translated by an IOMMU
-remote-processor device address
-firmware load address
-DT parent/child bus address translated by ranges/dma-ranges
-```
-
-The same numeric value can mean different spaces. Label addresses in design documents and logs.
+Label CPU physical, DMA/bus, IOVA, remote-device, and firmware load addresses explicitly in design documents and logs ([Name Every Address Space](../memory-firmware-and-heterogeneous-socs/dma-addressing-coherency-and-iommu-topology.md#name-every-address-space)); the same numeric value can mean different spaces.
 
 ## Create A Memory Ownership Map
 
@@ -39,82 +28,15 @@ Example:
 
 Validate no overlap with kernel, initrd, FDT, bootloader relocation, framebuffer, crash log, or update buffers.
 
-## Understand Reservation Forms
+## Reservation Forms And Firmware Agreement
 
-Device Tree can reserve memory through mechanisms such as the FDT reservation map and `/reserved-memory` child nodes. Exact binding semantics determine whether regions are statically addressed, dynamically allocated, reusable, or excluded from normal mapping.
+Represent each region with the mechanism its consumer binding requires—`/reserved-memory` children referenced by `memory-region`, the FDT reservation map, or a shared DMA pool ([Reserved Memory](../standard-nodes-and-properties/reserved-memory.md), [CMA, Shared DMA Pools, And Static Carveouts](../memory-firmware-and-heterogeneous-socs/cma-shared-dma-pools-and-static-carveouts.md)). Do not generalize one remoteproc driver's region order or `no-map` use to another.
 
-Schematic example:
+Static DTS, boot-firmware fixups, firmware resource tables, driver allocation, CMA, and hypervisor assignment can all determine memory. Choose one authority per fact or define an explicit negotiation; a resource table requesting one carveout while DT points to another is a conflict, not redundancy ([Reconcile DT And Resource Tables](../memory-firmware-and-heterogeneous-socs/firmware-images-resource-tables-and-host-contracts.md#reconcile-dt-and-resource-tables)).
 
-```dts
-/ {
-    reserved-memory {
-        #address-cells = <2>;
-        #size-cells = <2>;
-        ranges;
+## Validate DMA Reachability And IOMMU Relationships
 
-        rproc_fw: remoteproc@90000000 {
-            reg = <0x0 0x90000000 0x0 0x01000000>;
-            no-map;
-        };
-
-        rproc_vring: vring@91000000 {
-            reg = <0x0 0x91000000 0x0 0x00800000>;
-            no-map;
-        };
-    };
-};
-
-&dsp0 {
-    memory-region = <&rproc_fw>, <&rproc_vring>;
-    firmware-name = "acme/axc300-dsp.bin";
-
-    status = "okay";
-};
-```
-
-The consumer binding defines region count/order/names and whether `no-map` is appropriate. Do not generalize this schematic example to another remoteproc driver.
-
-## Reconcile Firmware And DT Sources
-
-Memory may be determined by:
-
-- static DTS
-- bootloader or trusted-firmware fixup
-- firmware resource table
-- remoteproc driver allocation
-- CMA/shared pool
-- hypervisor assignment
-
-Choose one authority per fact or define an explicit negotiation. A firmware resource table requesting one carveout while DT points to another is not redundancy; it is a conflict.
-
-## Validate DMA Reachability
-
-For each DMA master record:
-
-- address width and mask
-- coherent/non-coherent behavior
-- bus `dma-ranges` translations
-- IOMMU presence and stream/device IDs
-- reserved/shared pool constraints
-- alignment/segment/boundary limits
-- secure versus non-secure access
-- cache maintenance owner
-
-Test buffers below and above meaningful boundaries, not only the first allocation that succeeds.
-
-## Bring Up An IOMMU Relationship
-
-```text
-consumer iommus property
-  -> provider phandle
-  -> provider #iommu-cells interpretation
-  -> stream/device ID from SoC interconnect documentation
-  -> IOMMU provider device/driver
-  -> domain attachment
-  -> mappings and fault behavior
-```
-
-Never copy a stream ID from the reference board when routing, package, or hardware revision can change it. Validate that an intentional invalid access produces the expected contained fault in a safe lab test where supported.
+Complete the [translation worksheet](../memory-firmware-and-heterogeneous-socs/dma-addressing-coherency-and-iommu-topology.md#a-translation-worksheet) for each DMA master, then test buffers below and above meaningful boundaries, not only the first allocation that succeeds. Never copy an IOMMU stream ID from the reference board when routing, package, or hardware revision can change it; derive it from SoC interconnect documentation and, where supported, confirm in a safe lab test that an intentional invalid access produces a contained fault.
 
 ## Stage Remote Processor Bring-Up
 

@@ -37,35 +37,9 @@ A root revision-specific compatible is useful when early firmware, platform poli
 
 Avoid `board-revision = <...>` as a universal switch read by unrelated drivers. Describe each physical delta at its owning node. Central revision identity may still exist for product selection or diagnostics, but must not replace the hardware description.
 
-## Base Trees Versus Overlays
+## Base Trees, Overlays, And Source Layers
 
-Use a separate base DTS when the board is a coherent, fixed product variant with substantial topology changes. Use overlays for genuinely composable, discoverable, or user-selectable hardware whose interfaces and supported combinations are controlled.
-
-Evaluate:
-
-- can the option be physically added or removed independently?
-- can selection be trusted and reproduced?
-- are conflicts and ordering bounded?
-- can every supported base/overlay pair be validated?
-- does the overlay target a stable public interface in the base?
-- will bootloaders and field update tooling preserve compatible versions?
-
-Do not use dozens of overlays merely to avoid maintaining clear board DTS files.
-
-## Layer Sources By Hardware Ownership
-
-A maintainable arrangement often follows:
-
-```text
-SoC.dtsi                 silicon blocks and fixed integration
-module.dtsi              module-level RAM/PMIC/wiring
-carrier-common.dtsi      common carrier hardware
-product-reva.dts         revision A assembly and status
-product-revb.dts         revision B deltas
-option-radio.dtso        controlled optional module
-```
-
-Inclusion is source composition, not inheritance in an ABI sense. The final flattened tree must still describe exactly one physical assembly without contradictory leftovers.
+Use a separate base DTS for a coherent fixed variant with substantial topology changes, and overlays only for genuinely composable hardware with controlled interfaces and combinations ([Overlays Versus Separate Base DTBs](../overlays-in-depth/validation-security-and-product-architecture.md#overlays-versus-separate-base-dtbs)). Layer sources by physical ownership ([Hardware-Based Layering And Source Style](../syntax-values-and-source-composition/hardware-based-layering-and-source-style.md)); inclusion is source composition, not ABI inheritance, and the final flattened tree must describe exactly one physical assembly without contradictory leftovers.
 
 ## Status Is Not Variant Modeling By Itself
 
@@ -75,19 +49,7 @@ Review the flattened DTB, because source layering can hide stale supplies, pin s
 
 ## Define Supported Compositions
 
-Use an explicit manifest:
-
-```text
-product-reva.dtb:
-  allowed overlays: radio-v1, display-a
-  forbidden together: radio-v1 + display-a (shared pins)
-
-product-revb.dtb:
-  allowed overlays: radio-v2, display-a, display-b
-  required firmware: system-controller >= 4
-```
-
-“Any overlay applies to any base” is not a versioning strategy. Give bases and overlays compatible identities, release them as a tested set, and reject unsupported combinations before partial application.
+Declare per base which overlays are allowed, which combinations are forbidden, and which firmware is required (for example `product-reva.dtb: allowed radio-v1, display-a; forbidden radio-v1 + display-a (shared pins)`). “Any overlay applies to any base” is not a versioning strategy; release bases and overlays as a tested set and reject unsupported combinations before partial application.
 
 ## Expand The Deployment Matrix
 
@@ -107,16 +69,7 @@ Test every reachable combination or enforce metadata that makes unsafe combinati
 
 ## Revision Discovery And Trust
 
-Board identity can come from straps, EEPROM, fuses, a system controller, or the selected image. Define:
-
-- authority for the identity
-- integrity and range validation
-- mapping from identity to exact base/overlay set
-- behavior for unknown or contradictory values
-- whether identity is mutable during servicing
-- logged evidence of the selected composition
-
-An unauthenticated EEPROM must not select a tree that grants access to secure memory or unsafe voltages.
+Board identity can come from straps, EEPROM, fuses, a system controller, or the selected image. Its authority, validation, mapping to an exact composition, and handling of unknown or contradictory values are covered in [Design The Identity Chain](../board-porting-workflow/board-revisions-variants-overlays-and-identity.md#design-the-identity-chain). An unauthenticated EEPROM must not select a tree that grants access to secure memory or unsafe voltages.
 
 ## Minimize Deltas Without Hiding Them
 

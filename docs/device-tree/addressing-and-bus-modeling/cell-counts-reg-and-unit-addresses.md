@@ -63,7 +63,7 @@ mailbox@2000 {
 };
 ```
 
-Here the parent has one address and one size cell. `reg-names` labels entries positionally. The consumer binding defines the accepted names, their order, and whether they are required. Linux drivers commonly request these resources by index or name; reordering `reg` without the names—or names without `reg`—changes which physical resource a driver maps.
+Here the parent has one address and one size cell. `reg-names` follows the same positional rules as other [resource-name lists](../provider-consumer-relationships/specifier-decoding-and-resource-names.md#resource-names): reordering `reg` without the names changes which physical resource a driver maps.
 
 Treat `[address, address + size)` as a half-open interval. A zero size, wraparound, overflow, overlap, or range outside the containing bus window is a defect even if `dtc` emits a blob.
 
@@ -107,15 +107,7 @@ In C, Python, shell utilities, or spreadsheets, verify that intermediate values 
 
 ## Binding Semantics Come First
 
-The generic shape does not tell you what the address means:
-
-- MMIO bus: offset or bus address plus length
-- I2C: target address with no size
-- SPI: chip-select index with no size
-- CPU container: hardware CPU identifier with no size
-- PCI: flags, bus/device/function, and register fields spread over three cells
-
-The same property name therefore cannot be decoded correctly without the parent bus binding.
+The generic shape does not tell you what the address means: it may be an MMIO offset plus length, an I2C target address, an SPI chip select, a CPU identifier, or a three-cell PCI address. [Bus-Specific Child Addressing](bus-specific-child-addressing.md) covers these formats.
 
 ## Linux Resource View
 

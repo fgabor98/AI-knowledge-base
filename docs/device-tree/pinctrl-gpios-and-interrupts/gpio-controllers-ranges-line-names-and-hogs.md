@@ -22,7 +22,7 @@ gpio0: gpio-controller@1000 {
 };
 ```
 
-`gpio-controller` marks the provider. `#gpio-cells` gives the number of argument cells after its phandle. A common two-cell form uses line offset followed by flags, but the provider binding is authoritative.
+`gpio-controller` and `#gpio-cells` were introduced in [GPIO And Interrupt Relationships](../provider-consumer-relationships/gpio-and-interrupt-relationships.md); this page covers the rest of the provider contract.
 
 `ngpios` limits valid offsets when the hardware bank is smaller than its register layout's natural width. Gaps can be described with `gpio-reserved-ranges` where the common binding permits it. Consumers must not target fused-off, unavailable, or package-unbonded lines.
 
@@ -82,21 +82,7 @@ A hog and a normal consumer cannot own the same line simultaneously. Such confli
 
 ## Combined GPIO And IRQ Providers
 
-Many GPIO blocks also provide an interrupt domain:
-
-```dts
-gpio0: gpio-controller@1000 {
-        gpio-controller;
-        #gpio-cells = <2>;
-
-        interrupt-controller;
-        #interrupt-cells = <2>;
-};
-```
-
-The GPIO and interrupt cell counts are separate contracts even when both use offset-plus-flags. GPIO flags and IRQ trigger flags come from different namespaces and must never be substituted for one another.
-
-The controller itself may consume one or more parent interrupts while providing child interrupts. That cascade is covered later in this module.
+Many GPIO blocks also provide an interrupt domain with a separate `#interrupt-cells` contract ([A GPIO Controller Can Also Be An Interrupt Controller](../provider-consumer-relationships/gpio-and-interrupt-relationships.md#a-gpio-controller-can-also-be-an-interrupt-controller)). The controller may also consume parent interrupts while providing child interrupts; that cascade is covered in [GPIO Interrupts, Cascades, And Shared Lines](gpio-interrupts-cascades-and-shared-lines.md).
 
 ## Expanders And Sleepable Controllers
 

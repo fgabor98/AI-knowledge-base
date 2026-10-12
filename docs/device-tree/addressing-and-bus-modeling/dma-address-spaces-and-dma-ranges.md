@@ -98,13 +98,9 @@ RAM
 
 `iommus` or an `iommu-map` associates requesters with an IOMMU, while `dma-ranges` describes address apertures across bus boundaries. They are complementary. Do not encode an IOMMU's dynamic IOVA allocation as a fixed `dma-ranges` window.
 
-Security review must also establish whether every requester path is translated, whether firmware leaves bypass enabled, and which devices share an IOMMU group. A phandle is a description, not proof of isolation.
-
 ## Coherency Is Another Axis
 
-`dma-coherent` says DMA transactions participate in the relevant cache-coherency domain. It does not define the DMA address, expand the device mask, or install IOMMU mappings. Conversely, a non-coherent device can use an IOMMU.
-
-Drivers must use the DMA API in both cases. The API handles architecture-required mapping, synchronization, and address translation; coherent allocation does not make arbitrary stack or static memory suitable for DMA.
+[`dma-coherent`](../standard-nodes-and-properties/cross-cutting-standard-relationships.md#dma-coherent) does not define the DMA address, expand the device mask, or install IOMMU mappings. Conversely, a non-coherent device can use an IOMMU. Drivers must use the DMA API in both cases.
 
 ## Diagnose From Both Ends
 

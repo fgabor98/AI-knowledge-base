@@ -12,18 +12,7 @@ Source reuse is safe only when it follows physical reuse. Put a fact in the high
 
 ## Model The Physical Hierarchy
 
-A common product structure is:
-
-```text
-SoC silicon
-  -> package / silicon revision
-  -> system-on-module
-  -> carrier board
-  -> assembled product
-  -> optional fitted hardware or expansion
-```
-
-Map sources to that hierarchy:
+Map source files to physical units as in [Hardware-Based Layering And Source Style](../syntax-values-and-source-composition/hardware-based-layering-and-source-style.md), extended at product scale with package-specific pin layers, assembled-product root identity, and independently selected option overlays:
 
 ```text
 vendor-soc.dtsi             on-SoC blocks, addresses, interrupts

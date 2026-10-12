@@ -10,39 +10,9 @@ last_reviewed: null
 
 An interrupt-controller node defines a local hardware interrupt namespace. A consumer's specifier is meaningful only through that controller's binding; the final Linux IRQ number is allocated separately by the IRQ-domain subsystem.
 
-## Controller Contract
+## Controller And Consumer Contract
 
-```dts
-intc: interrupt-controller@2000 {
-        compatible = "example,trainer-intc";
-        reg = <0x2000 0x100>;
-        interrupt-controller;
-        #interrupt-cells = <2>;
-};
-```
-
-`interrupt-controller` marks a provider and `#interrupt-cells` determines each child specifier's width. A two-cell binding might encode hardware line plus trigger type; another controller may need an interrupt class, CPU affinity, bank, or other fields.
-
-Never infer cell meaning from count alone. Read the controller schema and any referenced common binding.
-
-## Consumer Forms
-
-With an inherited or explicit parent:
-
-```dts
-device@3000 {
-        interrupt-parent = <&intc>;
-        interrupts = <17 IRQ_TYPE_LEVEL_HIGH>;
-};
-```
-
-With the parent embedded per entry:
-
-```dts
-interrupts-extended = <&intc 17 IRQ_TYPE_LEVEL_HIGH>;
-```
-
-`interrupts-extended` is useful for mixed parents. `interrupt-names` labels completed entries positionally. See [Interrupt Parents, Specifiers, And Routing](../addressing-and-bus-modeling/interrupt-parents-specifiers-and-routing.md) for inheritance and nexus mechanics.
+`interrupt-controller` marks a provider and `#interrupt-cells` sets each child specifier's width. A two-cell binding might encode hardware line plus trigger type; another controller may need an interrupt class, CPU affinity, bank, or other fields, so never infer cell meaning from count alone. Consumers use `interrupt-parent` plus `interrupts`, or `interrupts-extended` for mixed parents, with `interrupt-names` labeling completed entries positionally. See [GPIO And Interrupt Relationships](../provider-consumer-relationships/gpio-and-interrupt-relationships.md) for the consumer forms and [Interrupt Parents, Specifiers, And Routing](../addressing-and-bus-modeling/interrupt-parents-specifiers-and-routing.md) for inheritance and nexus mechanics.
 
 ## Trigger Types
 
@@ -105,16 +75,6 @@ Keep these columns separate during diagnosis:
 | Linux virtual IRQ | 126 |
 
 Comparing `interrupts = <42 ...>` directly with line 42 of `/proc/interrupts` is generally invalid.
-
-## Interrupt Names And Driver Lookup
-
-```dts
-interrupts = <17 IRQ_TYPE_LEVEL_HIGH>,
-             <18 IRQ_TYPE_EDGE_RISING>;
-interrupt-names = "fault", "complete";
-```
-
-The binding defines the names and order. Drivers can request by name, avoiding fragile numeric indices. Reordering either list independently silently swaps semantics.
 
 ## Failure Signatures
 

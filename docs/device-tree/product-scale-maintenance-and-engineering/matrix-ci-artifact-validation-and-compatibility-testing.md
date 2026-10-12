@@ -29,27 +29,7 @@ Distinguish supported, build-only, negative, and impossible combinations.
 
 ## Generate From A Reviewed Inventory
 
-Example source of truth:
-
-```yaml
-variants:
-  - id: axc200-revb-base
-    dtb: acme/axc200-revb.dtb
-    overlays: []
-    kernels: [product-6.6, product-6.12]
-    bootloaders: [boot-7.2, boot-7.3]
-    hardware_class: axc200-revb
-  - id: axc200-revc-radio
-    dtb: acme/axc200-revc.dtb
-    overlays: [acme/radio-v1.dtbo]
-    kernels: [product-6.12]
-    bootloaders: [boot-7.3]
-    hardware_class: axc200-revc-radio
-negative_compositions:
-  - [acme/axc200-revb.dtb, acme/radio-v2.dtbo]
-```
-
-CI should fail if a released artifact, manifest entry, or allowed overlay lacks an inventory record.
+Derive the matrix from the [variant inventory](layering-variants-ownership-and-source-architecture.md#create-a-variant-inventory), extended with the supported kernel and bootloader lines per variant and an explicit list of negative compositions (for example, a revision B base with a radio-v2 overlay). CI should fail if a released artifact, manifest entry, or allowed overlay lacks an inventory record.
 
 ## Build A Validation Pyramid
 

@@ -64,17 +64,7 @@ Exact mismatch with semantic equality can come from padding, order, symbols, or 
 
 ## Normalize Carefully
 
-A decompiled/sorted diff can contain noise:
-
-- renumbered phandles
-- generated symbols/fixups
-- property/node order
-- omitted source labels/comments
-- tool-version formatting
-
-Use the same `dtc` version and flags for both. For focused questions, query exact paths/properties with `fdtget` instead of diffing entire trees.
-
-Do not normalize away evidence needed for the hypothesis—for example, remove `__symbols__` only if overlay compatibility is not under investigation.
+Decompiled, sorted diffs contain noise from phandle renumbering, generated symbols, ordering, and tool-version formatting ([Semantic Diff](../boot-time-mutation-and-ownership/final-tree-validation-diffing-and-runtime-forensics.md#semantic-diff)). Use the same `dtc` version and flags on both sides, and query exact paths with `fdtget` for focused questions. Do not normalize away evidence needed for the hypothesis—for example, remove `__symbols__` only if overlay compatibility is not under investigation.
 
 ## Layered Diagnosis
 
@@ -173,18 +163,7 @@ Shared DTSI changes require building every dependent board, not only the author'
 
 ## Preserve Failure Evidence
 
-Collect before rebuilding or overwriting:
-
-- failing artifact/container
-- exact hash and size
-- bootloader/environment/configuration logs
-- selected base/overlay identities
-- pre-handoff capture when possible
-- runtime live-tree capture and logs
-- tool versions and commands
-- known-good comparison artifact
-
-Do not run `fdtput` on the evidence. Copy it first.
+Collect the failing artifact, its hash, boot configuration logs, selected base/overlay identities, and pre-handoff and runtime captures before rebuilding or overwriting anything (see the [field provenance bundle](../boot-time-mutation-and-ownership/final-tree-validation-diffing-and-runtime-forensics.md#field-provenance-bundle)). Keep a known-good comparison artifact, and never run `fdtput` on the evidence—copy it first.
 
 ## Decision Tree
 

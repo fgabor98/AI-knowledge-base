@@ -86,37 +86,9 @@ Matching only a broad compatible can choose a tree that boots but drives the wro
 
 ## Image Hashes Versus Signatures
 
-A hash detects accidental corruption only if the expected hash is itself trusted. A digital signature authenticates signed content using a public key rooted in trusted storage or an authenticated earlier stage.
+A hash detects corruption only if the expected hash is itself trusted; a signature authenticates content against a public key anchored in an earlier trusted stage. Signed configurations matter because individually signed images can still form an unauthorized combination. Never say “the FIT is signed” without naming the required key and policy, the selected configuration, covered images, algorithms, rollback policy, and alternate boot paths.
 
-U-Boot supports signing images and configurations. Signed configurations protect the association among selected kernel, DTB, ramdisk, and other referenced images. This matters because every individual image could be legitimately signed yet form an unauthorized combination.
-
-Review exactly which nodes and strings the signature covers. Do not say “the FIT is signed” without identifying:
-
-- required public key
-- required mode and configuration/image policy
-- selected configuration
-- referenced images
-- algorithms
-- rollback/version policy
-- behavior for unsigned legacy formats and alternate boot commands
-
-## Where Verification Keys Live
-
-Verification public-key material can be inserted into U-Boot's control FDT. That tree must already be authenticated or immutable under the previous trust stage. Putting the key only inside the untrusted FIT would let an attacker replace both image and key.
-
-Key insertion changes the control DTB after ordinary DTS compilation. Include the final key-bearing control tree in build provenance, size checks, and signing of the bootloader stage.
-
-Plan:
-
-- offline/private-key protection
-- development versus production key separation
-- key rotation
-- revocation
-- algorithm transition
-- factory and recovery keys
-- rollback counters or version fuses
-
-DT nodes encode key parameters; they do not supply the operational key-management policy.
+Verification public keys are inserted into U-Boot's control FDT, which must itself be authenticated; a key carried only inside the FIT lets an attacker replace both. Include the final key-bearing control DTB in build provenance, size checks, and bootloader signing. [FIT Authenticated Selection And Key Policy](../security-and-production-lifecycle/fit-authenticated-selection-and-key-policy.md) covers signing flows, key policy, bypass testing, and anti-rollback in depth.
 
 ## DTB And Overlay Verification
 
@@ -164,13 +136,9 @@ Archive the ITS or generated source, exact payload hashes, final FIT hash, signi
 
 The default configuration or board match selected a valid but incorrect pair. Inspect selection input and the configuration references, not the DTB filename printed by the build.
 
-### Hash Passes, Security Still Fails
+### Hash Passes Or Signature Passes, Security Still Fails
 
-Hashes are unkeyed, signatures are optional, the required key is not marked as required, or an alternate unsigned boot path remains enabled.
-
-### Signature Passes, Rollback Remains Possible
-
-The image is authentic but older than product policy permits. Add an authenticated version/rollback mechanism outside mere signature validity.
+Hashes are unkeyed, signatures are optional, the required key is not marked required, an unsigned boot path remains enabled, or an authentic but old release is accepted without [anti-rollback](../security-and-production-lifecycle/fit-authenticated-selection-and-key-policy.md#signature-is-not-freshness).
 
 ### Modified DTB After Verification
 

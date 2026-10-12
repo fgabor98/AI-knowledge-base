@@ -59,56 +59,11 @@ The command syntax and semantics depend on U-Boot version; the documented `fdt` 
 
 The number passed is additional space in current U-Boot behavior, not a guarantee that surrounding RAM is unused. Address planning must reserve the entire expanded interval.
 
-Budget:
+Derive the capacity from the worst-case supported overlay set plus later fixups, as described in [Libfdt Capacity, Relocation, And Failure Atomicity](../boot-time-mutation-and-ownership/libfdt-capacity-relocation-and-failure-atomicity.md#calculate-capacity), and test the largest supported combination.
 
-```text
-base totalsize
-  + sum of overlay structural/string growth
-  + bootloader fixups
-  + future bounded margin
-```
+## Order And Compatibility Are Product Policy
 
-Test the largest supported overlay combination.
-
-## Apply Order Is Part Of The Product
-
-Overlays can:
-
-- add independent nodes
-- enable or disable a common node
-- replace the same property
-- delete nodes or properties
-- reference nodes introduced by an earlier overlay
-
-Therefore order can change the result. Define layers such as:
-
-```text
-base board
-  -> board revision
-  -> factory-fitted module
-  -> field expansion
-  -> deployment policy
-```
-
-Reject contradictory or unsupported combinations before mutation. Do not rely on directory enumeration order, filesystem order, or a list editable without authentication.
-
-## Validate Compatibility Before Applying
-
-An overlay manifest should constrain:
-
-- base board family
-- base DT ABI/version
-- board revision range
-- required/forbidden overlays
-- kernel compatibility
-- firmware dependencies
-- resource conflicts
-- ordering
-- signature and rollback state
-
-The Devicetree overlay format itself does not provide this full product compatibility policy.
-
-Compile-time schema validation of an isolated overlay is limited because its target context is absent. In CI, apply every supported combination to its base, then validate the merged tree.
+Overlays can replace the same property, delete content, or reference nodes introduced by earlier overlays, so order changes the result. Derive one canonical order from an authenticated layer model ([Overlay Order, Composition, And Conflict Ownership](../boot-time-mutation-and-ownership/overlay-order-composition-and-conflict-ownership.md)) and reject unsupported combinations before mutation; never rely on directory or filesystem order. The overlay format itself carries no base-compatibility policy, so a manifest must ([Base Compatibility, Versioning, And Overlay ABI](../overlays-in-depth/base-compatibility-versioning-and-overlay-abi.md)). Because an isolated overlay lacks its target context, CI must apply every supported combination to its base and validate the merged tree.
 
 ## Failure Is Not Transactional Recovery
 
@@ -129,29 +84,11 @@ Do not “undo” by applying another overlay unless that exact transition is de
 
 ## Phandles And Resource Conflicts
 
-Libfdt can resolve local phandles and target references, but it does not understand electrical conflicts. A structurally valid merged tree can:
-
-- drive one GPIO from two consumers
-- enable mutually exclusive pin states
-- assign one chip select twice
-- overlap `reg` windows
-- enable devices needing incompatible voltages
-- duplicate aliases
-- violate provider cell counts or schemas
-
-Validate the final tree and apply product-specific conflict checks.
+Libfdt resolves phandles and targets but does not understand electrical conflicts: a structurally valid merged tree can double-assign GPIOs, chip selects, pins, `reg` windows, or aliases. Validate the final tree against the [hardware conflict inventory](../overlays-in-depth/stacking-dependencies-conflicts-and-removal-order.md#hardware-conflict-inventory).
 
 ## Authentication And Measured State
 
-An overlay changes the hardware contract visible to Linux. Authenticate it before application under the same trust policy as the base DTB. Protect the overlay list, ordering, and board-identity mapping too.
-
-If measured boot records only the base DTB, attestation does not identify the final hardware description. Measure either:
-
-- each ordered, authenticated input and selection manifest
-- the final serialized DTB after authorized mutations
-- preferably both, so input provenance and resulting state are available
-
-Define whether field-installed hardware can legitimately change measurements.
+An overlay changes the hardware contract visible to Linux, so authenticate it, the overlay list, its order, and the board-identity mapping under the same trust policy as the base DTB. If measured boot records only the base DTB, attestation does not identify the final hardware description; measure the ordered inputs and the final serialized tree ([Measurement And Provenance](../overlays-in-depth/validation-security-and-product-architecture.md#measurement-and-provenance)).
 
 ## Inspect The Result
 

@@ -27,19 +27,7 @@ The inherited node may already define `compatible`, `reg`, interrupts, clocks, r
 
 ## Console Selection
 
-`/chosen/stdout-path` selects the firmware console path, optionally with serial options:
-
-```dts
-aliases {
-        serial0 = &uart2;
-};
-
-chosen {
-        stdout-path = "serial0:115200n8";
-};
-```
-
-The alias offers a stable firmware path; it does not universally guarantee `/dev/ttyS0`. Linux driver type, probe order, command-line console parameters, and alias handling determine tty naming. Confirm the boot log's actual console registration.
+`/chosen/stdout-path` and its `serial0` alias are covered in [Chosen And Boot Handoff](../standard-nodes-and-properties/chosen-and-boot-handoff.md). The alias does not universally guarantee `/dev/ttyS0`; driver type, probe order, command-line console parameters, and alias handling determine tty naming, so confirm the boot log's actual console registration.
 
 Bootloader and kernel must agree on pins, clock, format, and ownership during handoff. Garbled early output often indicates a source clock or divisor mismatch, not a bad baud string. Silence after early console can mean the full driver changed pinctrl, reset, or clock state.
 

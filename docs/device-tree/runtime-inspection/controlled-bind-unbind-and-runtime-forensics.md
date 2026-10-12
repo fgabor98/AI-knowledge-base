@@ -159,20 +159,7 @@ After bind, verify the same functional tests used at boot, not only the symlink.
 
 ## Field Forensics Bundle
 
-```text
-boot ID, kernel release/build/config identity
-raw boot FDT and live-tree captures
-target raw/decoded DT properties
-device/of_node/subsystem/modalias/uevent/driver state
-module and alias metadata
-deferred list and supplier/consumer links
-full kernel log
-subsystem-specific state
-controlled transition timeline and statuses
-hardware result
-```
-
-Redact secrets, MACs/serials where policy requires, and `/chosen` seed content.
+Package the [pre-mutation snapshot](../runtime-inspection.md#snapshot-before-mutation) together with the controlled transition timeline, command statuses, and hardware result. Redact secrets, MACs/serials where policy requires, and `/chosen` seed content.
 
 ## Stop Conditions
 

@@ -184,19 +184,7 @@ Linux kernel cookies are runtime handles, not persistent product IDs. Map both i
 
 ## Test The Negative Graph
 
-Test:
-
-- missing prerequisite
-- dependency cycle
-- both directions of each conflict
-- duplicate overlay
-- wrong order
-- removal of a lower stacked overlay
-- failure in the middle of apply sequence
-- failure during device probe and during teardown
-- unknown overlay ID/version
-
-The safe rejection path is part of the product behavior.
+Missing prerequisites, cycles, conflicts in both directions, duplicates, wrong order, removal of a lower stacked overlay, and mid-sequence failures must all be rejected safely; see [Validate Rejections](validation-security-and-product-architecture.md#validate-rejections). The safe rejection path is part of the product behavior.
 
 ## Authoritative References
 

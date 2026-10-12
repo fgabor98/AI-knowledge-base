@@ -126,14 +126,7 @@ The DTBO binary itself should be immutable under a release hash.
 
 ## Four-Way Compatibility Matrix
 
-| Base | overlay | Required result |
-|---|---|---|
-| old | old | released baseline |
-| old | new | supported merge, explicit rejection, or unreachable update order |
-| new | old | preserved overlay surface or explicit rejection |
-| new | new | intended complete behavior |
-
-Extend the matrix for prior overlays, bootloader versions, kernels, and module firmware. A base/overlay pair can merge identically yet behave differently under a kernel lacking the introduced binding or teardown support.
+Apply the same old/new × old/new matrix used for [compatible evolution](../driver-matching/compatible-evolution-and-stable-abi-decisions.md#compatibility-in-both-directions) to base and overlay versions: each cell must yield intended behavior, a supported merge, or an explicit rejection. Extend it for prior overlays, bootloader versions, kernels, and module firmware; a pair can merge identically yet behave differently under a kernel lacking the introduced binding or teardown support.
 
 ## Preconditions And Postconditions
 

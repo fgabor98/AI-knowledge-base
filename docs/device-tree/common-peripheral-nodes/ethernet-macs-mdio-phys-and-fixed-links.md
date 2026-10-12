@@ -66,7 +66,7 @@ Use a fixed link only when link parameters really are fixed and no MDIO-managed 
 
 ## MAC Addresses
 
-A production MAC address may come from an NVMEM cell, dedicated EEPROM, OTP, firmware, or a standard address property. Establish precedence in the driver/binding and ensure unique provisioning. Do not commit one globally administered address into a shared board DTS.
+A production MAC address may come from an NVMEM cell, dedicated EEPROM, OTP, firmware, or a standard address property; [MAC Addresses, Serial Numbers, And Board Identity](../boot-time-mutation-and-ownership/mac-addresses-serial-numbers-and-board-identity.md) covers precedence and validation. Do not commit one globally administered address into a shared board DTS.
 
 The NVMEM cell's byte order and post-processing must match its layout binding. A six-byte value existing in sysfs does not prove the network stack interpreted it correctly.
 

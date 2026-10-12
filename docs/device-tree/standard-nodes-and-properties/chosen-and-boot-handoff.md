@@ -67,25 +67,13 @@ When initrd unpacking fails, compare bootloader load addresses, `/chosen` in the
 
 ## Firmware Mutation Is Part Of The Interface
 
-Think of the final tree as an artifact assembled by several owners:
-
-```text
-base DTS + board includes + build overlays
-        ↓
-packaged DTB
-        ↓ firmware selection and fixups
-handed-off DTB
-        ↓ kernel unflattening
-runtime tree
-```
-
-Capture all three relevant states when diagnosing boot handoff:
+The handed-off tree is assembled by several owners (see [What The Bootloader Can Change](../foundations/source-and-binary-artifacts.md#what-the-bootloader-can-change)). When diagnosing boot handoff, capture:
 
 1. the built DTB and its hash
 2. the DTB immediately before kernel entry, if the bootloader can save it
 3. `/sys/firmware/devicetree/base` or `/proc/device-tree` at runtime
 
-Diffing only source files misses runtime memory sizing, MAC address injection, console selection, initrd metadata, and overlay application.
+Diffing only source files misses runtime memory sizing, MAC address injection, console selection, initrd metadata, and overlay application. [Boot-Time Mutation And Ownership](../boot-time-mutation-and-ownership.md) covers this pipeline in depth.
 
 ## Console Failure Checklist
 

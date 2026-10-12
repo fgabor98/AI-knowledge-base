@@ -26,25 +26,11 @@ Two spaces can be numerically identical on one board and different on another. N
 
 ## `dma-ranges` Describes A Bus Translation
 
-Like `ranges` for CPU-initiated accesses, `dma-ranges` describes how child-bus DMA addresses translate toward the parent:
-
-```dts
-soc {
-        #address-cells = <2>;
-        #size-cells = <2>;
-        dma-ranges = <0x0 0x00000000
-                      0x0 0x80000000
-                      0x0 0x40000000>;
-};
-```
-
-Decode each tuple using the child address cells, parent address cells, and size cells of the relevant bus. Do not assume this illustrative tuple matches a real platform. An absent, empty, or populated property can have binding- and architecture-sensitive consequences, so follow the parent chain and platform schema.
-
-`dma-ranges` does not create an IOMMU mapping and does not guarantee the device implements enough address bits for the translated result.
+Decode `dma-ranges` with the relevant bus cell counts as shown in [DMA Address Spaces And `dma-ranges`](../addressing-and-bus-modeling/dma-address-spaces-and-dma-ranges.md). It does not create an IOMMU mapping and does not guarantee the device implements enough address bits for the translated result.
 
 ## DMA Masks Are Device Capability
 
-A driver negotiates streaming and coherent DMA masks with the DMA API. A 32-bit engine cannot reach arbitrary RAM above 4 GiB without a usable translation layer or bounce buffering. Even with an IOMMU, the IOVA aperture, segment limits, alignment, and boundary restrictions still matter.
+The device's negotiated DMA mask can be narrower than the bus translation ([DMA Masks And Reachability](../addressing-and-bus-modeling/dma-address-spaces-and-dma-ranges.md#dma-masks-and-reachability)). Even with an IOMMU, the IOVA aperture, segment limits, alignment, and boundary restrictions still matter.
 
 Review:
 
@@ -74,19 +60,7 @@ Coherent mappings still need correct producer/consumer ordering. Streaming mappi
 
 ## IOMMU Attachment
 
-An `iommus` property identifies the translation context used by a device:
-
-```dts
-accelerator@51000000 {
-        iommus = <&smmu 0x42>;
-};
-```
-
-The IOMMU provider binding defines the specifier cells. Depending on hardware, the identifier may represent a stream ID, device ID, translation context input, or a combination.
-
-For buses that derive identifiers from child devices, `iommu-map` and `iommu-map-mask` can map requester IDs to IOMMU specifiers. This is common in PCI host bridges and must be evaluated with requester-ID routing, not copied from a peripheral example.
-
-An IOMMU gives translation and potentially access control only while correctly configured. It does not protect memory from masters that bypass it, and it cannot repair firmware using an address from the wrong domain.
+`iommus` and bus-level `iommu-map`/`iommu-map-mask` are introduced in [DMA, IOMMU, PHY, And Regulator Dependencies](../provider-consumer-relationships/dma-iommu-phy-and-regulator-dependencies.md#iommu-relationships); evaluate `iommu-map` against requester-ID routing rather than copying a peripheral example. An IOMMU protects memory only while correctly configured, does not stop masters that bypass it, and cannot repair firmware using an address from the wrong domain.
 
 ## Remoteproc Address Translation
 

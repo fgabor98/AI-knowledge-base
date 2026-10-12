@@ -12,22 +12,7 @@ last_reviewed: null
 
 ## When A New Compatible Is Needed
 
-Create a distinct compatible when software must distinguish hardware to operate it correctly and cannot reliably discover the difference. Examples include:
-
-- changed register layout or field semantics
-- a mandatory new clock, reset, supply, PHY, or power sequence
-- interrupt, DMA, endianness, or coherency behavior that differs
-- an erratum requiring a different safe programming path
-- non-discoverable capabilities or limits that affect operation
-- incompatible required properties or operating modes
-
-Do not create one merely because:
-
-- a Linux driver was split, merged, or renamed
-- the source file moved
-- a new kernel implements another feature
-- the board or product has a new sales name
-- a reliable identification register already reports the difference
+Create a distinct compatible when software must distinguish hardware to operate it correctly and cannot reliably discover the difference—not because a driver, file, product name, or kernel version changed. [Compatible Evolution And Stable ABI Decisions](../driver-matching/compatible-evolution-and-stable-abi-decisions.md) lists the typical triggers and a decision matrix. This page focuses on proving fallbacks safe and on separating compatible-implied facts from per-instance properties.
 
 ## Specific-To-General Ordering
 
@@ -74,22 +59,7 @@ Deliberate failure to bind is safer than deceptive partial compatibility.
 
 ## Compatible Versus Properties
 
-Use compatible-specific driver data for facts invariant across every instance of that implementation:
-
-```c
-struct ax_uart_data {
-        unsigned int fifo_depth;
-        bool needs_status_readback;
-};
-
-static const struct of_device_id ax_uart_of_match[] = {
-        { .compatible = "acme,ax100-uart", .data = &ax100_data },
-        { .compatible = "acme,ax200-uart", .data = &ax200_data },
-        { }
-};
-```
-
-Use DT properties for per-instance integration, such as the actual provider clocks, board supply, routed interrupt, or a limit imposed by the carrier. Do not make a property like `acme,is-ax200` duplicate the compatible.
+Use compatible-specific driver match data for facts invariant across every instance of an implementation, and DT properties for per-instance integration such as provider clocks, board supplies, routed interrupts, or carrier-imposed limits ([Match Data Versus DT Properties](../driver-matching/compatible-evolution-and-stable-abi-decisions.md#match-data-versus-dt-properties)). Do not make a property like `acme,is-ax200` duplicate the compatible.
 
 ## Feature Properties Need Hardware Semantics
 
@@ -109,16 +79,7 @@ Even the second proposal should first be compared with standard `clocks` and ass
 
 ## Root And SoC Compatible Lists
 
-The root compatible identifies boards/products from specific to general. A typical list can express a revision, board family, and SoC, but every fallback level must have meaningful consumers and safe semantics.
-
-```dts
-/ {
-        model = "Acme Falcon Carrier revision B";
-        compatible = "acme,falcon-revb", "acme,falcon", "acme,ax9";
-};
-```
-
-`model` is descriptive and is not a replacement for machine identity. A revision-specific compatible is warranted when firmware, early platform code, or software-visible board behavior must distinguish it. Peripheral compatibles need not change when existing properties completely describe the wiring delta.
+Root lists follow the same rules ([Root Versus Device Compatible](../driver-matching/compatible-contracts-and-fallback-chains.md#root-versus-device-compatible)); every fallback level must have meaningful consumers and safe semantics. A revision-specific root compatible is warranted when firmware, early platform code, or software-visible board behavior must distinguish it. Peripheral compatibles need not change when existing properties completely describe the wiring delta.
 
 ## Unknown Compatible Behavior
 
@@ -128,14 +89,7 @@ Conversely, adding a new property beside an old fallback does not teach an old c
 
 ## Four-Way Test Matrix
 
-| DTB | consumer | expected result |
-|---|---|---|
-| old | old | released baseline |
-| old | new | old compatible and absence defaults still work |
-| new | new | specific match enables complete behavior |
-| new | old | safe fallback, explicit non-bind, or unsupported update order |
-
-Record exact versions and tests. Repeat across any bootloader or firmware component that also parses the node.
+Run the old/new DTB × old/new consumer matrix from [Compatibility In Both Directions](../driver-matching/compatible-evolution-and-stable-abi-decisions.md#compatibility-in-both-directions). Record exact versions and tests, and repeat across any bootloader or firmware component that also parses the node.
 
 ## Authoritative References
 

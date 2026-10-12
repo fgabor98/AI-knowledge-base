@@ -81,17 +81,7 @@ Other bindings use `reg` for slots, ports, endpoints, functions, or controller-l
 
 ## Discoverable Versus Non-Discoverable Buses
 
-SoC MMIO devices usually need explicit nodes because no standard enumeration mechanism discovers them. PCI and USB can enumerate devices, so firmware generally describes the host controller and non-discoverable board integration rather than duplicating every discoverable function.
-
-Device Tree nodes may still be needed for discoverable devices when the binding must provide information that enumeration cannot, such as:
-
-- fixed board wiring and GPIOs
-- regulators, clocks, or reset controls outside the protocol
-- MAC addresses or calibration data
-- interrupt routing not discoverable through the bus
-- platform-specific mode or lane configuration
-
-The node address then follows that discoverable bus's binding and topology.
+For PCI and USB, firmware generally describes the host controller and non-discoverable board integration rather than every enumerable function (see [Discoverable And Non-Discoverable Hardware](../foundations/hardware-description-model.md#discoverable-and-non-discoverable-hardware)). When a binding does add a node for a discoverable device—for fixed wiring, supplies, MAC addresses, calibration data, or non-discoverable interrupt routing—its address follows that bus's binding and topology.
 
 ## Bus Nodes Are Devices Too
 

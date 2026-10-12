@@ -138,17 +138,12 @@ These are starting points, not proofs. A malformed clock can make a DMA controll
 
 ## Debugging Method
 
-For every link:
+For every link, decode the runtime entry with the [decoding worksheet](specifier-decoding-and-resource-names.md#a-mechanical-decoding-worksheet), then:
 
-1. verify the consumer property in the runtime tree
-2. read the consumer binding for names and cardinality
-3. resolve the provider phandle
-4. read the provider binding and `#*-cells` where applicable
-5. decode arguments using binding constants
-6. verify provider ancestors, clocks, resets, supplies, and domains
-7. confirm provider driver configuration and registration
-8. inspect subsystem-specific runtime diagnostics
-9. follow deferral to the earliest unavailable supplier
+1. verify the provider's own ancestors, clocks, resets, supplies, and domains
+2. confirm provider driver configuration and registration
+3. inspect subsystem-specific runtime diagnostics
+4. follow deferral to the earliest unavailable supplier
 
 ## Common Errors
 

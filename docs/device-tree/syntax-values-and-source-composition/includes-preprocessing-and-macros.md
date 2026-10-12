@@ -168,17 +168,7 @@ Compare compiler versions, preprocessing, include directories, warning flags, ge
 
 ## Dependency And Reproducibility Concerns
 
-A reproducible Device Tree build records:
-
-- compiler and preprocessor versions
-- full include search paths
-- source revision, including headers
-- macro definitions and generated inputs
-- selected DTS targets
-- `dtc` flags such as `-@` and warning controls
-- output hashes
-
-Include provenance is especially important when vendor SDKs carry multiple kernel or U-Boot copies of similarly named DTSI files.
+Include provenance matters as soon as a DTB ships, especially when vendor SDKs carry multiple kernel or U-Boot copies of similarly named DTSI files. [Build Pipeline, Preprocessing, And Artifact Provenance](../build-and-diagnostic-tools/build-pipeline-preprocessing-and-artifact-provenance.md#reproducibility-record) lists what a reproducible build must record.
 
 ## Exercises
 
