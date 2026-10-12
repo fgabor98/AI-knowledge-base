@@ -38,29 +38,25 @@ The widths are:
 | parent address | bus node's parent's `#address-cells` |
 | length | bus node's `#size-cells` |
 
-Example:
+The Raspberry Pi 4 `soc` bus shown in [One Translation Boundary](simple-bus-ranges-and-nested-translation.md#one-translation-boundary) also carries a DMA translation (`bcm2711.dtsi`):
 
 ```dts
-/ {
-        #address-cells = <2>;
-        #size-cells = <2>;
-
-        soc {
-                #address-cells = <1>;
-                #size-cells = <1>;
-                ranges = <0x0 0x0 0x40000000 0x01000000>;
-                dma-ranges = <0x00000000 0x00000000 0x80000000 0x10000000>;
-        };
+soc {
+        #address-cells = <1>;
+        #size-cells = <1>;
+        ranges = <0x7e000000  0x0 0xfe000000  0x01800000>, /* ... */;
+        /* Emulate a contiguous 30-bit address range for DMA */
+        dma-ranges = <0xc0000000  0x0 0x00000000  0x40000000>;
 };
 ```
 
-The MMIO window maps SoC child address zero to CPU physical `0x40000000`. Independently, DMA from devices below `soc` using address `[0, 0x10000000)` reaches parent memory `[0x80000000, 0x90000000)`. A buffer at CPU physical `0x88000000` is therefore visible at DMA address `0x08000000`, assuming no additional IOMMU translation.
+The MMIO window maps bus address `0x7e000000` to CPU physical `0xfe000000`. Independently, DMA from devices below `soc` using bus addresses `[0xc0000000, 0x100000000)` reaches physical memory `[0x0, 0x40000000)`. A buffer at CPU physical `0x08000000` is therefore programmed into a legacy DMA master as `0xc8000000`, and memory above 1 GiB is unreachable for those masters without bouncing.
 
-This is not the direction of a CPU MMIO access. Read it from the initiating device outward toward memory.
+This is not the direction of a CPU MMIO access. Read it from the initiating device outward toward memory. The same file shows how windows differ per master: its PCIe controller uses `dma-ranges` to limit inbound DMA to the first 3 GiB because, per the source comment, “the wrapper around the PCIe block has a bug preventing it from accessing beyond the first 3GB of memory.”
 
 ## Empty And Absent DMA Ranges
 
-An empty `dma-ranges;` represents identity between child and parent DMA address spaces. An absent property may be handled according to architecture, bus binding, and Linux firmware rules; do not rely on absence when the hardware has a real offset or aperture.
+An empty `dma-ranges;` represents identity between child and parent DMA address spaces; the AM64x `dmss` bus uses it, and the AM64x PCIe root complex declares an explicit 64 GiB identity window, `dma-ranges = <0x02000000 0x0 0x0 0x0 0x0 0x00000010 0x0>;`. An absent property may be handled according to architecture, bus binding, and Linux firmware rules; do not rely on absence when the hardware has a real offset or aperture.
 
 Explicit mappings are especially important when:
 

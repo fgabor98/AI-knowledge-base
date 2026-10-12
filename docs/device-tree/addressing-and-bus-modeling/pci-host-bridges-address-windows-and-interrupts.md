@@ -12,27 +12,31 @@ A PCI host bridge connects several distinct namespaces: CPU-visible controller r
 
 ## Host-Bridge Skeleton
 
+The AM64x PCIe root complex (`k3-am64-main.dtsi`, clocks and power trimmed):
+
 ```dts
-pcie@4010000000 {
-        compatible = "pci-host-ecam-generic";
+pcie0_rc: pcie@f102000 {
+        compatible = "ti,am64-pcie-host", "ti,j721e-pcie-host";
+        reg = <0x00 0x0f102000 0x00 0x1000>,
+              <0x00 0x0f100000 0x00 0x400>,
+              <0x00 0x0d000000 0x00 0x00800000>,
+              <0x06 0x00000000 0x00 0x00001000>; /* ECAM (4 KB) */
+        reg-names = "intd_cfg", "user_cfg", "reg", "cfg";
         device_type = "pci";
         #address-cells = <3>;
         #size-cells = <2>;
-        bus-range = <0x00 0xff>;
-        reg = <0x00000040 0x10000000 0x0 0x10000000>;
-
-        ranges = <0x01000000 0x0 0x00000000
-                  0x00000000 0x3f000000
-                  0x00000000 0x00010000>,
-                 <0x02000000 0x0 0x40000000
-                  0x00000000 0x40000000
-                  0x00000000 0x40000000>;
+        bus-range = <0x0 0xff>;
+        msi-map = <0x0 &gic_its 0x0 0x10000>;
+        ranges = <0x01000000 0x00 0x00001000 0x06 0x00001000 0x00 0x00100000>, /* IO (1 MB) */
+                 <0x02000000 0x00 0x00101000 0x06 0x00101000 0x00 0xffeff000>; /* 32-bit Non-Prefetchable MEM (4 GB - 1 MB - 4 KB) */
+        dma-ranges = <0x02000000 0x0 0x0 0x0 0x0 0x00000010 0x0>;
+        /* ... */
 };
 ```
 
-Assume the root has two address and two size cells. The host node's `reg` is therefore root-encoded: ECAM at CPU physical `0x4010000000`, size `0x10000000`. Its `ranges` entries instead use three PCI child-address cells, two parent-address cells, and two size cells.
+The parent `bus@f4000` has two address and two size cells, so the four `reg` entries are parent-encoded: wrapper registers, user configuration, the Cadence core at `0x0d000000`, and a 4 KiB configuration window at `0x6_0000_0000`. The `ranges` entries instead use three PCI child-address cells, two parent-address cells, and two size cells.
 
-This example is illustrative and must not be copied without the host-controller binding, actual apertures, and architecture rules.
+This node only makes sense together with the `ti,j721e-pci-host.yaml` binding and the AM64x memory map; do not copy its apertures to another SoC.
 
 ## PCI Child Address Encoding
 
@@ -47,16 +51,20 @@ Common space-code patterns in `ranges` include:
 
 Decode the bit fields; do not concatenate all three cells into a 96-bit number.
 
-The example maps:
+The AM64x example maps:
 
-- PCI I/O `[0, 0x10000)` to parent/CPU `[0x3f000000, 0x3f010000)`
-- PCI memory `[0x40000000, 0x80000000)` to parent/CPU `[0x40000000, 0x80000000)`
+- PCI I/O `[0x1000, 0x101000)` to CPU `[0x6_0000_1000, 0x6_0010_1000)`
+- 32-bit PCI memory `[0x101000, 0x1_0000_0000)` to CPU `[0x6_0010_1000, 0x7_0000_0000)`
+
+Both windows live in the 4 GiB “PCIe DAT1” region at `0x6_0000_0000` that `bus@f4000` forwards, directly after the 4 KiB configuration window.
 
 PCI I/O space is a separate resource type even if the host maps accesses through a CPU MMIO aperture.
 
 ## Configuration Space And `bus-range`
 
-`reg`/`reg-names` describe host-controller resources required by its binding, which may include ECAM or implementation-specific control blocks. `bus-range` states which PCI bus numbers the host owns. For generic ECAM, configuration-space size and bus coverage must agree with the ECAM layout.
+`reg`/`reg-names` describe host-controller resources required by its binding, which may include ECAM or implementation-specific control blocks. `bus-range` states which PCI bus numbers the host owns. For generic ECAM, configuration-space size and bus coverage must agree with the ECAM layout: 1 MiB per bus.
+
+The AM64x node is a useful counterexample. Its `cfg` window is commented “ECAM” but is only 4 KiB while `bus-range` covers 256 buses. That is valid for this controller because the Cadence host driver (`pcie-cadence-host.c`) reprograms outbound address-translation region 0 with the target bus and devfn before every configuration access, so one 4 KiB window serves all functions. Follow the controller binding and driver, not the generic ECAM rule, when a host is not `pci-host-ecam-generic`.
 
 Do not place the host controller's own control registers in PCI `ranges`; they are consumed by the host and belong in its parent-encoded `reg`. `ranges` describes windows forwarded to transactions below the host bridge.
 
@@ -85,6 +93,8 @@ PCI functions expose interrupt pins INTA–INTD. Board wiring and bridge swizzli
 - `interrupt-map-mask`
 - `interrupt-map`
 
+The Arm Juno PCIe host shows a complete four-row map with mask `<0 0 0 7>`; it is decoded cell by cell in [Interrupt Nexus Mapping](../standard-nodes-and-properties/cross-cutting-standard-relationships.md#interrupt-nexus-mapping).
+
 The child match key combines the PCI child unit address—typically enough bus/device/function bits selected by the mask—with the interrupt pin. Each row then names the parent and its specifier. A correct mask is critical: masking too many device/function bits can send several slots to the same unintended route, while matching irrelevant register bits can prevent any row from matching.
 
 Keep three identifiers separate:
@@ -97,7 +107,7 @@ Bridge swizzling may transform INTx pins at every bridge. Test multiple slots an
 
 ## MSI And MSI-X
 
-MSI/MSI-X use memory writes rather than physical INTx pins. Device Tree can associate a host or requester range with an MSI controller through `msi-parent` or `msi-map`/`msi-map-mask`. The mapping may depend on PCI requester IDs.
+MSI/MSI-X use memory writes rather than physical INTx pins. Device Tree can associate a host or requester range with an MSI controller through `msi-parent` or `msi-map`/`msi-map-mask`. The AM64x root complex maps all 65536 requester IDs one-to-one onto GIC ITS device IDs: `msi-map = <0x0 &gic_its 0x0 0x10000>;` (RID base, controller, ITS ID base, length).
 
 MSI routing also interacts with IOMMU requester identity and interrupt-remapping security. Verify that:
 
