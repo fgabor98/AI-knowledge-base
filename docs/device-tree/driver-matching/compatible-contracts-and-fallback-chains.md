@@ -12,16 +12,19 @@ A compatible string names a hardware programming-model contract. An ordered list
 
 ## Ordered From Specific To General
 
+Every AM64x UART carries two strings (`k3-am64-main.dtsi`):
+
 ```dts
-serial@4000 {
-        compatible = "acme,ax200-uart", "acme,ax100-uart";
-        reg = <0x4000 0x100>;
+main_uart0: serial@2800000 {
+        compatible = "ti,am64-uart", "ti,am654-uart";
+        reg = <0x00 0x02800000 0x00 0x100>;
+        /* ... */
 };
 ```
 
-This asserts more than family resemblance. It says software implementing the `acme,ax100-uart` contract can safely operate the AX200 block, possibly without newer features.
+This asserts more than family resemblance. It says software implementing the `ti,am654-uart` contract—introduced for the first K3 SoC, AM65x—can safely operate the AM64x UART. Mainline's `8250_omap` driver relies on exactly that promise: its match table has no `ti,am64-uart` entry at all, so every AM64x UART binds through the fallback.
 
-The first entry should identify the actual implementation. Later entries are fallbacks in decreasing specificity. Order matters to clients selecting the best supported entry.
+The first entry should identify the actual implementation, even when no driver matches it today; it lets a future kernel add an AM64x-specific quirk without changing deployed DTBs. Later entries are fallbacks in decreasing specificity. The AM64x I2C controllers follow the same pattern with `"ti,am64-i2c", "ti,omap4-i2c"`, binding through the OMAP4 entry of `i2c-omap`.
 
 ## What Compatibility Must Cover
 
@@ -38,34 +41,32 @@ Matching register offsets alone is insufficient. If the new device needs an addi
 
 ## Exact Strings, Not Patterns
 
-Compatible strings are literal values conventionally written as `vendor,device`. They do not support wildcards such as `vendor,uart-*`, semantic-version comparisons, or substring matching. The vendor prefix must follow the binding ecosystem's registered naming rules.
+Compatible strings are literal values conventionally written as `vendor,device`. They do not support wildcards such as `ti,am6*-uart`, semantic-version comparisons, or substring matching. The vendor prefix must be registered in `Documentation/devicetree/bindings/vendor-prefixes.yaml`.
 
 Use hardware identity, not deployment or software policy:
 
 ```text
-good: vendor,ax200-uart
-bad:  vendor,production-uart
-bad:  vendor,linux-6-12-uart
-bad:  vendor,uart-driver-v3
+good: ti,am64-uart                 (SoC integration of an IP block)
+good: ti,am654-uart                (programming model introduced on AM65x)
+bad:  ti,production-uart           (invented: deployment role)
+bad:  ti,linux-6-12-uart           (invented: software version)
+bad:  ti,uart-driver-v3            (invented: driver identity)
 ```
 
-The contract must remain meaningful to other operating systems and future kernels.
+The contract must remain meaningful to other operating systems and future kernels; U-Boot's K3 UART support reads the same strings.
 
 ## Root Versus Device Compatible
 
-The root node identifies the complete machine:
+The root node identifies the complete machine; a peripheral node identifies one hardware block. From the PHYTEC phyBOARD-Electra and the AM64x SoC files:
 
 ```dts
 / {
-        compatible = "acme,atlas-revc", "acme,atlas", "acme,ax200";
+        compatible = "phytec,am642-phyboard-electra-rdk",
+                     "phytec,am64-phycore-som", "ti,am642";
 };
-```
 
-A peripheral node identifies one hardware block:
-
-```dts
-ethernet@5000 {
-        compatible = "acme,ax200-ethernet", "acme,ax100-ethernet";
+main_r5fss0: r5fss@78000000 {
+        compatible = "ti,am64-r5fss";
 };
 ```
 
@@ -81,23 +82,36 @@ That preference operates within a candidate match table. It is not a global arbi
 
 ## Fallbacks Enable Old Software
 
-Suppose an older kernel knows only:
+`8250_omap` attaches different quirk data to different contracts (`drivers/tty/serial/8250/8250_omap.c`):
 
 ```c
-{ .compatible = "acme,ax100-uart", .data = &ax100_data },
+static const struct of_device_id omap8250_dt_ids[] = {
+        { .compatible = "ti,am654-uart", .data = &am654_platdata, },
+        { .compatible = "ti,omap2-uart" },
+        { .compatible = "ti,omap3-uart" },
+        { .compatible = "ti,omap4-uart", .data = &omap4_platdata, },
+        { .compatible = "ti,am3352-uart", .data = &am33xx_platdata, },
+        { .compatible = "ti,am4372-uart", .data = &am33xx_platdata, },
+        { .compatible = "ti,dra742-uart", .data = &omap4_platdata, },
+        {},
+};
 ```
 
-The AX200 node's fallback allows that driver to bind. A newer kernel can add:
+The AM64x node's fallback lets this table bind with `am654_platdata`. If AM64x ever needed different behavior, a kernel could add `{ .compatible = "ti,am64-uart", .data = &am64_platdata }`, and every deployed AM64x DTB would pick it up without modification because the specific string was there from the start.
 
-```c
-{ .compatible = "acme,ax200-uart", .data = &ax200_data },
-```
-
-and select AX200-specific behavior. This only works if AX100 behavior is a safe subset. A fallback must never be added merely to make an old kernel bind; an explicit non-match is safer than silent misprogramming.
+This only works if AM654 behavior is a safe subset. Note what the K3 UART did **not** do: it does not list `ti,omap4-uart` as a further fallback, even though the IP is an OMAP-family 8250. `am654_platdata` enables `UART_HAS_EFR2`, `UART_HAS_RHR_IT_DIS`, and `UART_RX_TIMEOUT_QUIRK`, behavior the OMAP4 path would not apply. A fallback must never be added merely to make an old kernel bind; an explicit non-match is safer than silent misprogramming.
 
 ## Generic Compatibles
 
-Some standardized devices have legitimate generic contracts such as `fixed-clock`, `regulator-fixed`, or `gpio-keys`. These names are defined by their bindings. Do not invent a generic value such as `generic-uart` or use `syscon` alone to avoid documenting the real programming model.
+Some standardized devices have legitimate generic contracts defined by their bindings. The AM642 SK uses `fixed-clock` (`serdes_refclk`), `regulator-fixed`, `gpio-leds`, and `simple-bus`. Generic strings can also appear as fallbacks after a specific one; the AM64x control-module node reads:
+
+```dts
+main_conf: syscon@43000000 {
+        compatible = "ti,j721e-system-controller", "syscon", "simple-mfd";
+};
+```
+
+`syscon` and `simple-mfd` describe how the block is accessed and populated, while the specific string documents the actual programming model. Do not invent a generic value such as `generic-uart`, or use `syscon` alone to avoid documenting the real block.
 
 Generic fallbacks can constrain future evolution. Once deployed, old software may bind on that promise. Review them as long-lived ABI, not as convenience labels.
 

@@ -32,26 +32,31 @@ Consequently, a compatible visible under `/sys/firmware/devicetree/base` can coe
 
 Many non-discoverable SoC devices become `platform_device` instances. Architecture and OF platform code populate children of recognized buses such as `simple-bus`, subject to availability and platform rules.
 
-```dts
-soc {
-        compatible = "simple-bus";
-        ranges;
+On AM64x, `bus@f4000` is a `simple-bus`, so its enabled children become platform devices:
 
-        serial@4000 {
-                compatible = "acme,ax100-uart";
-                reg = <0x4000 0x100>;
-                status = "okay";
+```dts
+cbass_main: bus@f4000 {
+        compatible = "simple-bus";
+        /* ... */
+
+        main_uart0: serial@2800000 {
+                compatible = "ti,am64-uart", "ti,am654-uart";
+                reg = <0x00 0x02800000 0x00 0x100>;
+                interrupts = <GIC_SPI 178 IRQ_TYPE_LEVEL_HIGH>;
+                /* status = "okay" from k3-am642-sk.dts */
         };
 };
 ```
 
-The serial node can become a platform device with translated MMIO and IRQ resources. `compatible` helps match it later; it is not by itself the command that creates it.
+The UART node becomes the platform device `2800000.serial` (translated address plus node name) with an MMIO resource and an IRQ. `compatible` helps match it later; it is not by itself the command that creates it.
+
+Not every child is populated this way. The `r5fss@78000000` cluster node is a platform device, but its `r5f@...` core children are created only when the K3 R5F driver probes the cluster and calls `devm_of_platform_populate()`.
 
 A disabled bus is normally not populated, so an `okay` descendant remains absent as a platform device. A missing or incorrect bus compatible can similarly prevent traversal even when leaf nodes look valid.
 
 ## Controller-Enumerated Children
 
-An I2C controller is often a platform device, but its children become `i2c_client` devices after the I2C controller driver registers an adapter and the I2C core enumerates firmware children.
+An I2C controller is often a platform device, but its children become `i2c_client` devices after the I2C controller driver registers an adapter and the I2C core enumerates firmware children. On the AM642 SK, `main_i2c1` (`20010000.i2c`) must probe before the PCA9538 expander at `0x70` and the TMP100 at `0x48` exist as I2C clients such as `1-0048`; the adapter number depends on probe order and aliases.
 
 ```text
 SoC population → platform I2C controller → controller probe
@@ -86,7 +91,7 @@ When tracing a device, record both:
 
 ```sh
 find /sys/firmware/devicetree/base -name compatible -print
-tr '\0' '\n' </sys/firmware/devicetree/base/soc/serial@4000/compatible
+tr '\0' '\n' </sys/firmware/devicetree/base/bus@f4000/serial@2800000/compatible
 ```
 
 ### Linux device
