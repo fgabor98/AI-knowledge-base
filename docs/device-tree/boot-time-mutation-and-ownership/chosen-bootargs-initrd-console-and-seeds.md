@@ -43,17 +43,7 @@ Log a redacted/canonical representation. Command lines can contain network ident
 
 ## `stdout-path`
 
-`stdout-path` identifies the firmware-selected boot console device, optionally with device-defined parameters after `:`:
-
-```dts
-chosen {
-        stdout-path = "serial0:115200n8";
-};
-```
-
-An alias such as `serial0` must resolve in `/aliases`, or use a valid full path. Confirm the referenced UART is enabled, pinned, clocked, and available to Linux. The deprecated `linux,stdout-path` and PowerPC `stdout` forms should not be introduced on new platforms.
-
-`stdout-path` is not the same as a Linux `console=` policy in all configurations. Test both early console and final console behavior.
+`stdout-path` semantics and the console failure checklist are in [Chosen And Boot Handoff](../standard-nodes-and-properties/chosen-and-boot-handoff.md). For a mutator, the rules are: the alias or path must resolve in the final tree, the UART must be enabled, pinned, and clocked, and deprecated `linux,stdout-path` or PowerPC `stdout` forms should not be introduced on new platforms. Test early and final console behavior separately because `stdout-path` and `console=` policy can differ.
 
 ## Initrd Range
 

@@ -40,58 +40,57 @@ Every arrow is a version boundary and a possible source of drift.
 
 ## DTS: Devicetree Source
 
-A `.dts` file normally represents a complete board or machine description and is a build entry point.
+A `.dts` file normally represents a complete board or machine description and is a build entry point. The AM642 SK board file begins (trimmed from `arch/arm64/boot/dts/ti/k3-am642-sk.dts`):
 
 ```dts
 /dts-v1/;
 
-#include "example-soc.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include "k3-am642.dtsi"
 
 / {
-        model = "Example Trainer Board";
-        compatible = "example,trainer-board", "example,trainer-soc";
+        compatible = "ti,am642-sk", "ti,am642";
+        model = "Texas Instruments AM642 SK";
+
+        chosen {
+                stdout-path = &main_uart0;
+        };
 };
 
-&uart0 {
+&main_uart0 {
         status = "okay";
+        pinctrl-names = "default";
+        pinctrl-0 = <&main_uart0_pins_default>;
 };
 ```
 
-The file may be short because it composes reusable descriptions and adds only board-specific facts.
+The file is short relative to the hardware because it composes reusable descriptions and adds only board-specific facts.
 
 ## DTSI: Reusable Source Fragments
 
-A `.dtsi` file is source intended for inclusion. Typical layers include:
+A `.dtsi` file is source intended for inclusion. The AM642 SK chain is:
 
 ```text
-SoC family DTSI
--> exact SoC DTSI
--> system-on-module DTSI
--> carrier or shared board-family DTSI
--> final board DTS
+k3-am64.dtsi        SoC family: interconnects, GIC, firmware interfaces
+  + k3-am64-main.dtsi / k3-am64-mcu.dtsi   on-chip peripherals per domain
+k3-am642.dtsi       exact dual-core A53 variant: /cpus and L2 cache
+k3-am642-sk.dts     final board: memory, regulators, pins, fitted devices
 ```
 
 Good layering follows physical reuse. SoC-integrated controllers belong in the SoC description. A regulator physically located on a system-on-module belongs in the module description. A connector or peripheral fitted only to one carrier belongs in that board's source.
 
-An SoC DTSI often describes controllers as present in silicon but unavailable until a board supplies wiring:
+The SoC DTSI describes controllers as present in silicon but unavailable until a board supplies wiring (`k3-am64-main.dtsi`):
 
 ```dts
-uart0: serial@1000 {
-        compatible = "example,trainer-uart";
-        reg = <0x1000 0x100>;
+main_uart0: serial@2800000 {
+        compatible = "ti,am64-uart", "ti,am654-uart";
+        reg = <0x00 0x02800000 0x00 0x100>;
+        /* interrupts, clocks, power-domains ... */
         status = "disabled";
 };
 ```
 
-The board enables and completes it:
-
-```dts
-&uart0 {
-        pinctrl-0 = <&uart0_pins>;
-        pinctrl-names = "default";
-        status = "okay";
-};
-```
+The board's `&main_uart0` amendment shown above enables and completes it.
 
 The resulting tree contains one merged node, not two runtime nodes.
 

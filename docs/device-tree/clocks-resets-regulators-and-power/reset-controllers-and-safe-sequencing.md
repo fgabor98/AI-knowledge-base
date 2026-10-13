@@ -12,21 +12,7 @@ A reset control may expose a level, generate a pulse, or trigger a hardware-defi
 
 ## Provider And Consumer Model
 
-```dts
-reset_controller: reset-controller@11000 {
-        compatible = "example,soc-reset-controller";
-        reg = <0x11000 0x1000>;
-        #reset-cells = <1>;
-};
-
-ethernet@40000 {
-        resets = <&reset_controller SOC_RST_ETH_MAC>,
-                 <&reset_controller SOC_RST_ETH_BUS>;
-        reset-names = "mac", "bus";
-};
-```
-
-The provider binding defines each specifier. One cell may be a logical reset ID rather than a hardware bit. A multi-cell format might encode bank and offset or flags. Names and order come from the consumer binding.
+`resets`/`reset-names` follow the provider-consumer pattern from [Clocks, Resets, And Power Domains](../provider-consumer-relationships/clocks-resets-and-power-domains.md#reset-relationships): one cell may be a logical reset ID rather than a hardware bit, and names and order come from the consumer binding.
 
 ## Reset Line, Control, And Controller
 
@@ -54,15 +40,7 @@ Do not publish both for the same physical line unless the consumer binding expli
 
 ## Sequencing Is Not Property Order
 
-This ordering in source has no operational meaning:
-
-```dts
-clocks = <&clock_controller SOC_CLK_ENGINE>;
-resets = <&reset_controller SOC_RST_ENGINE>;
-vdd-supply = <&reg_engine>;
-```
-
-The driver, frameworks, or firmware sequence resources. A common—but not universal—enable path is:
+[Property order is style](../provider-consumer-relationships/clocks-resets-and-power-domains.md#dependency-sequencing-is-not-encoded-by-property-order); the driver, frameworks, or firmware sequence resources. A common—but not universal—enable path is:
 
 1. enable the supply and wait for stability
 2. power the domain and remove isolation
@@ -95,14 +73,12 @@ For firmware-owned or boot-critical blocks, establish explicitly:
 
 Start from the consumer:
 
-1. verify the runtime `resets` and `reset-names` properties
-2. resolve the phandle and decode the provider cells
-3. confirm the provider node, ancestors, compatible, and driver
-4. distinguish `-ENOENT`, malformed specifiers, and `-EPROBE_DEFER`
-5. inspect reset-controller and consumer logs
-6. check clock and power prerequisites for the reset controller itself
-7. measure the physical line or reset-status register if accessible
-8. compare cold boot, warm boot, unbind/rebind, and suspend/resume
+1. decode the runtime `resets` entry with the [decoding worksheet](../provider-consumer-relationships/specifier-decoding-and-resource-names.md#a-mechanical-decoding-worksheet)
+2. distinguish `-ENOENT`, malformed specifiers, and `-EPROBE_DEFER`
+3. inspect reset-controller and consumer logs
+4. check clock and power prerequisites for the reset controller itself
+5. measure the physical line or reset-status register if accessible
+6. compare cold boot, warm boot, unbind/rebind, and suspend/resume
 
 A deassert call returning success proves only that the provider accepted the operation. It does not prove voltage, clock, isolation, pulse width, or device readiness.
 

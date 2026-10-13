@@ -50,6 +50,8 @@ Before expansion:
 4. copy/open the tree using supported commands
 5. inspect the new address and header
 
+When `bootm` or `booti` prepares the tree, `boot_relocate_fdt()` copies it to a new buffer of `totalsize + CONFIG_SYS_FDT_PAD`; the default pad is `0x3000` (12 KiB). Every later fixup in `image_setup_libfdt()` must fit in that margin. TI's overlay script runs before this and adds its own `fdt resize 0x100000`.
+
 The special `fdt_high` no-copy values documented by U-Boot require the original tree to be writable, padded, accessible, and aligned; U-Boot discourages this because it bypasses normal relocation safeguards.
 
 ## Calculate Capacity
@@ -119,6 +121,8 @@ Safe patterns:
 - discard and reload on failure
 
 Overlay errors can invalidate both base and overlay blobs in U-Boot's documented flow. Keep pristine inputs.
+
+U-Boot's own boot path shows both styles. In `image_setup_libfdt()`, a failure in `fdt_root()`, `fdt_chosen()`, `arch_fixup_fdt()`, the OP-TEE node copy, `ft_board_setup()`, `ft_system_setup()`, or `fdt_initrd()` jumps to an error path that prints ` - must RESET the board to recover.` The log can mislead: a failure to set `bootargs` or `serial-number` prints `WARNING: could not set ...`, yet the function returns the error and the boot aborts. The reverse also happens: the AM62x `ft_system_setup()` returns 0 even if one of its fixups fails, so a thermal or reservation fixup can fail with only a printed message. Decide, per mutation, which category it belongs in, and check the return path rather than the message text.
 
 ## Packing And Hashing
 

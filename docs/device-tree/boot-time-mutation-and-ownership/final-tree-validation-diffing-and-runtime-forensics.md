@@ -12,18 +12,7 @@ Source validation proves only the compiled base. A mutation pipeline needs valid
 
 ## Preserve Boundary Artifacts
 
-Capture:
-
-1. compiled base DTB
-2. selected/authenticated base
-3. post-overlay hardware tree
-4. post-firmware/board fixup tree
-5. final pre-kernel FDT
-6. Linux live tree
-
-In production, storage may permit only hashes and a mutation manifest. Provide a privileged service workflow for retrieving sanitized artifacts when needed.
-
-The most valuable artifact is the FDT immediately before jumping to Linux. It separates bootloader behavior from kernel interpretation.
+Capture the checkpoints listed in [Checkpoint Strategy](mutation-provenance-authorities-and-checkpoints.md#checkpoint-strategy). In production, storage may permit only hashes and a mutation manifest; provide a privileged service workflow for retrieving sanitized artifacts when needed. The most valuable artifact is the FDT immediately before jumping to Linux, because it separates bootloader behavior from kernel interpretation.
 
 ## Structural Validation
 
@@ -72,50 +61,23 @@ Decompiled textual diff contains noise:
 
 Build a semantic path/property diff:
 
+For an AM62x SK booted by TI U-Boot with the HDMI audio overlay, the attributed diff from host-built base to `/sys/firmware/fdt` looks like this (see the [lab](boot-time-mutation-provenance-lab.md)):
+
 ```text
-added /reserved-memory/secure@...
-changed /memory@.../reg old -> new
-added /chosen/linux,initrd-start
-changed /soc/ethernet@.../local-mac-address [redacted]
-added /soc/spi@.../module@0 from overlay module-x
+added    /sound-sii9022                                   overlay k3-am62x-sk-hdmi-audio
+changed  /sound/status okay -> disabled                   overlay k3-am62x-sk-hdmi-audio
+added    /chosen/bootargs, /chosen/u-boot,version         fdt_chosen()
+changed  .../ethernet-ports/port@1/mac-address [redacted] fdt_fixup_ethernet()
+added    .../ethernet-ports/port@1/local-mac-address      fdt_fixup_ethernet()
+changed  /thermal-zones/*/trips/*-crit/temperature        fdt_fixup_thermal_critical_trips_k3()
+replaced /reserved-memory/tfa@..., optee@...              fdt_fixup_reserved()
 ```
 
 Maintain an allowlist by mutation ID, not a broad ignore list. Unexpected changes outside the owner's path set fail CI.
 
-## Capture From U-Boot
+## Capture From U-Boot And Linux
 
-Depending on enabled commands and media:
-
-```text
-=> fdt addr
-=> fdt header
-=> fdt print /chosen
-=> fdt print /memory
-=> md.b ${fdt_addr_r} ...
-```
-
-Use a supported command, debugger, network transfer, or storage write to export exactly the header `totalsize` bytes. Never guess a fixed size that truncates or leaks adjacent memory.
-
-Record address before and after `bootm` relocation. The tree inspected earlier can differ from the tree actually passed.
-
-## Capture From Linux
-
-The live unflattened tree is exposed under sysfs:
-
-```sh
-dtc -I fs -O dts \
-    -o linux-live.dts \
-    /sys/firmware/devicetree/base
-
-tr -d '\0' </proc/device-tree/model
-cat /proc/cmdline
-cat /proc/iomem
-dmesg | grep -Ei 'Machine model|OF:|reserved memory|Kernel command line'
-```
-
-Filesystem order does not preserve original serialized ordering. Some handoff properties can be consumed, cleared, or hidden for security. The live tree is not guaranteed to be byte-identical to the input blob.
-
-On systems that expose the original flattened blob separately, confirm its platform semantics before treating it as the precise handoff copy.
+Export exactly the header `totalsize` bytes of the working FDT using the procedure in [Capture The Pre-Handoff FDT](../build-and-diagnostic-tools/u-boot-fdt-commands-and-handoff-inspection.md#capture-the-pre-handoff-fdt), and record its address before and after `bootm` relocation; the tree inspected earlier can differ from the tree actually passed. On the Linux side, capture `/sys/firmware/fdt` and the live tree as described in [Runtime Tree Surfaces And Boot-FDT Identity](../runtime-inspection/runtime-tree-surfaces-and-boot-fdt-identity.md); some handoff properties can be consumed, cleared, or hidden, so the live tree is not guaranteed to match the input blob.
 
 ## Triangulate With Subsystem Evidence
 

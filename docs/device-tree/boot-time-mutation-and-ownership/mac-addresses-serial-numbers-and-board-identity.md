@@ -62,6 +62,8 @@ If bootloader code writes an address:
 - check whether an existing valid property should be preserved
 - avoid injecting one value into multiple ports
 
+U-Boot's generic `fdt_fixup_ethernet()` is a concrete case. It walks `/aliases`, maps `ethernet` or `ethernet0` to env `ethaddr` and `ethernetN` to `ethNaddr`, skips nodes whose `status` is `disabled`, and then writes six bytes twice: it *replaces* `mac-address` only if the property already exists, and *creates* `local-mac-address`. On TI K3 SoC files, every CPSW port carries `mac-address = [00 00 00 00 00 00];` precisely so that this fixup has a property to replace. The alias numbering is therefore part of the MAC provisioning contract.
+
 Test multi-port and disabled-interface variants.
 
 ## Prefer Described NVMEM When Appropriate

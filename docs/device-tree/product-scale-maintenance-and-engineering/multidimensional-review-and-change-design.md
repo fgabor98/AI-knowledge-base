@@ -23,12 +23,7 @@ DT review fails when “it builds” is treated as a complete verdict. A change 
 
 ### Binding and ABI
 
-- compatible is documented before use
-- properties are defined, typed, constrained, and complete
-- existing property meaning is unchanged
-- old valid DTBs retain defined behavior with new drivers
-- fallback compatibles represent real programming compatibility
-- required/optional transitions and defaults have a migration plan
+Apply the binding-semantics and ABI-evolution passes from [Review In Independent Passes](../binding-design-and-stable-abi/review-strategy-and-upstream-submission-order.md#review-in-independent-passes): documented compatibles, typed and complete properties, unchanged existing meanings, defined old-DTB behavior, real fallback compatibility, and migration plans for required/optional transitions.
 
 ### Style and source organization
 
@@ -108,17 +103,7 @@ Assertions without a named evidence source remain review debt.
 
 ## Design Reviewable Patches
 
-Prefer an ordered series:
-
-1. binding/schema addition or compatible extension
-2. binding constants/header when required
-3. driver support preserving old behavior
-4. SoC/module shared description
-5. board/product enablement
-6. migration of existing users
-7. cleanup only after behavior is stable
-
-Exact routing can require binding/driver and DTS patches to travel through different maintainer trees. Keep dependencies explicit and each patch buildable/bisectable.
+Order the series as in [Patch Dependency Graph](../binding-design-and-stable-abi/review-strategy-and-upstream-submission-order.md#patch-dependency-graph), adding migration of existing users and cleanup only after behavior is stable. Keep dependencies explicit and each patch buildable and bisectable.
 
 Separate:
 

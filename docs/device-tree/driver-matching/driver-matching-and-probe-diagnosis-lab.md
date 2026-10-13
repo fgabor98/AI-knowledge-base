@@ -2,7 +2,7 @@
 status: draft
 reviewed: false
 domain: device-tree
-difficulty: advanced
+difficulty: intermediate
 last_reviewed: null
 ---
 
@@ -10,306 +10,202 @@ last_reviewed: null
 
 ## Goal
 
-Trace a fictional DT node through compatible selection, platform-device creation, module alias generation, driver matching, match data, and probe outcome. Deliberate failures isolate each stage.
+Trace a real DT node—the TMP100 temperature sensor at I2C address `0x48` on the TI AM642 SK—through device creation, module alias generation, autoloading, driver matching, match data, and probe outcome. Deliberate, non-persistent DT edits in U-Boot isolate each stage.
 
-Use a disposable development kernel, virtual machine, or test board. Do not apply experimental overlays or force driver binding on production hardware.
+## Target And Safety
 
-## Lab Node
+- an AM642 SK running a kernel built with `CONFIG_SENSORS_LM75=m` (the arm64 `defconfig` setting) and the matching `k3-am642-sk.dtb`
+- serial console access to U-Boot
+- edits are applied only to U-Boot's in-memory working FDT, so a normal reboot restores the original tree
 
-Add this node to a test platform's root or an OF-populated simple bus using the platform's normal DTS/overlay workflow:
+Only touch `tmp100@48`. Do not disable `main_i2c1`: the same bus carries the PCA9538 expander that switches the SD card supply, and the board may lose its root filesystem.
+
+## The Node And Driver
+
+From `k3-am642-sk.dts`:
 
 ```dts
-match-lab {
-        compatible = "example,match-lab-v2", "example,match-lab";
-        example,poll-interval-ms = <250>;
-        status = "okay";
+&main_i2c1 {
+        /* SoC power supply temperature */
+        tmp100@48 {
+                compatible = "ti,tmp100";
+                reg = <0x48>;
+        };
 };
 ```
 
-The compatible and property are fictional and intentionally have no upstream schema. This node represents no physical hardware; the driver will only read metadata and log its selected variant.
-
-For an overlay-capable system, ensure the platform supports creating platform devices for newly attached nodes. Otherwise compile the node into a test DTB and reboot the disposable target.
-
-## Lab Driver
-
-Create `match_lab.c` outside the knowledge-base repository:
+From `drivers/hwmon/lm75.c`, trimmed:
 
 ```c
-#include <linux/device.h>
-#include <linux/module.h>
-#include <linux/of.h>
-#include <linux/platform_device.h>
-#include <linux/property.h>
-
-struct match_lab_data {
-        const char *name;
-        u32 default_interval_ms;
+static const struct i2c_device_id lm75_i2c_ids[] = {
+        /* ... */
+        { "tmp100", tmp100, },
+        /* ... */
 };
+MODULE_DEVICE_TABLE(i2c, lm75_i2c_ids);
 
-static const struct match_lab_data v1_data = {
-        .name = "v1-compatible path",
-        .default_interval_ms = 1000,
-};
-
-static const struct match_lab_data v2_data = {
-        .name = "v2-specific path",
-        .default_interval_ms = 500,
-};
-
-static const struct of_device_id match_lab_of_match[] = {
-        { .compatible = "example,match-lab-v2", .data = &v2_data },
-        { .compatible = "example,match-lab", .data = &v1_data },
-        { }
-};
-MODULE_DEVICE_TABLE(of, match_lab_of_match);
-
-static int match_lab_probe(struct platform_device *pdev)
-{
-        const struct match_lab_data *data;
-        u32 interval;
-        int ret;
-
-        data = device_get_match_data(&pdev->dev);
-        if (!data)
-                return dev_err_probe(&pdev->dev, -EINVAL,
-                                     "no variant data\n");
-
-        if (!device_property_present(&pdev->dev,
-                                     "example,poll-interval-ms")) {
-                interval = data->default_interval_ms;
-        } else {
-                ret = device_property_read_u32(&pdev->dev,
-                                               "example,poll-interval-ms",
-                                               &interval);
-                if (ret)
-                        return dev_err_probe(&pdev->dev, ret,
-                                             "invalid poll interval\n");
-        }
-
-        dev_info(&pdev->dev, "matched %s, interval=%u ms\n",
-                 data->name, interval);
-        return 0;
-}
-
-static struct platform_driver match_lab_driver = {
-        .probe = match_lab_probe,
-        .driver = {
-                .name = "match-lab",
-                .of_match_table = match_lab_of_match,
+static const struct of_device_id __maybe_unused lm75_of_match[] = {
+        /* ... */
+        {
+                .compatible = "ti,tmp100",
+                .data = (void *)tmp100
         },
+        /* ... */
 };
-module_platform_driver(match_lab_driver);
-
-MODULE_DESCRIPTION("Device Tree matching lab");
-MODULE_LICENSE("GPL");
+MODULE_DEVICE_TABLE(of, lm75_of_match);
 ```
 
-Create a `Makefile`:
-
-```make
-obj-m := match_lab.o
-```
-
-Build against the running development kernel:
-
-```sh
-make -C /lib/modules/$(uname -r)/build M=$PWD modules
-modinfo ./match_lab.ko
-modinfo -F alias ./match_lab.ko
-```
-
-The build needs matching kernel headers/configuration and a configured external-module toolchain. Record the kernel release, compiler, command, warnings, and module hash.
+The driver has two ID tables. Both carry the same variant enum, which `i2c_get_match_data()` retrieves in probe.
 
 ## Step 1: Prove The Runtime Node
 
 ```sh
-find /sys/firmware/devicetree/base -name match-lab -print
-tr '\0' '\n' </sys/firmware/devicetree/base/match-lab/compatible
-hexdump -Cv /sys/firmware/devicetree/base/match-lab/example,poll-interval-ms
+N=/sys/firmware/devicetree/base/bus@f4000/i2c@20010000/tmp100@48
+tr '\0' '\n' <"$N/compatible"
+hexdump -C "$N/reg"
 ```
 
-If the node is below a bus, adjust the path. Confirm the ordered compatible list in the runtime tree, not only the DTS source.
+Confirm the compatible and address in the runtime tree, not only in the DTS.
 
-## Step 2: Prove Device Population
+## Step 2: Prove Device Creation
 
-Find a platform device whose `of_node` resolves to the lab node:
+The I2C core, not platform population, creates this device after `main_i2c1` probes:
 
 ```sh
-find /sys/bus/platform/devices -maxdepth 2 -type l -name of_node -print
+ls -l /sys/bus/i2c/devices/
+readlink -f /sys/bus/i2c/devices/1-0048/of_node
+cat /sys/bus/i2c/devices/1-0048/name
+cat /sys/bus/i2c/devices/1-0048/modalias
 ```
 
-For the matching device directory, record:
-
-```sh
-readlink -f /sys/bus/platform/devices/DEVICE/of_node
-cat /sys/bus/platform/devices/DEVICE/modalias
-cat /sys/bus/platform/devices/DEVICE/uevent
-```
-
-If the runtime node exists but no platform device does, stop debugging the match table and fix population first.
+Expected: the client `1-0048` (adapter 1 because of the `i2c1` alias), `name` = `tmp100`, and modalias `of:Ntmp100T(null)Cti,tmp100`. The client name comes from the text after the comma in the first compatible (`of_alias_from_compatible()` in `drivers/of/base.c`).
 
 ## Step 3: Prove Module Metadata
 
-Compare the device modalias with:
-
 ```sh
-modinfo -F alias ./match_lab.ko
+modinfo -F alias lm75 | grep -i tmp100
+modprobe --resolve-alias "$(cat /sys/bus/i2c/devices/1-0048/modalias)"
 ```
 
-For an installed test module, run `depmod`, then query without loading:
+Expect `of:N*T*Cti,tmp100`, `of:N*T*Cti,tmp100C*`, and `i2c:tmp100`, and the alias resolves to `lm75`.
+
+## Step 4: Prove Binding And Function
 
 ```sh
-modprobe --resolve-alias "$(cat /sys/bus/platform/devices/DEVICE/modalias)"
+readlink /sys/bus/i2c/devices/1-0048/driver
+ls /sys/bus/i2c/devices/1-0048/hwmon/
+cat /sys/bus/i2c/devices/1-0048/hwmon/hwmon*/name
+cat /sys/bus/i2c/devices/1-0048/hwmon/hwmon*/temp1_input
 ```
 
-Record whether the intended module is the only result.
+The `driver` symlink proves binding. A plausible millidegree reading proves the I2C transaction and the TMP100 register model work. Repeat for `1-0049`, the DDR supply sensor.
 
-## Step 4: Load, Match, And Probe
-
-Loading a module changes kernel state. On the disposable target:
+## Step 5: Separate Module Loading From Binding
 
 ```sh
-sudo insmod ./match_lab.ko
-dmesg | tail -n 30
-readlink /sys/bus/platform/devices/DEVICE/driver
+echo 1-0048 | sudo tee /sys/bus/i2c/drivers/lm75/unbind
+readlink /sys/bus/i2c/devices/1-0048/driver || echo unbound
+lsmod | grep lm75
+echo 1-0048 | sudo tee /sys/bus/i2c/drivers/lm75/bind
 ```
 
-Expected log:
+The module stays loaded while one device is unbound, so “module loaded” and “device bound” are different facts. Then unload and let udev reload it:
+
+```sh
+sudo modprobe -r lm75
+sudo udevadm trigger --action=add /sys/bus/i2c/devices/1-0048
+readlink /sys/bus/i2c/devices/1-0048/driver
+```
+
+## Step 6: Wrong Vendor Prefix
+
+Reboot, interrupt U-Boot, load the kernel and DTB the way your boot flow does, then before `booti`:
 
 ```text
-matched v2-specific path, interval=250 ms
+=> fdt addr ${fdt_addr_r}
+=> fdt resize 0x1000
+=> fdt set /bus@f4000/i2c@20010000/tmp100@48 compatible "acme,tmp100"
 ```
 
-The `driver` symlink proves binding. The message proves probe selected V2 match data and decoded the property. It does not prove any real hardware function because the lab intentionally controls none.
+`acme,tmp100` is a deliberately wrong, invented string. After boot:
 
-## Step 5: Exercise The Fallback
-
-Remove only the V2 entry from the driver's table, rebuild, reload safely, and keep the DT list unchanged:
-
-```c
-static const struct of_device_id match_lab_of_match[] = {
-        { .compatible = "example,match-lab", .data = &v1_data },
-        { }
-};
+```sh
+cat /sys/bus/i2c/devices/1-0048/name
+cat /sys/bus/i2c/devices/1-0048/modalias
+readlink /sys/bus/i2c/devices/1-0048/driver || echo unbound
+sudo modprobe lm75
+readlink /sys/bus/i2c/devices/1-0048/driver
 ```
 
-Expected result: the node's second compatible matches and the log reports `v1-compatible path`. Explain why this demonstrates selection mechanics but does **not** prove a real hardware fallback is safe.
+Expected: the client name is still `tmp100`, the modalias is `of:Ntmp100T(null)Cacme,tmp100`, which no module alias matches, so nothing autoloads. But once `lm75` is loaded manually, the device **binds** through the `i2c_device_id` table: `i2c_device_match()` in `drivers/i2c/i2c-core-base.c` tries OF matching, then ACPI, then the I2C ID table against the client name. Explain why “works after `modprobe`” here hides a DT bug rather than a packaging bug.
 
-Restore the V2 entry.
+## Step 7: Unknown Part
 
-## Step 6: Break Automatic Discovery
+Repeat Step 6 with the invented compatible `"ti,tmp99"`. Now neither the OF table nor the I2C ID table (`tmp99`) matches, so the device stays unbound even with the module loaded. This is a match failure, not an autoload failure.
 
-Remove only:
+## Step 8: Disable The Device
 
-```c
-MODULE_DEVICE_TABLE(of, match_lab_of_match);
+Repeat with:
+
+```text
+=> fdt set /bus@f4000/i2c@20010000/tmp100@48 status disabled
 ```
 
-Rebuild and compare `modinfo -F alias`. The driver can still match after `insmod` because `.of_match_table` remains, but a device modalias no longer resolves automatically to this module. Restore the macro.
+The runtime node still exists under `/sys/firmware/devicetree/base`, but `1-0048` does not exist. This is an availability/population result; matching never runs.
 
-## Step 7: Break Bus Matching
+## Step 9: Separate Probe Failure
 
-Keep the module table but remove:
+Repeat with a wrong address:
 
-```c
-.of_match_table = match_lab_of_match,
+```text
+=> fdt set /bus@f4000/i2c@20010000/tmp100@48 reg <0x4a>
 ```
 
-Rebuild and load. The module registers a platform driver, but normal OF compatible matching should not bind it. This separates module loading from driver matching. Restore the pointer.
+Unit address and `reg` now disagree, and nothing answers at `0x4a`. Expect a client `1-004a`, a match against `lm75`, a probe that fails when the driver first reads the chip, and no lasting `driver` symlink:
 
-## Step 8: Break The Compatible
-
-Change only the DT node to:
-
-```dts
-compatible = "example,match-lab-v3";
+```sh
+ls /sys/bus/i2c/devices/ | grep 004a
+readlink /sys/bus/i2c/devices/1-004a/driver || echo unbound
+dmesg | grep -i -E 'lm75|1-004a'
 ```
 
-Apply through the safe test workflow and verify:
+Record the errno. This is distinct from Step 7, where probe never ran.
 
-- node exists
-- platform device exists
-- its modalias changed
-- the driver does not bind
-- probe log is absent
+## Step 10: Build An Evidence Matrix
 
-Do not “fix” this by adding a wildcard; add a real V3 contract only if hardware semantics justify it. Restore the original list.
-
-## Step 9: Disable Population
-
-Set:
-
-```dts
-status = "disabled";
-```
-
-After rebuilding/rebooting or applying the test overlay lifecycle correctly, prove that the node can remain visible in the runtime tree while the platform device is absent. This is an availability/population result, not a match-table result.
-
-Restore `okay`.
-
-## Step 10: Separate Probe Failure
-
-Temporarily make the property mandatory in the driver:
-
-```c
-ret = device_property_read_u32(&pdev->dev,
-                               "example,poll-interval-ms",
-                               &interval);
-if (ret)
-        return dev_err_probe(&pdev->dev, ret,
-                             "poll interval is required\n");
-```
-
-Remove the property from DT. The device and candidate driver still match, so probe runs, returns an error, and no lasting `driver` symlink is created. Capture the log and errno. This is distinct from Step 8, where probe never ran.
-
-Restore the optional-property semantics.
-
-## Step 11: Build An Evidence Matrix
-
-Fill one row per experiment:
-
-| Experiment | Runtime node | Linux device | Alias resolves | Module loaded | Probe entered | Bound | Selected data/error |
+| Experiment | Runtime node | I2C client | Modalias resolves | Module loaded | Probe entered | Bound | Notes |
 |---|---|---|---|---|---|---|---|
 | baseline | | | | | | | |
-| fallback only | | | | | | | |
-| no module table | | | | | | | |
-| no OF table pointer | | | | | | | |
-| incompatible V3 | | | | | | | |
+| unbind/bind | | | | | | | |
+| wrong vendor prefix | | | | | | | |
+| unknown part | | | | | | | |
 | disabled | | | | | | | |
-| required property absent | | | | | | | |
+| wrong address | | | | | | | |
 
-The matrix is the main deliverable. Every failure should stop at a different pipeline stage.
+Every failure should stop at a different pipeline stage.
 
 ## Cleanup
 
-Unload the test module only after confirming no dependent activity:
-
-```sh
-sudo rmmod match_lab
-```
-
-Remove the test overlay or restore the original DTB using the platform's supported lifecycle, then verify the lab device disappeared. Do not force removal if the platform cannot safely detach overlay-created devices.
+Reboot without U-Boot edits and confirm `1-0048` and `1-0049` are bound to `lm75` again.
 
 ## Completion Criteria
 
 The lab is complete when you can provide:
 
 - runtime compatible list and DT path
-- Linux device path and resolved `of_node`
+- I2C client path, name, and resolved `of_node`
 - device modalias and module alias metadata
-- module build identity and hash
-- match-data selection for specific and fallback cases
+- evidence that the I2C ID table can bind a mis-prefixed node without autoloading it
 - distinct evidence for no population, no autoload, no match, and failed probe
 - a completed pipeline matrix
-- safe cleanup evidence
 
 ## Authoritative References
 
 - [Linux driver-core binding model](https://docs.kernel.org/driver-api/driver-model/binding.html)
+- [Linux I2C device instantiation](https://docs.kernel.org/i2c/instantiating-devices.html)
 - [Linux DeviceTree matching and modalias APIs](https://docs.kernel.org/devicetree/kernel-api.html)
-- [Linux external-module build guide](https://docs.kernel.org/kbuild/modules.html)
-- [Linux platform devices and drivers](https://docs.kernel.org/driver-api/driver-model/platform.html)
+- [U-Boot `fdt` command](https://docs.u-boot.org/en/latest/usage/cmd/fdt.html)
 
 ## Continue
 
-Proceed to [Pinctrl, GPIOs, And Interrupts](../pinctrl-gpios-and-interrupts.md).
+Proceed to [Runtime Inspection](../runtime-inspection.md).

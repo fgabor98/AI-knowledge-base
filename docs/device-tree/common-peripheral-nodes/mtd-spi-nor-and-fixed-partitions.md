@@ -12,34 +12,73 @@ MTD represents raw flash characteristics rather than block-device semantics. A p
 
 ## SPI NOR Device
 
+The AM642 EVM boots from a 64 MiB octal SPI NOR on `ospi0`. From `k3-am642-evm.dts`:
+
 ```dts
-flash@0 {
-        compatible = "jedec,spi-nor";
-        reg = <0>;
-        spi-max-frequency = <50000000>;
+&ospi0 {
+        status = "okay";
+        pinctrl-names = "default";
+        pinctrl-0 = <&ospi0_pins_default>;
 
-        partitions {
-                compatible = "fixed-partitions";
-                #address-cells = <1>;
-                #size-cells = <1>;
+        flash@0 {
+                compatible = "jedec,spi-nor";
+                reg = <0x0>;
+                spi-tx-bus-width = <8>;
+                spi-rx-bus-width = <8>;
+                spi-max-frequency = <25000000>;
+                cdns,tshsl-ns = <60>;
+                cdns,tsd2d-ns = <60>;
+                cdns,tchsh-ns = <60>;
+                cdns,tslch-ns = <60>;
+                cdns,read-delay = <4>;
 
-                partition@0 {
-                        label = "bootloader";
-                        reg = <0x000000 0x100000>;
-                        read-only;
-                };
+                partitions {
+                        compatible = "fixed-partitions";
+                        #address-cells = <1>;
+                        #size-cells = <1>;
 
-                partition@100000 {
-                        label = "firmware-a";
-                        reg = <0x100000 0x700000>;
+                        partition@0 {
+                                label = "ospi.tiboot3";
+                                reg = <0x0 0x100000>;
+                        };
+
+                        partition@100000 {
+                                label = "ospi.tispl";
+                                reg = <0x100000 0x200000>;
+                        };
+
+                        partition@300000 {
+                                label = "ospi.u-boot";
+                                reg = <0x300000 0x400000>;
+                        };
+
+                        partition@700000 {
+                                label = "ospi.env";
+                                reg = <0x700000 0x40000>;
+                        };
+
+                        partition@740000 {
+                                label = "ospi.env.backup";
+                                reg = <0x740000 0x40000>;
+                        };
+
+                        partition@800000 {
+                                label = "ospi.rootfs";
+                                reg = <0x800000 0x37c0000>;
+                        };
+
+                        partition@3fc0000 {
+                                label = "ospi.phypattern";
+                                reg = <0x3fc0000 0x40000>;
+                        };
                 };
         };
 };
 ```
 
-The flash node is an SPI target, so its `reg` selects chip select. Inside `fixed-partitions`, each `reg` is flash offset and size. Address meaning changes at the partition-container boundary.
+The flash node is an SPI target, so its `reg` selects chip select 0. Inside `fixed-partitions`, each `reg` is flash offset and size. Address meaning changes at the partition-container boundary. The `cdns,*` properties are per-device timing for the Cadence OSPI controller (chip-select setup and hold times, read capture delay), so they sit on the flash child, not the controller.
 
-Modern SPI NOR devices often expose discoverable parameters through SFDP, making `jedec,spi-nor` appropriate. Use a part-specific compatible or fixup only when the binding/framework requires it; do not encode a guessed geometry that contradicts discoverable data.
+`jedec,spi-nor` is enough because the framework reads the JEDEC ID and SFDP tables to learn size, erase types, and octal opcodes. Use a part-specific compatible only when the binding or framework requires it; do not encode a guessed geometry that contradicts discoverable data.
 
 ## Partition Geometry
 
@@ -51,6 +90,10 @@ For every region, prove:
 - redundant metadata has independent erase blocks where required
 - boot ROM and bootloader offsets agree with immutable platform behavior
 - kernel command line, UBI, filesystem, and updater use the same layout
+
+Apply this to the EVM layout. The boot ROM loads `tiboot3` from offset 0; TI U-Boot's `am64x_evm_r5_defconfig` and `am64x_evm_a53_defconfig` set `CONFIG_SYS_SPI_U_BOOT_OFFS` to `0x100000` and `0x300000`, matching `ospi.tispl` and `ospi.u-boot`. The last partition ends at `0x4000000`, exactly 64 MiB. `ospi.env.backup` ends at `0x780000` and `ospi.rootfs` starts at `0x800000`, leaving a 512 KiB hole. Decide whether a hole like this is reserved space or an accident, and record that decision.
+
+None of the partitions is `read-only`, so Linux can rewrite the boot chain through `/dev/mtdN`. That is deliberate on an EVM and a decision to revisit for a product.
 
 Schema validation can catch some structural errors but cannot know the boot ROM contract or whether two product variants install different flash capacities.
 
@@ -68,7 +111,7 @@ Do not copy a NOR layout to NAND or mount raw NAND as if it were a conventional 
 
 ## Update Architecture
 
-An A/B scheme needs more than partitions named `firmware-a` and `firmware-b`. Define:
+An A/B scheme needs more than two partitions with `-a` and `-b` labels. Define:
 
 - authenticated image format
 - atomic boot-selection metadata

@@ -10,12 +10,12 @@ last_reviewed: null
 
 ## Two Include Mechanisms
 
-DTS ecosystems commonly use two different processors:
+DTS ecosystems commonly use two different processors. Both appear in mainline Linux:
 
 ```dts
-/include/ "trainer-common.dtsi"
-#include "trainer-soc.dtsi"
-#include <dt-bindings/gpio/gpio.h>
+/include/ "integrator.dtsi"            /* arch/arm/boot/dts/arm/integratorcp.dts */
+#include "k3-am642.dtsi"               /* arch/arm64/boot/dts/ti/k3-am642-sk.dts */
+#include <dt-bindings/gpio/gpio.h>     /* same file */
 ```
 
 | Form | Processor | Typical use |
@@ -28,93 +28,104 @@ They are not interchangeable in every command. A source using `#include` normall
 
 ## Native `/include/`
 
-`dtc` can directly insert another source file:
+`dtc` can directly insert another source file, as the ARM Integrator/CP board does:
 
 ```dts
 /dts-v1/;
-/include/ "trainer-soc.dtsi"
+/include/ "integrator.dtsi"
 
 / {
-        model = "Trainer Native-Include Board";
+        model = "ARM Integrator/CP";
+        compatible = "arm,integrator-cp";
+        /* ... */
 };
 ```
 
-Search behavior depends on the invoking command, source location, and `dtc` include directories supplied with `-i`. Always reproduce the real build command when resolving an unexpected file.
-
-Native includes can themselves include other files. The effective result is textual/source composition before final tree construction; the DTB does not retain a normal include provenance record.
+Search behavior depends on the source location and `dtc` include directories supplied with `-i`. Native includes can themselves include other files. The DTB does not retain a normal include provenance record.
 
 ## C Preprocessing
 
-Linux kernel builds preprocess DTS so sources can include headers and symbolic constants. A simplified standalone flow is:
+Linux kernel builds preprocess every DTS. The rule in `scripts/Makefile.dtbs` is:
 
-```sh
-cpp -nostdinc -undef -D__DTS__ -x assembler-with-cpp \
-    -I include -I arch/arm64/boot/dts \
-    board.dts board.preprocessed.dts
+```make
+DTC_INCLUDE := $(srctree)/scripts/dtc/include-prefixes
 
-dtc -I dts -O dtb -o board.dtb board.preprocessed.dts
+dtc_cpp_flags = -Wp,-MMD,$(depfile).pre.tmp -nostdinc -I $(DTC_INCLUDE) -undef -D__DTS__
+
+cmd_dtc =         $(HOSTCC) -E $(dtc_cpp_flags) -x assembler-with-cpp -o $(dtc-tmp) $< ;         $(DTC) -o $@ -b 0 $(addprefix -i,$(dir $<) $(DTC_INCLUDE))                $(DTC_FLAGS) -d $(depfile).dtc.tmp $(dtc-tmp) ;         ...
 ```
 
-This is illustrative, not a universal replacement for a kernel build rule. Real kernel builds supply generated paths, architecture directories, dependency files, warning flags, and their in-tree `dtc`. Inspect the build's verbose output rather than guessing its flags.
+Two details matter when you reproduce it:
+
+- `-nostdinc -I scripts/dtc/include-prefixes` means `<dt-bindings/...>` resolves only through that prefix directory, which links to `include/dt-bindings` and the architecture DTS trees. Quoted includes such as `"k3-am64.dtsi"` resolve relative to the including file.
+- `DTC_FLAGS` changes with `W=1`/`W=2`, and `-@` is added automatically for base DTBs that overlays are applied to.
+
+A standalone equivalent for the AM642 SK is shown in the [First Device Tree Lab](../foundations/first-device-tree-lab.md#step-10-build-the-real-board-dtb). Inspect `make V=1` output rather than guessing flags.
 
 ## Binding Constants
 
-Headers under `include/dt-bindings/` give readable names to values defined by bindings:
+Headers under `include/dt-bindings/` give readable names to values defined by bindings. In the AM64x sources:
 
 ```dts
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/soc/ti,sci_pm_domain.h>
 
-reset-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
-interrupts = <5 IRQ_TYPE_LEVEL_LOW>;
+interrupts = <GIC_SPI 178 IRQ_TYPE_LEVEL_HIGH>;               /* -> <0 178 4> */
+power-domains = <&k3_pds 146 TI_SCI_PD_EXCLUSIVE>;           /* -> <&k3_pds 146 1> */
+gpio = <&main_gpio0 48 GPIO_ACTIVE_HIGH>;                    /* -> <&main_gpio0 48 0> */
 ```
 
 After preprocessing, constants become integers. The names improve reviewability but do not change the property encoding or validate the specifier.
 
-When debugging, inspect both views:
+When debugging, inspect all four views:
 
 ```text
-maintainable source: GPIO_ACTIVE_LOW
-preprocessed source: numeric macro expansion
-binding: meaning of that argument position
+maintainable source: TI_SCI_PD_EXCLUSIVE
+preprocessed source: 1
+binding: meaning of that argument position (exclusive vs shared TI-SCI device ownership)
 compiled DTB: final cells
 ```
 
 ## Object-Like And Function-Like Macros
 
-Simple symbolic constants are usually easy to audit:
+Object-like constants are easy to audit. `k3-serdes.h` names the SERDES lane-mux values used by AM64x boards:
 
 ```c
-#define TRAINER_UART_CLOCK 24000000
+#define AM64_SERDES0_LANE0_PCIE0                0x0
+#define AM64_SERDES0_LANE0_USB                  0x1
 ```
 
 ```dts
-clock-frequency = <TRAINER_UART_CLOCK>;
+&serdes_ln_ctrl {
+        idle-states = <AM64_SERDES0_LANE0_USB>;
+};
 ```
 
-Function-like macros can reduce repetition but can also hide tuple shape:
+Function-like macros reduce repetition but can hide tuple shape. `k3-pinctrl.h` defines:
 
 ```c
-#define TRAINER_REG(addr, size) <(addr) (size)>
+#define AM64X_IOPAD(pa, val, muxmode)   (((pa) & 0x1fff)) ((val) | (muxmode))
 ```
 
-```dts
-reg = TRAINER_REG(0x1000, 0x100);
-```
+so each `AM64X_IOPAD(...)` entry inside `pinctrl-single,pins = < ... >` expands to **two** cells: the pad register offset and the combined configuration/mux value. `AM64X_IOPAD(0x0260, PIN_INPUT_PULLUP, 0)` becomes `0x260 0x64000`. A reviewer who cannot see that shape cannot check it against the `pinctrl-single` binding's `#pinctrl-cells`.
 
 Use macros primarily for standardized constants and established architecture patterns. Avoid creating a private language that prevents reviewers from seeing addresses, cell counts, or provider arguments directly.
 
 ## Conditional Preprocessing
 
-The C preprocessor supports `#if`, `#ifdef`, and related directives, but conditional hardware descriptions can create invisible variants:
+The C preprocessor supports `#if`, `#ifdef`, and related directives. TI's K3 board files do not use them, but some boards do. The Renesas RZ/G2L SMARC board selects mutually exclusive PMOD functions with macros edited in the source (`arch/arm64/boot/dts/renesas/r9a07g044l2-smarc.dts`):
 
 ```dts
-#ifdef TRAINER_HAS_SENSOR
-        sensor@48 { /* ... */ };
+#define PMOD1_SER0      1
+#define PMOD_MTU3       0
+
+#if (PMOD_MTU3 && PMOD1_SER0)
+#error "Cannot set as PMOD_MTU3 and PMOD1_SER0 are mutually exclusive "
 #endif
 ```
 
-For concrete boards, separate DTS files or hardware-based DTSI layers usually make variants easier to review, validate, and release. If generated configuration truly controls a build, record the macro set and validate every emitted tree.
+Each macro combination produces a different hardware description from the same filename, and only one combination is built and validated by default. For concrete boards, separate DTS files—like TI's `k3-am642-evm.dts` plus its `.dtso` overlays—usually make variants easier to review, validate, and release. If configuration macros truly control a build, record the macro set and validate every emitted tree.
 
 ## Inspecting The Actual Preprocessed Source
 
@@ -129,11 +140,11 @@ When `dtc` reports a surprising line or token:
 Useful commands in a kernel tree include:
 
 ```sh
-make V=1 ARCH=arm64 dtbs
-find build -name '*.dts.tmp' -o -name '*.dtb.dts.tmp'
+make V=1 ARCH=arm64 ti/k3-am642-sk.dtb
+find . -name '.k3-am642-sk.dtb.dts.tmp'
 ```
 
-Intermediate names vary by kernel version and build setup. The verbose command is the source of truth.
+With current Kbuild the preprocessed file is a hidden `.<target>.dtb.dts.tmp` next to the output (see `dtc-tmp` in `scripts/Makefile.dtbs`), but names vary by kernel version. The verbose command is the source of truth.
 
 Preprocessor line markers can confuse standalone tooling. Kernel build flags and the `dtc` parser account for their expected form; copying only half the pipeline often creates misleading errors.
 
@@ -168,17 +179,7 @@ Compare compiler versions, preprocessing, include directories, warning flags, ge
 
 ## Dependency And Reproducibility Concerns
 
-A reproducible Device Tree build records:
-
-- compiler and preprocessor versions
-- full include search paths
-- source revision, including headers
-- macro definitions and generated inputs
-- selected DTS targets
-- `dtc` flags such as `-@` and warning controls
-- output hashes
-
-Include provenance is especially important when vendor SDKs carry multiple kernel or U-Boot copies of similarly named DTSI files.
+Include provenance matters as soon as a DTB ships, especially when vendor SDKs carry multiple kernel or U-Boot copies of similarly named DTSI files. [Build Pipeline, Preprocessing, And Artifact Provenance](../build-and-diagnostic-tools/build-pipeline-preprocessing-and-artifact-provenance.md#reproducibility-record) lists what a reproducible build must record.
 
 ## Exercises
 

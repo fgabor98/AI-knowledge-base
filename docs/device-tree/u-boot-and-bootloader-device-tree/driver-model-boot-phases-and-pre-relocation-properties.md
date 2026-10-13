@@ -97,7 +97,35 @@ Always decompile `spl/u-boot-spl.dtb` or inspect it with `fdtget`. Compare it wi
 
 Put shared phase requirements in the narrowest reusable U-Boot-specific SoC or board fragment. A controller required in SPL on every SoC board may be tagged at the SoC U-Boot layer; a board-only boot regulator belongs in the board layer.
 
-Avoid adding boot-phase properties to upstream OS hardware sources unless the upstream Devicetree project accepts and owns those properties in that context. U-Boot's documented source-composition flow exists to keep bootloader metadata manageable.
+Avoid adding boot-phase properties to upstream OS hardware sources unless the upstream Devicetree project accepts and owns those properties in that context. `bootph-*` is now a standard `dt-schema` binding, and TI has moved many of its boot-phase markings into the Linux sources: mainline `k3-am642-sk.dts` contains 23 `bootph-*` properties, for example `bootph-all` on `main_i2c0`, which SPL needs to read the board EEPROM. Requirements specific to one U-Boot configuration stay in U-Boot. `k3-am642-sk-u-boot.dtsi` adds `bootph-all` to the CPSW switch, its MDIO bus, both PHYs, their pin groups, and `phy_gmii_sel`, so that SPL can boot over Ethernet:
+
+```dts
+&cpsw3g_mdio {
+        bootph-all;
+};
+
+&cpsw3g_phy0 {
+        bootph-all;
+};
+
+&rgmii1_pins_default {
+        bootph-all;
+};
+
+&cpsw3g {
+        bootph-all;
+
+        ethernet-ports {
+                bootph-all;
+        };
+};
+
+&phy_gmii_sel {
+        bootph-all;
+};
+```
+
+Missing any one of these, such as `phy_gmii_sel`, which the CPSW needs to set the RGMII mode, leaves the SPL network boot path without a provider while U-Boot proper, which sees the full tree, still works.
 
 ## Size And Security Tradeoffs
 

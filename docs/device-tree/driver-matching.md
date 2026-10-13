@@ -78,7 +78,7 @@ This module explains matching and the probe contract. Designing binding schemas 
 
 ## Completion Check
 
-You are ready for [Pinctrl, GPIOs, And Interrupts](pinctrl-gpios-and-interrupts.md) when you can:
+You are ready for [Runtime Inspection](runtime-inspection.md) when you can:
 
 - defend every fallback compatible as truly backward-compatible
 - show the exact event that creates the Linux device

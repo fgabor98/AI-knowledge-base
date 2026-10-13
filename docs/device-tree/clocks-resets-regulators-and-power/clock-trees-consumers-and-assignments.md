@@ -10,38 +10,12 @@ last_reviewed: null
 
 Clocks form a directed topology: oscillators and PLLs feed muxes, dividers, and gates, which feed consumers. A consumer specifier selects a provider output. It does not describe the whole signal path or guarantee a particular rate.
 
-## Providers And Specifiers
+## Providers, Specifiers, And Names
 
-A provider advertises `#clock-cells`; its binding defines every argument after the phandle:
+Consumer `clocks`/`clock-names` decoding was covered in [Clocks, Resets, And Power Domains](../provider-consumer-relationships/clocks-resets-and-power-domains.md#clock-relationships). Two points matter for clock trees:
 
-```dts
-clock_controller: clock-controller@10000 {
-        compatible = "example,soc-clock-controller";
-        reg = <0x10000 0x1000>;
-        #clock-cells = <1>;
-};
-
-video@30000 {
-        clocks = <&clock_controller SOC_CLK_VIDEO_BUS>,
-                 <&clock_controller SOC_CLK_VIDEO_CORE>;
-        clock-names = "bus", "core";
-};
-```
-
-The symbolic IDs normally come from a provider-specific header in `include/dt-bindings/clock/`. They compile to integers, but the integer is meaningful only in that provider's binding namespace. It need not equal a register offset or bit number.
-
-With `#clock-cells = <0>`, the provider node itself identifies one output. With two or more cells, the tuple may encode a domain and an index, flags, or another provider-defined scheme. Never infer the format from a different SoC.
-
-## Names Are Part Of The Consumer Contract
-
-`clock-names` maps semantic roles to entries in `clocks`:
-
-```c
-bus_clk = devm_clk_get_enabled(dev, "bus");
-core_clk = devm_clk_get(dev, "core");
-```
-
-Index order and names must match the consumer binding. Renaming a clock to match a schematic net may break the driver if the binding calls it `core`. Conversely, provider-internal clock names are not a replacement for `clock-names` on the consumer.
+- Symbolic IDs from `include/dt-bindings/clock/` compile to integers that are meaningful only in that provider's namespace; they need not equal a register offset or bit number. Never infer a multi-cell format from a different SoC.
+- `clock-names` follow the consumer binding, not schematic nets or provider-internal clock names. Renaming a clock to match a net breaks a driver that requests `core`.
 
 ## Consumption Versus Assignment
 
@@ -57,11 +31,25 @@ These properties answer different questions:
 
 A device can consume a clock without assigning its parent or rate. It can also configure an assigned clock that is not one of its direct inputs, when its binding and clock topology justify doing so.
 
+Two AM64x nodes show both forms (`k3-am64-main.dtsi`). A timer selects a parent for its functional clock, and the OSPI controller selects a parent and a rate:
+
 ```dts
-assigned-clocks = <&clock_controller SOC_CLK_VIDEO_CORE>;
-assigned-clock-parents = <&clock_controller SOC_CLK_PLL_VIDEO>;
-assigned-clock-rates = <600000000>;
+main_timer0: timer@2400000 {
+        clocks = <&k3_clks 36 1>;
+        clock-names = "fck";
+        assigned-clocks = <&k3_clks 36 1>;
+        assigned-clock-parents = <&k3_clks 36 2>;
+};
+
+ospi0: spi@fc40000 {
+        clocks = <&k3_clks 75 6>;
+        assigned-clocks = <&k3_clks 75 6>;
+        assigned-clock-parents = <&k3_clks 75 7>;
+        assigned-clock-rates = <166666666>;
+};
 ```
+
+On K3, “parents” such as `<&k3_clks 36 2>` are other clock IDs of the same TI-SCI device: the firmware exposes each mux input as its own clock, and `assigned-clock-parents` asks the firmware to switch the mux.
 
 Parallel assignment arrays are positional. A zero entry can mean “leave unchanged” where the generic clock binding permits it. Read the binding before using omission or zero as a placeholder.
 

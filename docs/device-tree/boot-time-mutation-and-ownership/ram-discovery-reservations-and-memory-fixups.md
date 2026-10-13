@@ -42,19 +42,7 @@ Represent only addressable, successfully initialized RAM. If DRAM has holes or m
 
 ## Correct Cell Encoding
 
-For a root with two address and two size cells:
-
-```dts
-memory@80000000 {
-        device_type = "memory";
-        reg = <0x0 0x80000000 0x0 0x40000000>,
-              <0x1 0x00000000 0x0 0x80000000>;
-};
-```
-
-This is illustrative. Mutator code must construct big-endian cells with appropriate helpers and check address-width overflow. Truncating a 64-bit size into one cell can create a plausible but dangerous smaller/larger range.
-
-Prefer one generic helper with tests over board-local hand encoding.
+Memory `reg` tuples use the root cell counts ([The `/memory` Node](../standard-nodes-and-properties/cpus-topology-and-memory.md#the-memory-node)). Mutator code must construct big-endian cells with tested generic helpers and check address-width overflow; truncating a 64-bit size into one cell can create a plausible but dangerous range.
 
 ## Reservations Must Track Ownership
 
@@ -96,6 +84,8 @@ Several strategies exist:
 Choose based on what is stable and trustworthy. Mutation is appropriate for discovered size; materially different bank wiring or reserved-layout ABI may justify separate board/SKU descriptions.
 
 Do not let one generic base erase product distinctions needed before discovery.
+
+TI K3 platforms use discovery. In SPL, `fixup_memory_node()` (`arch/arm/mach-k3/k3-ddr.c`) runs `dram_init()` and `dram_init_banksize()`, then rewrites the next stage's `/memory` with `fdt_fixup_memory_banks()`. With `CONFIG_K3_INLINE_ECC`, `k3_ddrss_ddr_fdt_fixup()` (`drivers/ram/k3-ddrss/k3-ddrss.c`) first subtracts the ECC-reserved space from the highest banks, so Linux's `/memory` is smaller than the DTS value by exactly the ECC carve-out. The 2 GiB in `k3-am625-sk.dts` is a default that firmware may replace, not an authority.
 
 ## Crash Kernels And Usable Memory
 

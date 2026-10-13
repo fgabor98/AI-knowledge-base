@@ -8,7 +8,7 @@ last_reviewed: null
 
 # U-Boot `fdt` Commands And Handoff Inspection
 
-U-Boot can expose two different trees: the control FDT used by U-Boot's driver model and the working FDT prepared for the operating system. Most Linux handoff diagnosis belongs on the working tree. Editing the control tree after U-Boot has cached pointers does not safely reconfigure U-Boot.
+U-Boot's `fdt` command can inspect both the control FDT and the OS-bound working FDT ([Control, Working, SPL, And Linux Device Trees](../u-boot-and-bootloader-device-tree/control-working-spl-and-linux-device-trees.md)). Most Linux handoff diagnosis belongs on the working tree.
 
 ## Identify Both Trees
 
@@ -49,25 +49,7 @@ Environment variables are policy inputs, not evidence by themselves. Expand them
 
 ## Capacity And Address Safety
 
-The `fdt addr` command can associate a length with the working FDT in current U-Boot, and `fdt resize` can expand capacity according to version-specific semantics. Neither proves adjacent RAM is free.
-
-Before growth:
-
-- validate current FDT header/totalsize
-- reserve a nonoverlapping destination interval
-- copy/open the base into that interval
-- account for overlays and later fixups
-- check kernel, initrd, decompression, stack, and firmware regions
-
-Example flow, with product-specific addresses omitted:
-
-```text
-=> fdt addr ${fdt_addr_r}
-=> fdt header
-=> fdt resize ${fdt_extra_space}
-```
-
-Do not pass arbitrary environment-controlled size/address values without range validation.
+`fdt addr` can associate a length with the working FDT and `fdt resize` can add capacity, but neither proves adjacent RAM is free. Plan the interval as described in [U-Boot Working-FDT Resize](../boot-time-mutation-and-ownership/libfdt-capacity-relocation-and-failure-atomicity.md#u-boot-working-fdt-resize), and never pass environment-controlled sizes or addresses without range validation.
 
 ## Read Before Write
 
@@ -111,18 +93,7 @@ Boot scripts must check command status. A partially prepared tree must not be pa
 
 ## Overlay Application
 
-Conceptual flow:
-
-```text
-=> fdt addr ${fdt_addr_r}
-=> fdt resize ${overlay_space}
-=> fdt apply ${overlay_addr_r}
-=> fdt print /soc/spi@2000000
-```
-
-Load and authenticate all selected overlays first, validate compatibility/order, and work on a disposable/reloadable base copy. U-Boot overlay documentation warns failed application can invalidate the involved blobs.
-
-Applying an overlay to the control FDT is not equivalent to dynamically reprobling U-Boot devices. Apply Linux product overlays to the OS-bound working FDT unless the platform architecture explicitly defines otherwise.
+`fdt apply ${overlay_addr_r}` merges an overlay into the working FDT after `fdt resize`. Follow the authentication, ordering, and failure rules in [Bootloader Overlay Application And Working-FDT Safety](../u-boot-and-bootloader-device-tree/bootloader-overlay-application-and-working-fdt-safety.md); never apply Linux product overlays to the control FDT.
 
 ## Capture The Pre-Handoff FDT
 
@@ -155,14 +126,7 @@ Host compose the same base and overlays:
 fdtoverlay -i base.dtb -o host-merged.dtb overlay-a.dtbo overlay-b.dtbo
 ```
 
-Compare host merged, U-Boot post-overlay, and U-Boot pre-handoff trees. Expected later differences may include:
-
-- `/memory` discovery
-- `/chosen` bootargs, initrd, console, and seeds
-- MAC addresses and serial identity
-- secure firmware reservations
-
-Every other difference needs an owner.
+Compare host merged, U-Boot post-overlay, and U-Boot pre-handoff trees. Only the [expected boot-time changes](../foundations/source-and-binary-artifacts.md#what-the-bootloader-can-change)—memory, `/chosen`, MACs and identity, firmware reservations—should differ, and each needs an owner.
 
 ## Common U-Boot Diagnostic Traps
 

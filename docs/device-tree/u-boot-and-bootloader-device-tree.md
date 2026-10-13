@@ -28,7 +28,8 @@ After completing this module, you should be able to:
 
 ## Prerequisites
 
-Complete [Memory, Firmware, And Heterogeneous SoCs](memory-firmware-and-heterogeneous-socs.md). This module assumes you can inspect DT artifacts, reason about memory ownership, and distinguish a static hardware description from a runtime software protocol.
+Complete [Overlays In Depth](overlays-in-depth.md). This module assumes you can inspect DT artifacts, reason about memory ownership, compose overlays, and distinguish a static hardware description from a runtime software protocol.
+
 
 ## Learning Path
 

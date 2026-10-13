@@ -39,18 +39,18 @@ Current upstream guidance expects compatible strings to be documented before DTS
 
 ## Build A Bisectable Series
 
-Example dependency plan:
+The Cadence CSI-2 receiver's error interrupt reached mainline as two series in different trees:
 
 ```text
-Series A (binding + driver tree)
-  1/3 dt-bindings: document acme,axc-capture-v4
-  2/3 media: axc: accept v4 compatible, preserve v3 fallback
-  3/3 media: axc: use optional calibration supply
+Series A (media tree, April 2025)
+  dt-bindings: media: cdns,csi2rx.yaml: Add optional interrupts for cdns-csi2rx
+  media: cadence: csi2rx: Enable csi2rx_err_irq interrupt and add support for VIDIOC_LOG_STATUS
 
-Series B (SoC tree; references Series A discussion)
-  1/2 arm64: dts: acme: add capture block to ax9
-  2/2 arm64: dts: acme: enable capture on axc200 revD
+Series B (TI SoC tree, August 2025)
+  arm64: dts: ti: k3-am62-main: Add CSI2 interrupts property
 ```
+
+Series B uses a property that Series A made optional, and the driver uses `platform_get_irq_byname_optional()`, so each tree builds and boots at every commit regardless of merge order.
 
 No intermediate commit should break builds or existing boards. If DTS can merge before driver support because it uses a fallback compatible, explain that property. If not, state the dependency and expected merge strategy.
 
@@ -60,19 +60,19 @@ For every patch record:
 
 ```yaml
 patch_id: DT-0042
-subject: "arm64: dts: acme: correct revC capture stream ID"
+subject: "arm64: dts: ti: k3-am62*: Move eMMC pinmux to top level board file"
 owner: product-platform
-reason: field correctness fix
-origin: downstream
-upstream_status: submitted-v2
-upstream_link: https://lore.kernel.org/...
-first_release: product-6.6.31-r7
-affected_products: [axc200-revC, axc210-revA]
+reason: field correctness fix (eMMC DAT1-7 need internal pull-ups on AM625 SK)
+origin: upstream backport
+upstream_status: merged
+upstream_link: https://lore.kernel.org/r/20250707190830.3951619-1-jm@ti.com
+first_release: product-6.12-r7
+affected_products: [am625-sk-based]
 binding_impact: none
 dependencies: []
-conflict_notes: "upstream file renamed after v6.10"
-validation: [dtbs_check, semantic-diff, capture-dma-hw]
-drop_when: "upstream commit <full-id> is in merge base"
+conflict_notes: "touches k3-am62x-sk-common.dtsi, k3-am625-sk.dts, k3-am62-lp-sk.dts"
+validation: [dtbs_check, semantic-diff, emmc-hs200-stress-hw]
+drop_when: "upstream commit a0b8da04153e is in merge base"
 ```
 
 The ledger should be generated or checked against the actual patch series so it cannot silently drift.
@@ -136,8 +136,8 @@ Choose a canonical source and automate synchronization or artifact comparison wh
 Before posting:
 
 ```bash
-make dt_binding_check DT_SCHEMA_FILES=/acme,axc-capture/
-make ARCH=arm64 dtbs_check DT_SCHEMA_FILES=/acme,axc-capture/
+make dt_binding_check DT_SCHEMA_FILES=/cdns,csi2rx/
+make ARCH=arm64 dtbs_check DT_SCHEMA_FILES=/cdns,csi2rx/
 scripts/checkpatch.pl --strict 000*.patch
 scripts/get_maintainer.pl 0001-*.patch
 ```

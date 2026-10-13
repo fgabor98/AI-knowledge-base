@@ -12,21 +12,7 @@ A generic power domain groups devices behind shared power-management hardware or
 
 ## Domain Providers And Consumers
 
-```dts
-power_controller: power-controller@12000 {
-        compatible = "example,soc-power-controller";
-        reg = <0x12000 0x1000>;
-        #power-domain-cells = <1>;
-};
-
-codec@50000 {
-        power-domains = <&power_controller SOC_PD_AUDIO>;
-};
-```
-
-The provider binding defines the cells. The ID may select an island managed through registers, a system controller, or firmware. A zero-cell provider node can represent one domain directly.
-
-The domain may control switches, isolation, retention, resets, clocks, or firmware state. Consumers must not duplicate those internal controls unless their binding defines separate ownership.
+`power-domains` specifiers are decoded like other provider tuples ([Power-Domain Relationships](../provider-consumer-relationships/clocks-resets-and-power-domains.md#power-domain-relationships)). The ID may select an island managed through registers, a system controller, or firmware, and the domain may control switches, isolation, retention, resets, clocks, or firmware state. Consumers must not duplicate those internal controls unless their binding defines separate ownership.
 
 ## Hierarchical Domains
 
@@ -36,9 +22,7 @@ Do not infer the hierarchy from register layout or a marketing block diagram. Mo
 
 ## A Domain Is Not A Regulator
 
-A regulator is an electrical supply with voltage/current constraints and consumer enable requests. A power domain is a coordinated power-management context. A domain may internally control a regulator, but listing only `power-domains` does not describe a separately wired `vdd-supply`. Conversely, a supply phandle does not model isolation, retention, or firmware-managed island state.
-
-If both relationships physically exist and the consumer binding exposes them, describe both.
+A domain may internally control a regulator, but listing only `power-domains` does not describe a separately wired `vdd-supply`, and a supply phandle does not model isolation, retention, or firmware-managed island state. If both relationships physically exist and the consumer binding exposes them, describe both.
 
 ## Runtime PM State
 
@@ -59,14 +43,7 @@ Firmware-described consumer/supplier relationships can become device links. Link
 
 A domain membership says devices share power-management context. A device link says one device depends on a supplier device. The kernel device hierarchy plus links forms a directed graph; cycles need architectural analysis, not probe-priority hacks.
 
-Repeated `-EPROBE_DEFER` is useful evidence at first. Permanent deferral usually means:
-
-- the supplier node is disabled or absent
-- the supplier driver is not enabled or failed probe
-- the tuple is invalid
-- a dependency cycle exists
-- a firmware-owned provider is unavailable
-- the consumer mistakenly treats an optional resource as mandatory
+Repeated `-EPROBE_DEFER` is useful evidence at first; permanent deferral needs the supplier trace in [Probe Deferral, Supplier Links, And Resource State](../runtime-inspection/probe-deferral-supplier-links-and-resource-state.md).
 
 ## Domain Performance States
 

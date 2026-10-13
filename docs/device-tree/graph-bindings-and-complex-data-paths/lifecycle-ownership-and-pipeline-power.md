@@ -14,15 +14,7 @@ A graph becomes operational only after every required component is present and t
 
 A source need not probe before its sink. An I²C sensor can register after a CSI receiver; a panel can register after a display controller; a codec can register after the CPU DAI. Frameworks use asynchronous notifiers, component matching, or deferred probe to assemble the final pipeline.
 
-Do not encode data-flow order as initcall priority. If a component is permanently missing, trace:
-
-1. both endpoint nodes in the live tree
-2. reciprocal `remote-endpoint` values
-3. ancestor `status` values
-4. control-bus device creation and driver match
-5. resource supplier registration
-6. subsystem async/component logs
-7. format/route constraints during completion
+Do not encode data-flow order as initcall priority. If a component is permanently missing, follow the [diagnostic ladder](graph-validation-and-runtime-diagnosis.md#a-diagnostic-ladder) from both endpoints through their suppliers and the subsystem's async/component logs.
 
 ## Control Ownership Versus Stream Ownership
 

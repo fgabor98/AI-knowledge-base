@@ -12,27 +12,22 @@ Source reuse is safe only when it follows physical reuse. Put a fact in the high
 
 ## Model The Physical Hierarchy
 
-A common product structure is:
+Map source files to physical units as in [Hardware-Based Layering And Source Style](../syntax-values-and-source-composition/hardware-based-layering-and-source-style.md), extended at product scale with package-specific pin layers, assembled-product root identity, and independently selected option overlays:
+
+TI's AM62x starter-kit family in mainline Linux has this graph:
 
 ```text
-SoC silicon
-  -> package / silicon revision
-  -> system-on-module
-  -> carrier board
-  -> assembled product
-  -> optional fitted hardware or expansion
+k3-am62.dtsi, k3-am62-main/mcu/wakeup.dtsi   on-SoC blocks, addresses, interrupts
+  <- k3-am625.dtsi                            AM625 variant: four A53 cores, OPP table
+k3-am62x-sk-common.dtsi                       shared starter-kit wiring
+  <- k3-am625-sk-common.dtsi                  AM625 SK and SiP SK only (1.4 GHz OPP, OSPI, second PHY)
+       <- k3-am625-sk.dts                     root identity, eMMC pins
+       <- k3-am6254atl-sk.dts                 SiP variant
+  <- k3-am62-lp-sk.dts                        LP SK: TPS65219 PMIC, eMMC pins, root identity
+k3-am62x-sk-hdmi-audio.dtso                   optional, composed with three bases
 ```
 
-Map sources to that hierarchy:
-
-```text
-vendor-soc.dtsi             on-SoC blocks, addresses, interrupts
-vendor-soc-package.dtsi     package-specific pins or resources
-acme-module-x.dtsi          module PMIC, RAM wiring, fixed module devices
-acme-carrier-a.dtsi         carrier regulators, connectors, buses
-acme-product-p.dts          root identity and final composition
-acme-option-radio.dtso      independently selected optional hardware
-```
+Not every family needs every layer. Each include must correspond to a stable physical unit or deliberately documented contract.
 
 Not every family needs every layer. Each include must correspond to a stable physical unit or deliberately documented contract.
 
@@ -46,16 +41,17 @@ Before moving content into a common `.dtsi`, ask:
 4. Would a new inheritor reasonably expect this node?
 5. Can a reviewer enumerate the blast radius from the include graph?
 
-If any answer is no, keep it lower or split the common layer.
+If any answer is no, keep it lower or split the common layer. TI's family failed question 1 for three years. The eMMC pin group lived in `k3-am62x-sk-common.dtsi` from v5.19 with plain `PIN_INPUT` on all pins, and its comments even listed two packages' balls, such as `(Y3/V3) MMC0_CMD`. The AM625 SK needs internal pull-ups on DAT1–DAT7, as JESD84 recommends to keep unconnected lines from floating, while the LP SK has external pull-ups. Commit `a0b8da04153e` (v6.17, `Cc: stable`) moved the group into each board file, giving the SK `PIN_INPUT_PULLUP` and leaving the LP SK unchanged.
 
 ## Separate Description From Policy
 
 DT describes hardware and stable integration contracts, not a product-feature database. Avoid properties such as:
 
 ```dts
-vendor,product-sku = <17>;
-vendor,enable-premium-mode;
-vendor,use-new-driver;
+/* Hypothetical, and none of these exist in TI's tree. */
+ti,product-sku = <17>;
+ti,enable-premium-mode;
+ti,use-new-driver;
 ```
 
 Use a specific compatible for real hardware programming differences, describe fitted devices, and keep commercial entitlement or driver-choice policy outside DT.
@@ -128,20 +124,21 @@ One person or team must be accountable for the final composition. Shared respons
 ## Create A Variant Inventory
 
 ```yaml
-product: axc200
-board_revision: C
-soc: ax9-rev2
-module: mx2-revB
-carrier: ca1-revC
-memory: 4GiB
-fitted_options: [front-panel-v2]
-base_dtb: axc200-revc.dtb
-allowed_overlays: [radio-v1.dtbo]
-identity_source: otp-board-id
+product: am62x-lp-sk-based
+board_name: AM62-LP-SKEVM            # TI board EEPROM
+soc: AM625                           # plus speed and temperature grade from eFuse
+pmic: TPS65219 (VDD_CORE 0.75 V)
+memory: 2GiB LPDDR4
+fitted_options: [hdmi-audio]
+base_dtb: ti/k3-am62-lp-sk.dtb
+allowed_overlays: [ti/k3-am62x-sk-hdmi-audio.dtbo]
+forbidden_overlays: [ti/k3-am62x-sk-csi2-imx219.dtbo]   # if no camera is fitted
+uboot_defconfig: am62x_lpsk_a53_defconfig
+identity_source: board-eeprom (CRC only)
 owners:
   final_composition: product-platform
   carrier: carrier-hw
-qualification_class: axc200-ca1-revC-4g
+qualification_class: am62x-lp-2g-T
 ```
 
 Generate the expected artifact set and test matrix from a reviewed inventory rather than discovering variants from filenames.

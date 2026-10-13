@@ -8,470 +8,222 @@ last_reviewed: null
 
 # Binding Schema Authoring And Validation Lab
 
-This lab encodes the AXC100/AXC200 hardware contract from the previous module as a schema, proves that real nodes select it, and diagnoses failures at each validation gate. Complete the design tasks before reading the reference analysis.
+This lab converts a real binding that Linux v6.19 still documents as plain text, `Documentation/devicetree/bindings/media/ti-am437x-vpfe.txt`, into a DT schema. You will audit the old text against the driver and the shipped DTS, write the schema, prove that it selects and validates the three AM437x boards that use the VPFE, and prove that it rejects specific mistakes. Every expected message below was produced with `dt-schema` 2026.9 against mainline v6.19-rc1.
 
-## Contract To Encode
+## Inputs
 
-The binding design review established:
+- `Documentation/devicetree/bindings/media/ti-am437x-vpfe.txt`
+- `drivers/media/platform/ti/am437x/am437x-vpfe.c`, function `vpfe_get_pdata()`
+- `arch/arm/boot/dts/ti/omap/am437x-l4.dtsi` (two SoC nodes) and the boards `am437x-sk-evm.dts`, `am437x-gp-evm.dts`, `am43x-epos-evm.dts`
+- `dt-schema` installed (`pip install dtschema`)
 
-### Common Contract
+## Task 1: Audit The Text Binding
 
-- one register region
-- two clock inputs ordered and named `bus`, `sample`
-- an optional standard graph `ports` structure for the connected sensor
-- no custom polling, DMA-buffer, version, fast-mode, or clock-rate properties
+Read the `.txt` file next to the driver and the DTS files, then list every disagreement. You should find at least these:
 
-### AXC100
+1. The text lists `ti,am437x-vpfe-interface` under the VPFE node's “Required properties”, but its own example, every board file, and the driver put it on the **endpoint** (`of_property_read_u32(endpoint, "ti,am437x-vpfe-interface", ...)`).
+2. The driver treats the interface as optional: it starts at 0 (raw Bayer) and falls back to raw Bayer for out-of-range values.
+3. The driver *does* require a parallel `bus-width` between 8 and 16 (`Invalid bus width.` otherwise), which the text never mentions.
+4. The example's unit address `vpfe@f0034000` does not match its `reg = <0x48328000 0x2000>`.
+5. The example's sensor uses `compatible = "ti,ov2659"` and `mclk-frequency`; real boards use `ovti,ov2659`.
+6. It points to `video-interfaces.txt`, which is now `video-interfaces.yaml`.
 
-- compatible is exactly `acme,axc100`
-- one interrupt named `completion`
-- no reset input
+Decide which disagreements the schema must resolve and which belong in the commit message.
 
-### AXC200
+## Task 2: Record The Baseline
 
-- compatible is exactly `acme,axc200`
-- two interrupts ordered and named `completion`, `error`
-- one reset named `core`
-- no AXC100 fallback because old software cannot recover safely from DMA faults
+Build the three DTBs (`make ARCH=arm ti/omap/am437x-sk-evm.dtb ...`, or the manual `cpp` + `dtc` pipeline) and validate them before any schema exists:
 
-The driver reads FIFO depth and silicon revision from hardware. Those are not DT properties.
-
-## Starting Schema
-
-An engineer proposes this file at `Documentation/devicetree/bindings/media/acme,ax-capture.yaml`:
-
-```yaml
-# SPDX-License-Identifier: GPL-2.0-only
-%YAML 1.2
----
-$id: http://devicetree.org/schemas/media/acme,capture.yaml#
-$schema: http://json-schema.org/draft-07/schema#
-
-title: Acme Linux capture driver configuration
-
-maintainers:
-  - Old Developer <old@example.com>
-
-select: false
-
-properties:
-  compatible:
-    enum: [acme,axc100, acme,axc200]
-
-  reg: true
-
-  interrupts:
-    maxItems: 1
-
-  interrupt-names:
-    items:
-      enum: [completion, error]
-
-  clocks:
-    maxItems: 2
-
-  clock-names:
-    items:
-      enum: [bus, sample]
-
-  resets:
-    maxItems: 1
-
-  acme,dma-buffer-size:
-    $ref: /schemas/types.yaml#/definitions/uint32
-
-required:
-  - compatible
-  - reg
-
-additionalProperties: true
-
-examples:
-  - |
-    capture@48000000 {
-        compatible = "acme,axc200";
-        reg = <0x48000000 0x1000>;
-        interrupts = <80>;
-        clocks = <&ccu 12>;
-        acme,dma-buffer-size = <1048576>;
-    };
+```sh
+dt-validate -m -s processed-schema.json am437x-sk-evm.dtb | grep -i vpfe
 ```
 
-Assume the vendor prefix is registered and the maintainer address is obsolete.
-
-## Lab Objectives
-
-Produce:
-
-1. a defect inventory classified by pipeline stage
-2. a corrected schema
-3. one valid AXC100 example and one valid AXC200 example
-4. positive and negative instance fixtures
-5. targeted and broad validation commands
-6. a diagnostic interpretation worksheet
-7. evidence that the binding was selected rather than skipped
-8. a submission-readiness checklist
-
-## Task 1: Audit Identity And Selection
-
-Answer:
-
-- Does `$id` mirror the actual path and filename?
-- Is `$schema` the DT binding meta-schema?
-- Does the title describe hardware?
-- Is the license the preferred form for a new binding?
-- Can the listed maintainer review changes?
-- Will `select: false` ever apply this schema to AXC nodes in platform DTBs?
-- Should an explicit selector exist at all?
-
-Classify which problems should fail `dt_binding_check` and which can remain semantically wrong while tools are quiet.
-
-## Task 2: Audit Properties And Required Sets
-
-For every property, write:
+Expected:
 
 ```text
-hardware meaning:
-standard or vendor-specific type owner:
-allowed cardinality:
-semantic order:
-variant conditions:
-required/optional/forbidden state:
-absence meaning:
+.../target-module@26000/vpfe@0: failed to match any schema with compatible: ['ti,am437x-vpfe']
+endpoint: ti,am437x-vpfe-interface: b'\x00\x00\x00\x00' is not of type 'object', 'integer', 'array', 'boolean', 'null'
+.../target-module@28000/vpfe@0: failed to match any schema with compatible: ['ti,am437x-vpfe']
 ```
 
-Pay particular attention to:
+The second line shows what an untyped vendor property looks like: without a schema, the validator cannot decode its bytes.
 
-- one versus two interrupt entries
-- fixed ordering of `interrupt-names` and `clock-names`
-- the missing second clock in the example
-- AXC200 reset presence and `reset-names`
-- AXC100 reset prohibition
-- graph child ownership
-- removal of the policy property
-- top-level closure
+## Task 3: Define The Contract
 
-## Task 3: Encode Variants
+Fill this table from Task 1, the driver, and `video-interfaces.yaml`:
 
-Define broad common limits under top-level `properties`. Then use compatible-specific conditions to narrow AXC100 and AXC200.
+| Property | Node | Required? | Constraint | Evidence |
+|---|---|---|---|---|
+| `compatible` | VPFE | | | |
+| `reg` | VPFE | | | |
+| `interrupts` | VPFE | | | |
+| `port` | VPFE | | | |
+| `ti,am437x-vpfe-interface` | endpoint | | | |
+| `bus-width` | endpoint | | | |
+| `hsync-active`, `vsync-active` | endpoint | | | |
+| `pinctrl-*`, `status` | VPFE | | | |
 
-Your schema must reject:
+Note that the SoC nodes in `am437x-l4.dtsi` have no clocks: the functional clock sits on the parent `ti,sysc` target module, so the VPFE schema must not require one.
 
-- AXC100 with two interrupts
-- AXC100 with any reset
-- AXC200 with one interrupt
-- AXC200 with no reset
-- either variant with reversed clock names
-- AXC200 with reversed interrupt names
-- the old `acme,dma-buffer-size` property
-- an unknown property typo
-- an invented compatible fallback list
+## Task 4: Write The Schema
 
-Do not solve variants by copying the whole schema into two large `oneOf` branches unless you can justify the maintenance cost.
+Create `Documentation/devicetree/bindings/media/ti,am437x-vpfe.yaml` with `$id`, `$schema`, `title`, `maintainers` (take them from the `TI AM437X VPFE DRIVER` entry in `MAINTAINERS`), `properties`, `required`, closure, and one example. Reference `/schemas/graph.yaml#/$defs/port-base` for the port and `/schemas/media/video-interfaces.yaml#` for the endpoint, and close both with `unevaluatedProperties: false`. Write it before reading the reference solution at the end.
 
-## Task 4: Add The Graph
+## Task 5: Run The Validation Ladder
 
-The optional sensor connection uses the standard graph binding:
-
-```dts
-ports {
-        #address-cells = <1>;
-        #size-cells = <0>;
-
-        port@0 {
-                reg = <0>;
-
-                capture_in: endpoint {
-                        remote-endpoint = <&sensor_out>;
-                };
-        };
-};
+```sh
+make dt_binding_check DT_SCHEMA_FILES=ti,am437x-vpfe.yaml
+make ARCH=arm CHECK_DTBS=y DT_SCHEMA_FILES=ti,am437x-vpfe.yaml \
+        ti/omap/am437x-sk-evm.dtb ti/omap/am437x-gp-evm.dtb ti/omap/am43x-epos-evm.dtb
 ```
 
-Reference the standard graph schema rather than reproducing endpoint fields. Decide whether the example should include the graph, and explain how remote labels/providers are handled in an isolated schema example.
+Without Kbuild, the same gates are `dt-doc-validate -u <bindings-dir> <file>`, `dt-mk-schema -j -o ps.json <bindings-dir>`, `dt-extract-example` plus `cpp` and `dtc -@`, and `dt-validate -m -s ps.json <dtb>`.
 
-## Task 5: Design Examples
+Expected: the schema and example pass; all three DTBs produce no VPFE output at all, including no `failed to match` line. That absence is your selection proof: `-m` would report the node if no schema matched.
 
-Create the smallest useful examples for both variants. Include only headers required by symbolic constants. If you omit the graph from the core example, explain how a separate example or real DTB provides coverage.
+## Task 6: Prove Negative Coverage
 
-For each example, predict:
+Apply each mutation to a copy, re-run the matching gate, and confirm the message:
 
-- preprocessor dependencies
-- parent address/size-cell assumptions
-- `dtc` warnings that could occur
-- schema branch selected
-- exact required resources
-
-## Task 6: Run The Validation Ladder
-
-Write commands for:
-
-1. targeted binding and example validation
-2. full binding validation
-3. affected ARM64 DTB validation against the target schema
-4. broader affected DTB validation
-5. an expected maintainer warning level
-
-Use `O=build` and record the kernel commit, architecture, configuration, `dtschema`, and `dtc` versions.
-
-## Task 7: Prove Negative Coverage
-
-Create a mutation table:
-
-| Fixture | Mutation | Expected owner/rule |
+| Mutation | Gate | Expected message (abridged) |
 |---|---|---|
-| AXC100 valid | add `resets` | AXC100 conditional forbids property |
-| AXC100 valid | reverse clock names | fixed positional `items` |
-| AXC200 valid | remove error IRQ | AXC200 `minItems` |
-| AXC200 valid | remove `reset-names` | AXC200 `required` |
-| AXC200 valid | add `acme,dma-buffer-size` | top-level closure |
-| AXC200 valid | use AXC200, AXC100 fallback list | compatible shape |
+| `bus-width = <20>` on the SK endpoint | DTB | `port:endpoint:bus-width: 20 is greater than the maximum of 16` |
+| `ti,am437x-vpfe-interface = <7>` | DTB | `port:endpoint:ti,am437x-vpfe-interface: 7 is not one of [0, 1, 2, 3, 4]` |
+| interface property moved to the VPFE node | DTB | `'ti,am437x-vpfe-interface' does not match any of the regexes: '^pinctrl-[0-9]+$'` |
+| `bus-width` deleted | DTB | `port:endpoint: 'bus-width' is a required property` |
+| `$id` names `media/ti,vpfe.yaml` | schema | `$id: Cannot determine base path from $id, relative path/filename doesn't match actual path or filename` |
+| interface `$ref` to `uint32` removed | processing | `ti,am437x-vpfe-interface: missing type definition` |
 
-For one mutation, show how you will prove the reported schema filename and instance path correspond to this binding.
+For the DTB mutations, `fdtput` on the SK DTB is enough, for example:
 
-## Task 8: Diagnose Hypothetical Output
-
-Classify and resolve each message:
-
-```text
-.../acme,ax-capture.yaml: $id: relative path/filename doesn't match actual path
+```sh
+E=/ocp@44000000/interconnect@48000000/segment@300000/target-module@26000/vpfe@0/port/endpoint
+cp am437x-sk-evm.dtb f1.dtb && fdtput -t u f1.dtb $E bus-width 20
 ```
 
-```text
-.../capture@48000000: interrupts: [[80]] is too short
-  from schema .../acme,ax-capture.yaml
-```
+The third row shows why the `.txt` placement was wrong: a schema that matched the text would reject every shipped board.
 
-```text
-.../capture@48000000: 'acme,dma-bufer-size' does not match any allowed property
-```
+## Task 7: Find What The Schema Cannot Catch
 
-```text
-.../capture@48000000: failed to match any schema with compatible: ['acme,axc200']
-```
+Explain each of these, and say which tool or review step would catch it:
 
-For the last message, do not assume the compatible is undocumented until checking whether the schema failed and was skipped.
+1. Both SoC nodes declare `reg = <0x0 0x2000>`, but their parent target modules declare `ranges = <0x0 0x26000 0x1000>` and `<0x0 0x28000 0x1000>`, so the child window is larger than the parent's (see [Window Containment](../addressing-and-bus-modeling/simple-bus-ranges-and-nested-translation.md)). `dtc` and `dt-validate` are both silent.
+2. The old example's `vpfe@f0034000` with `reg = <0x48328000 ...>`. Compile it as a standalone DTS and note that `dtc` does not report the mismatch for a node outside a `simple-bus`.
+3. Values the driver accepts but the schema now rejects (for example interface 7). Decide whether that stricter contract can break any shipped DTB.
 
-## Reference Analysis
+## Task 8: Prepare The Submission
 
-### Defect Inventory
+Write the commit for a single patch: subject `dt-bindings: media: ti,am437x-vpfe: Convert to DT schema`, deletion of the `.txt` file, and a message that records every deliberate difference from the text from Task 1 (for example, “Move ti,am437x-vpfe-interface to the endpoint, matching the driver and all in-tree users”). List the validation commands you ran and their results.
 
-The starting proposal has both tool-detectable and semantic problems:
-
-| Defect | Likely gate | Consequence |
-|---|---|---|
-| `$id` omits `ax-` from filename | meta-schema/path check | wrong global identity/reference base |
-| generic JSON Schema `$schema` | DT meta-schema | bypasses/violates DT binding contract |
-| single GPL license | review policy | new bindings normally use preferred dual license |
-| Linux-driver title | semantic review | documents implementation rather than hardware |
-| obsolete maintainer | review/maintenance | no credible owner |
-| `select: false` | selection/semantic | platform nodes never use this concrete binding |
-| `reg: true` | meta-schema/semantic | no device-specific cardinality |
-| one interrupt for all variants | example/DTB validation | AXC200 contract incomplete |
-| unordered resource names | semantic/negative tests | reversals and duplicates may pass |
-| clocks not required or exact | semantic/DTB validation | incomplete nodes pass |
-| reset optional for all variants | semantic/DTB validation | unsafe AXC200 and false AXC100 accepted |
-| no `reset-names` | semantic | role is not fixed |
-| DMA buffer policy property | ABI review | wrong interface, description missing |
-| `additionalProperties: true` | semantic/negative tests | typos and undocumented data pass |
-| incomplete AXC200 example | example validation after fixes | canonical example violates contract |
-
-Some meta-schema versions will produce several errors at once. Fix identity and structure first, then re-run before interpreting later messages.
-
-### Corrected Schema
-
-One defensible schema is:
+## Reference Solution
 
 ```yaml
 # SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
 %YAML 1.2
 ---
-$id: http://devicetree.org/schemas/media/acme,ax-capture.yaml#
+$id: http://devicetree.org/schemas/media/ti,am437x-vpfe.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: Acme AX100 and AX200 capture engines
+title: Texas Instruments AM437x Video Processing Front End (VPFE)
 
 maintainers:
-  - Current Maintainer <maintainer@example.com>
+  - Lad Prabhakar <prabhakar.csengg@gmail.com>
 
-description: |
-  AX capture engines receive samples from an external interface and transfer
-  them to memory. AX200 adds a DMA-fault interrupt and reset recovery input.
+description:
+  The VPFE captures from raw image sensors and video decoders over a
+  parallel bus.
 
 properties:
   compatible:
-    enum:
-      - acme,axc100
-      - acme,axc200
+    const: ti,am437x-vpfe
 
   reg:
     maxItems: 1
 
   interrupts:
-    minItems: 1
-    maxItems: 2
-
-  interrupt-names:
-    minItems: 1
-    maxItems: 2
-
-  clocks:
-    minItems: 2
-    maxItems: 2
-
-  clock-names:
-    items:
-      - const: bus
-      - const: sample
-
-  resets:
     maxItems: 1
 
-  reset-names:
-    items:
-      - const: core
+  port:
+    $ref: /schemas/graph.yaml#/$defs/port-base
+    description: Parallel input from an image sensor or video decoder.
 
-  ports:
-    $ref: /schemas/graph.yaml#/properties/ports
+    properties:
+      endpoint:
+        $ref: /schemas/media/video-interfaces.yaml#
+        unevaluatedProperties: false
+
+        properties:
+          ti,am437x-vpfe-interface:
+            $ref: /schemas/types.yaml#/definitions/uint32
+            enum: [0, 1, 2, 3, 4]
+            default: 0
+            description: |
+              Input interface type:
+                0 - Raw Bayer
+                1 - 8-bit BT.656
+                2 - 10-bit BT.656
+                3 - YCbCr 8-bit
+                4 - YCbCr 16-bit
+
+          bus-width:
+            minimum: 8
+            maximum: 16
+
+          hsync-active: true
+          vsync-active: true
+
+        required:
+          - bus-width
+
+    unevaluatedProperties: false
 
 required:
   - compatible
   - reg
   - interrupts
-  - interrupt-names
-  - clocks
-  - clock-names
-
-allOf:
-  - if:
-      properties:
-        compatible:
-          contains:
-            const: acme,axc100
-    then:
-      properties:
-        interrupts:
-          maxItems: 1
-        interrupt-names:
-          items:
-            - const: completion
-        resets: false
-        reset-names: false
-
-  - if:
-      properties:
-        compatible:
-          contains:
-            const: acme,axc200
-    then:
-      properties:
-        interrupts:
-          minItems: 2
-        interrupt-names:
-          items:
-            - const: completion
-            - const: error
-      required:
-        - resets
-        - reset-names
+  - port
 
 additionalProperties: false
 
 examples:
   - |
-    capture@48000000 {
-        compatible = "acme,axc100";
-        reg = <0x48000000 0x1000>;
-        interrupts = <80>;
-        interrupt-names = "completion";
-        clocks = <&capture_bus_clk>, <&capture_sample_clk>;
-        clock-names = "bus", "sample";
-    };
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
 
-  - |
-    capture@48000000 {
-        compatible = "acme,axc200";
-        reg = <0x48000000 0x1000>;
-        interrupts = <80>, <81>;
-        interrupt-names = "completion", "error";
-        clocks = <&capture_bus_clk>, <&capture_sample_clk>;
-        clock-names = "bus", "sample";
-        resets = <&capture_reset 7>;
-        reset-names = "core";
+    vpfe@0 {
+        compatible = "ti,am437x-vpfe";
+        reg = <0x0 0x2000>;
+        interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
+
+        port {
+            endpoint {
+                remote-endpoint = <&ov2659_ep>;
+                ti,am437x-vpfe-interface = <0>;
+                bus-width = <8>;
+                hsync-active = <0>;
+                vsync-active = <0>;
+            };
+        };
     };
 ```
 
-The exact accepted form must be tested against the current kernel meta-schemas. If the relevant subsystem has an additional common device schema, reference it and revisit top-level closure—composition may require `unevaluatedProperties: false`. The graph `$ref` is attached to the `ports` property itself, so the parent still explicitly owns that property name.
+Points to check against your version:
 
-The conditions could include `required: [compatible]` inside `if`, but top-level `required` already guarantees `compatible` exists. Keeping the discriminator explicit can improve clarity in extracted helper conditions.
-
-### Example Strategy
-
-Two examples are justified because the resource contracts differ materially. The examples use numeric interrupts to avoid an interrupt-header dependency and dummy phandle labels supplied by the example harness. If a current kernel's example harness requires explicit provider scaffolding for these references, follow the errors and nearby binding conventions rather than bloating the binding preemptively.
-
-Graph coverage can come from a third minimal example or a real platform DTB. If included in an isolated example, both endpoint labels must resolve, so a small peer node or accepted dummy topology may be necessary. Do not include an entire sensor binding merely to make the example look realistic.
-
-### Validation Commands
-
-```bash
-make O=build dt_binding_check \
-  DT_SCHEMA_FILES=Documentation/devicetree/bindings/media/acme,ax-capture.yaml
-
-make O=build dt_binding_check
-
-make O=build ARCH=arm64 dtbs_check \
-  DT_SCHEMA_FILES=Documentation/devicetree/bindings/media/acme,ax-capture.yaml
-
-make O=build ARCH=arm64 dtbs_check
-
-make O=build ARCH=arm64 W=1 dtbs_check
-```
-
-Use the configured cross-compiler/environment required by the tree. A fixed-string directory fragment may be more appropriate during iteration, but record exactly what it selects.
-
-### Diagnostic Interpretation
-
-- `$id` mismatch: binding identity/meta-schema failure; correct the URI to mirror the file path.
-- AXC200 interrupt list too short: the binding selected correctly and its AXC200 condition rejected an incomplete instance; fix DTS unless the hardware contract is wrong.
-- `acme,dma-bufer-size` rejected: closure caught either a typo or an undocumented policy property; remove it rather than documenting the typo.
-- no matching schema: first run targeted `dt_binding_check`. If the schema is invalid or `select: false`, `dtbs_check` can lack the processed binding. Only after proving schema health should you investigate compatible spelling and selection.
-
-### Selection Proof
-
-Use a temporary negative mutation on a representative AXC200 node:
-
-```text
-remove reset-names
-run targeted dtbs_check
-observe instance path /.../capture@48000000
-observe schema path .../media/acme,ax-capture.yaml
-restore reset-names
-rerun and confirm that diagnostic disappears
-```
-
-This proves the schema participated. Keep the valid fixture and automate the negative case outside committed production DTS when the project has a suitable test-fixture framework.
-
-## Submission Readiness
-
-Before the binding patch is ready:
-
-- [ ] hardware contract and ABI review are complete
-- [ ] `$id`, filename, license, maintainers, and vendor prefix are correct
-- [ ] every property has an owner, exact type, cardinality, and absence meaning
-- [ ] resource order and parallel names agree
-- [ ] variants require and forbid the correct resources
-- [ ] schema and every nested object are closed appropriately
-- [ ] examples compile and exercise meaningful valid variants
-- [ ] targeted and full `dt_binding_check` pass
-- [ ] affected DTBs select the schema and pass
-- [ ] negative fixtures fail for the intended rules
-- [ ] `dtc`/maintainer warning levels add no unexplained diagnostics
-- [ ] binding patch precedes its driver and DTS users in the series
-- [ ] exact commands, versions, hardware tests, and baseline warnings are reported
+- `ti,am437x-vpfe-interface` lives under the endpoint, with a `uint32` type, an `enum`, and `default: 0`
+- `bus-width` is required with `minimum: 8` and `maximum: 16`, matching the driver
+- there are no `clocks`; `pinctrl-*` and `status` need no declaration because `dt-schema` admits them
+- the example includes `arm-gic.h` and refers to a sensor endpoint it does not define, which works because `dt-extract-example` emits `/plugin/;`
 
 ## Completion Criteria
 
-You have completed the lab when you can explain not only why the corrected schema passes, but also why each invalid mutation fails, which schema branch reports it, and how you know the binding was not skipped.
+The lab is complete when you can show:
+
+- the defect list from Task 1 with the action for each
+- the baseline output and the clean output after the schema
+- the contract table
+- the schema passing meta-validation and example validation
+- all six mutations producing their expected messages
+- explanations for the three gaps in Task 7
+- a commit message that would survive review
 
 ## Authoritative References
 

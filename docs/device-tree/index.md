@@ -12,6 +12,14 @@ Device Tree topics focused on describing embedded hardware for Linux, U-Boot, fi
 
 Device Tree appears in kernel, U-Boot, TI SDK, board porting, pinmux, clocks, regulators, networking, storage, and remoteproc work. This section is the standalone roadmap for learning it systematically.
 
+## Real Hardware Examples
+
+Examples use real upstream sources wherever possible, primarily the TI AM64x family and its AM642 SK and AM642 EVM boards, with AM62x boards where AM64x lacks the hardware (display, camera, audio, CPU frequency scaling). Unless stated otherwise, DTS excerpts come from mainline Linux `arch/arm64/boot/dts/ti/` (v6.19-rc1), bindings from `Documentation/devicetree/bindings/`, and U-Boot examples from TI U-Boot. Excerpts are trimmed: `/* ... */` marks omitted properties or nodes. Clock and power-domain specifiers such as `<&k3_clks 146 0>` and `<&k3_pds 146 TI_SCI_PD_EXCLUSIVE>` are TI-SCI system-firmware device and clock IDs.
+
+Other real sources appear where they teach something the TI boards cannot: BeaglePlay (an independent AM625 board, used for porting), AM62x LP SK and AM62A7 SK, J721E SK and AM654 boards, AM437x SK (parallel camera), Kontron SA67, Raspberry Pi 4, Arm Juno, Allwinner A64, and Renesas ULCB. Schema diagnostics were reproduced with `dt-schema` 2026.9, overlay and libfdt results with DTC v1.7.0.
+
+Where a page teaches an anti-pattern or a deliberately broken description, the example is marked as invented or hypothetical.
+
 ## Learning Materials
 
 1. [Official Device Tree Documentation Reading Checklist](official-docs-reading/index.md)
@@ -21,18 +29,18 @@ Device Tree appears in kernel, U-Boot, TI SDK, board porting, pinmux, clocks, re
 5. [Standard Nodes And Properties](standard-nodes-and-properties.md)
 6. [Addressing And Bus Modeling](addressing-and-bus-modeling.md)
 7. [Driver Matching](driver-matching.md)
-8. [Pinctrl, GPIOs, And Interrupts](pinctrl-gpios-and-interrupts.md)
-9. [Clocks, Resets, Regulators, And Power](clocks-resets-regulators-and-power.md)
-10. [Common Peripheral Nodes](common-peripheral-nodes.md)
-11. [Graph Bindings And Complex Data Paths](graph-bindings-and-complex-data-paths.md)
-12. [Memory, Firmware, And Heterogeneous SoCs](memory-firmware-and-heterogeneous-socs.md)
-13. [U-Boot And Bootloader Device Tree](u-boot-and-bootloader-device-tree.md)
-14. [Boot-Time Mutation And Ownership](boot-time-mutation-and-ownership.md)
-15. [Binding Design And Stable ABI](binding-design-and-stable-abi.md)
-16. [Writing And Validating Binding Schemas](writing-and-validating-binding-schemas.md)
-17. [Overlays In Depth](overlays-in-depth.md)
-18. [Build And Diagnostic Tools](build-and-diagnostic-tools.md)
-19. [Runtime Inspection](runtime-inspection.md)
+8. [Runtime Inspection](runtime-inspection.md)
+9. [Pinctrl, GPIOs, And Interrupts](pinctrl-gpios-and-interrupts.md)
+10. [Clocks, Resets, Regulators, And Power](clocks-resets-regulators-and-power.md)
+11. [Common Peripheral Nodes](common-peripheral-nodes.md)
+12. [Graph Bindings And Complex Data Paths](graph-bindings-and-complex-data-paths.md)
+13. [Memory, Firmware, And Heterogeneous SoCs](memory-firmware-and-heterogeneous-socs.md)
+14. [Binding Design And Stable ABI](binding-design-and-stable-abi.md)
+15. [Writing And Validating Binding Schemas](writing-and-validating-binding-schemas.md)
+16. [Overlays In Depth](overlays-in-depth.md)
+17. [U-Boot And Bootloader Device Tree](u-boot-and-bootloader-device-tree.md)
+18. [Boot-Time Mutation And Ownership](boot-time-mutation-and-ownership.md)
+19. [Build And Diagnostic Tools](build-and-diagnostic-tools.md)
 20. [Security And Production Lifecycle](security-and-production-lifecycle.md)
 21. [Product-Scale Maintenance And Engineering](product-scale-maintenance-and-engineering.md)
 22. [Board Porting Workflow](board-porting-workflow.md)
@@ -143,6 +151,20 @@ Device Tree appears in kernel, U-Boot, TI SDK, board porting, pinmux, clocks, re
 - binding-driven driver expectations
 - optional vs required properties
 
+### Runtime Inspection
+
+- `/proc/device-tree`
+- `/sys/firmware/devicetree/base`
+- decoded DTBs with `dtc`
+- checking deployed DTB identity
+- `dmesg` probe logs
+- driver bind/unbind checks
+- comparing source DTS to runtime tree
+- inspecting NUL-terminated property values safely
+- inspecting binary cells and byte arrays
+- comparing DTB hashes across build, boot media, and target
+- inspecting the tree from U-Boot before kernel handoff
+
 ### Pinctrl, GPIOs, And Interrupts
 
 - pinmux
@@ -220,31 +242,6 @@ Device Tree appears in kernel, U-Boot, TI SDK, board porting, pinmux, clocks, re
 - OP-TEE
 - secure-world reserved memory
 
-### U-Boot And Bootloader Device Tree
-
-- U-Boot control DTB
-- SPL DTB
-- Linux DTB
-- U-Boot-specific properties
-- pre-relocation properties
-- overlays applied by U-Boot
-- FIT image DTB selection
-- environment-driven DTB loading
-
-### Boot-Time Mutation And Ownership
-
-- bootloader fixups
-- firmware fixups
-- memory-size updates
-- MAC-address injection
-- serial-number injection
-- `/chosen` modifications
-- overlay application order
-- DTB relocation and available padding
-- ownership of each boot-time mutation
-- built DTB vs bootloader-visible tree vs Linux runtime tree
-- tracing the exact DTB and overlays selected during boot
-
 ### Binding Design And Stable ABI
 
 - describing hardware rather than Linux implementation details
@@ -307,6 +304,31 @@ Device Tree appears in kernel, U-Boot, TI SDK, board porting, pinmux, clocks, re
 - lifetime hazards when dynamically removing overlay nodes
 - limitations of overlays as a board-variant mechanism
 
+### U-Boot And Bootloader Device Tree
+
+- U-Boot control DTB
+- SPL DTB
+- Linux DTB
+- U-Boot-specific properties
+- pre-relocation properties
+- overlays applied by U-Boot
+- FIT image DTB selection
+- environment-driven DTB loading
+
+### Boot-Time Mutation And Ownership
+
+- bootloader fixups
+- firmware fixups
+- memory-size updates
+- MAC-address injection
+- serial-number injection
+- `/chosen` modifications
+- overlay application order
+- DTB relocation and available padding
+- ownership of each boot-time mutation
+- built DTB vs bootloader-visible tree vs Linux runtime tree
+- tracing the exact DTB and overlays selected during boot
+
 ### Build And Diagnostic Tools
 
 - `dtc`
@@ -322,20 +344,6 @@ Device Tree appears in kernel, U-Boot, TI SDK, board porting, pinmux, clocks, re
 - tracing a generated DTB to its source and build rule
 - `libfdt`
 - firmware and bootloader use of `libfdt`
-
-### Runtime Inspection
-
-- `/proc/device-tree`
-- `/sys/firmware/devicetree/base`
-- decoded DTBs with `dtc`
-- checking deployed DTB identity
-- `dmesg` probe logs
-- driver bind/unbind checks
-- comparing source DTS to runtime tree
-- inspecting NUL-terminated property values safely
-- inspecting binary cells and byte arrays
-- comparing DTB hashes across build, boot media, and target
-- inspecting the tree from U-Boot before kernel handoff
 
 ### Security And Production Lifecycle
 

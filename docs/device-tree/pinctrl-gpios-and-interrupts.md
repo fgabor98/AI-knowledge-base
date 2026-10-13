@@ -27,7 +27,8 @@ After completing this module, you should be able to:
 
 ## Prerequisites
 
-Complete [Driver Matching](driver-matching.md). This module assumes you can resolve providers, decode specifier widths, distinguish Linux devices from DT nodes, and determine whether probe succeeded.
+Complete [Runtime Inspection](runtime-inspection.md). This module assumes you can resolve providers, decode specifier widths, distinguish Linux devices from DT nodes, and determine whether probe succeeded or deferred.
+
 
 ## Learning Path
 

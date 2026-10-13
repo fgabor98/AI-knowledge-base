@@ -73,20 +73,7 @@ The first unexplained difference identifies the responsible stage. Comparing sou
 
 ## Expected Differences
 
-Bootloader/firmware may legitimately change:
-
-- `/memory` banks
-- `/reserved-memory` or reservation map
-- `/chosen/bootargs`
-- initrd bounds
-- stdout/console path
-- random/KASLR seeds
-- MAC addresses and product identity
-- status/topology selected from authenticated board data
-
-Linux live overlays can later add/update nodes and properties. Each difference still needs a named owner, input, validation rule, and lifecycle.
-
-Do not publish sensitive `/chosen` seed values in diffs.
+Bootloader and firmware may legitimately change memory, reservations, `/chosen`, console, seeds, MAC addresses, identity, and status ([What The Bootloader Can Change](../foundations/source-and-binary-artifacts.md#what-the-bootloader-can-change)), and Linux live overlays can later add or update nodes. Each difference still needs a named owner, input, validation rule, and lifecycle. Do not publish sensitive `/chosen` seed values in diffs.
 
 ## Reservation Blind Spot
 
@@ -110,23 +97,15 @@ Whole-tree diffs are noisy. Query important invariants:
 fdtget live-tree.dtb / model
 fdtget live-tree.dtb / compatible
 fdtget live-tree.dtb /chosen stdout-path
-fdtget live-tree.dtb /soc/device@48000000 status
-fdtget -tx live-tree.dtb /soc/device@48000000 clocks
+fdtget live-tree.dtb /bus@f4000/mmc@fa00000 status
+fdtget -tx live-tree.dtb /bus@f4000/mmc@fa00000 clocks
 ```
 
 Use exact node paths discovered from the capture. Build a table of expected values and owners.
 
 ## Phandle Normalization
 
-Phandle numbers can change between separately compiled or composed trees while relationships remain equivalent. A raw DTS diff can therefore show many numeric changes.
-
-For relationship-aware comparison:
-
-1. resolve each consumer phandle to its provider node path
-2. decode arguments with provider cells/binding
-3. compare `(consumer property/name -> provider path + semantic args)`
-
-Do not normalize phandles away when diagnosing corrupt references.
+Phandle numbers can change between separately compiled or composed trees while relationships remain equivalent. For relationship-aware comparison, resolve each consumer phandle to its provider path, decode arguments with the provider binding, and compare `(consumer property/name -> provider path + semantic args)`. Do not normalize phandles away when diagnosing corrupt references.
 
 ## Source-To-Live Attribution
 
@@ -143,21 +122,7 @@ Decompiled live DTS contains no reliable original include line information. Attr
 
 ## Capture Consistency
 
-For a field bundle:
-
-```text
-timestamp/boot ID
-kernel release/build ID
-dtc version
-raw /sys/firmware/fdt hash/copy if available
-live-tree reconstructed DTB and decoded DTS
-root identity and /chosen redacted summary
-target raw property files
-bootloader pre-handoff hash/capture
-overlay/runtime mutation log
-```
-
-Use `/proc/sys/kernel/random/boot_id` as a boot-instance identifier when available; it is not an artifact version.
+Include the `dtc` version, raw `/sys/firmware/fdt` copy, reconstructed live DTB and decoded DTS, and the overlay/runtime mutation log in the [runtime evidence bundle](../runtime-inspection.md#snapshot-before-mutation). Use `/proc/sys/kernel/random/boot_id` as a boot-instance identifier when available; it is not an artifact version.
 
 ## Common Diff Traps
 

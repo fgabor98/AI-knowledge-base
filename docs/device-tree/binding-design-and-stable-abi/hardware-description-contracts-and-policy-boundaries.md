@@ -56,31 +56,36 @@ The same numeric value can belong in different places depending on its meaning. 
 
 Ask whether an independently written operating system could understand the property from its name and binding alone. If the description says “set this so driver function X takes branch Y,” the abstraction is wrong.
 
-Bad interface:
+Take the Cadence CSI-2 receiver on AM62x. A driver-shaped proposal for it might be (hypothetical):
 
 ```dts
-capture@40000000 {
-        compatible = "acme,capture-v2";
-        acme,use-polling;
-        acme,allocate-large-buffer;
-        acme,skip-reset-workaround;
+cdns_csi2rx0: csi-bridge@30101000 {
+        compatible = "ti,j721e-csi2rx", "cdns,csi2rx";
+        ti,use-polling;
+        ti,allocate-large-buffer;
+        ti,skip-reset-workaround;
 };
 ```
 
-These properties select implementation techniques. Model the underlying truth instead:
+These properties select implementation techniques. The real node in `k3-am62-main.dtsi` models the hardware instead:
 
 ```dts
-capture@40000000 {
-        compatible = "acme,capture-v2";
-        reg = <0x40000000 0x1000>;
-        interrupts = <42>, <43>;
-        interrupt-names = "completion", "error";
-        resets = <&resetc 7>;
-        reset-names = "core";
+cdns_csi2rx0: csi-bridge@30101000 {
+        compatible = "ti,j721e-csi2rx", "cdns,csi2rx";
+        reg = <0x00 0x30101000 0x00 0x1000>;
+        interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 141 IRQ_TYPE_LEVEL_HIGH>;
+        interrupt-names = "error_irq", "irq";
+        clocks = <&k3_clks 182 0>, <&k3_clks 182 3>, /* ... */;
+        clock-names = "sys_clk", "p_clk", /* pixel_if0..3_clk */;
+        phys = <&dphy0>;
+        phy-names = "dphy";
 };
 ```
 
-If a particular revision has a reset erratum, encode it in compatible-specific match data rather than a property named after the workaround.
+Whether to poll or use the interrupts, and how large a buffer to allocate, are driver decisions made from these facts.
+
+A silicon erratum belongs in driver data keyed by something the hardware identifies, not in a property named after the workaround. `sdhci_am654` disables HS400 on AM62P SR1.0 and SR1.1 through `soc_device_match()` on the SoC family and revision; no board DT says “skip HS400.”
 
 ## Nodes Are Hardware, Not Driver Instances
 
@@ -126,11 +131,11 @@ A normal-world DT cannot grant itself access by describing a secure device.
 
 Classify each proposal before looking at a driver:
 
-1. `vendor,dma-buffer-size = <1048576>` chosen to reduce dropped frames.
-2. `max-frequency = <25000000>` due to a level shifter on this board.
-3. `vendor,revision = <3>` even though a reliable revision register exists.
-4. `reset-gpios` for a peripheral reset wired only on one carrier.
-5. `vendor,use-new-api` added during a driver rewrite.
+1. `ti,dma-buffer-size = <1048576>` on the CSI-2 shim, chosen to reduce dropped frames (hypothetical).
+2. `max-frequency = <25000000>` on an SD host because of a level shifter on this board.
+3. `ti,silicon-revision = <2>` on the AM62P SD host, although the SoC revision is readable through socinfo (hypothetical).
+4. `reset-gpios` on BeaglePlay's Ethernet PHY, wired to `main_gpio0` line 15.
+5. `ti,use-new-api` added during a driver rewrite (hypothetical).
 
 Expected reasoning:
 

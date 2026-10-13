@@ -8,270 +8,171 @@ last_reviewed: null
 
 # Bootloader DT Selection And Handoff Lab
 
-This lab traces a fictional dual-board product from ROM through SPL and U-Boot into Linux. A shared firmware image contains two control DTBs, a signed FIT with one kernel and two Linux DTBs, and an optional authenticated mezzanine overlay. The goal is to prove selection, memory safety, verification, and final handoff.
+This lab traces how one TI U-Boot build boots two different boards, the AM642 EVM and the AM642 SK, from ROM to Linux. Board identity comes from an I²C EEPROM and is consumed four times: by the R5 SPL to pick its own DTB and DRAM configuration, by the R5 SPL again to pick the A53 SPL's DTB from `tispl.bin`, by the A53 SPL to pick U-Boot's DTB from `u-boot.img`, and by U-Boot to pick the Linux DTB file. Sources are TI U-Boot (`ti-u-boot`, v2026.01-rc3) and mainline Linux.
 
 ## Objectives
 
 By the end, you should be able to:
 
-- inventory every tree-shaped artifact and its consumer
-- derive an early-phase dependency closure
-- calculate SRAM and DRAM image ranges
-- reproduce SPL and FIT configuration selection
-- verify that configuration, DTB, and overlay policy share one trust chain
-- distinguish control and working FDT runtime addresses
-- capture the final Linux-bound DTB and its provenance
-- diagnose deliberate selection, sizing, and trust faults
+- list every DT-shaped artifact in the two-board image and its consumer
+- trace the SPL dependency closure needed to read the board EEPROM
+- prove the R5 SPL SRAM budget from configuration
+- follow each of the four selection points, including its fallback
+- plan the DRAM addresses used by the default environment
+- predict the failure signature when identity is missing, wrong, or overridden
 
-## Product Contract
+## Inputs
 
-Assume:
-
-- ROM loads at most 256 KiB into SRAM at `0x00100000`
-- SRAM ends at `0x00180000`; the remainder is available for SPL runtime
-- SPL chooses Board A or B using a CRC-protected EEPROM identifier
-- generic I²C pins and timing are identical on both boards
-- Board A and B require different PMIC/DRAM configuration
-- SPL initializes DRAM and loads U-Boot proper plus a signed FIT
-- U-Boot proper uses the control DTB selected by SPL
-- the FIT contains one kernel and two Linux DTBs
-- an optional mezzanine is identified by a trusted product manifest and uses one DTBO
-- U-Boot proper is authenticated by the previous stage
-- FIT verification keys are embedded in its control DTB
-
-Compatible strings, addresses, and commands are illustrative. A real product must use its SoC's ROM format, U-Boot version, linker scripts, and verified-boot design.
+- TI U-Boot: `configs/am64x_evm_r5_defconfig`, `configs/am64x_evm_a53_defconfig`, `arch/arm/dts/k3-am64x-binman.dtsi`, `arch/arm/dts/k3-am642-r5-{evm,sk}.dts`, `board/ti/am64x/evm.c`, `board/ti/common/board_detect.c`, `arch/arm/mach-k3/am64x/am642_init.c`, `include/env/ti/{ti_common,mmc}.env`, `board/ti/am64x/am64x.env`
+- Linux: `k3-am642-evm.dts`, `k3-am642-sk.dts`
+- for Steps 7–9, an AM642 SK and optionally an AM642 EVM, both with serial console
 
 ## Step 1: Create The Artifact Ledger
 
-| Artifact | Consumer | Selector | Trust |
-|---|---|---|---|
-| `spl/u-boot-spl.bin` | ROM/CPU | ROM boot policy | ROM authentication |
-| generic SPL DTB | SPL before EEPROM read | built with SPL | covered by SPL image |
-| Board A/B control DTB | SPL then U-Boot | validated EEPROM ID | authenticated U-Boot package |
-| binman description | build tooling | board build config | release build provenance |
-| FIT image tree | SPL/U-Boot loader | FIT parser | signed configuration |
-| Board A/B Linux DTB | Linux after selection | FIT configuration | config signature |
-| mezzanine DTBO | U-Boot working FDT | signed manifest | authenticated overlay |
+Build both configurations following TI's documentation (R5 first, then A53 with TF-A and OP-TEE). Then list every DT-shaped artifact:
 
-Explain why the FIT image tree and binman description are not hardware DTBs.
+| Artifact | Built from | Packaged in | Consumer |
+|---|---|---|---|
+| R5 SPL DTBs (EVM, SK) | `k3-am642-r5-evm.dts`, `k3-am642-r5-sk.dts` | multi-DTB FIT inside the R5 SPL | R5 SPL |
+| A53 SPL DTBs | `spl/dts/ti/k3-am642-{evm,sk}.dtb` | `tispl.bin` `fdt-0`, `fdt-1` | R5 SPL selects, A53 SPL uses |
+| U-Boot DTBs | `u-boot.dtb` (EVM) and `dts/upstream/src/arm64/ti/k3-am642-sk.dtb` | `u-boot.img` `fdt-0`, `fdt-1` | A53 SPL selects, U-Boot uses |
+| Linux DTBs | Linux `ti/k3-am642-{evm,sk}.dtb` | root filesystem `/boot/dtb/ti/` | U-Boot loads, Linux uses |
+| the binman description | `k3-am64x-binman.dtsi` | none (build input) | binman |
+
+Record hashes for each, and run `mkimage -l tispl.bin` and `mkimage -l u-boot.img` to confirm two configurations in each, with descriptions `k3-am642-evm` and `k3-am642-sk`.
 
 ## Step 2: Audit The SPL Dependency Closure
 
-SPL needs:
+The R5 SPL must read the EEPROM before it knows the board. Using the R5 SPL's EVM DTB (the one it starts on), confirm that these nodes survive phase filtering, and find where each `bootph-*` comes from (Linux DTS or `-u-boot.dtsi`):
 
 ```text
-SRAM and timer
-  -> generic pinctrl
-  -> I2C controller
-  -> EEPROM
-  -> selected PMIC/regulators
-  -> selected DRAM controller/configuration
-  -> boot storage
-  -> hash/signature implementation
+main_i2c0 (bootph-all in Linux k3-am642-{evm,sk}.dts)
+  -> main_i2c0_pins_default, main_pmx0
+  -> its clock and power domain providers (k3_clks, k3_pds via dmsc)
+  -> eeprom@50 (EVM) / eeprom@51 (SK): not needed; board_detect.c talks to the address directly
 ```
 
-The generic SPL tree must contain enough I²C dependencies to read identity before switching to the board-specific selection. Both selected trees must contain their complete PMIC, DRAM, and storage dependency closures, with appropriate `bootph-*` properties and phase drivers.
-
-Decompile all phase DTBs and verify the closure rather than reading only source files.
+Then compare `main_i2c0` in the two Linux files. Both use pads `0x0260`/`0x0264` (I2C0_SCL/SDA, `PIN_INPUT_PULLUP`) at 400 kHz. Explain why that sameness is what makes it safe to start on the EVM tree.
 
 ## Step 3: Prove The SRAM Budget
 
-Assume the map reports:
+From `am64x_evm_r5_defconfig`:
 
 ```text
-SPL text+rodata+data  176 KiB
-SPL BSS                28 KiB
-generic SPL DTB         9 KiB
-stack reservation      16 KiB
-malloc/global data     20 KiB
-handoff/bloblist        4 KiB
+CONFIG_SPL_TEXT_BASE=0x70000000
+CONFIG_SPL_MAX_SIZE=0x180000
+CONFIG_SPL_SIZE_LIMIT=0x190000
+CONFIG_SPL_SIZE_LIMIT_PROVIDE_STACK=0x4000
+CONFIG_SPL_BSS_START_ADDR=0x7019b800
+CONFIG_SPL_BSS_MAX_SIZE=0x4000
 ```
 
-The ROM-loaded bytes are 185 KiB before format/header/padding, under its 256 KiB limit. Runtime demand is:
+Draw the interval map, and add `CONFIG_K3_ATF_LOAD_ADDR=0x701c0000` from the A53 defconfig. Then measure: `size spl/u-boot-spl`, the size of `spl/u-boot-spl.bin` with its appended multi-DTB FIT, and compare against both limits. Explain why adding a third board to `CONFIG_SPL_OF_LIST` costs SRAM even if that board never boots.
 
-```text
-176 + 28 + 9 + 16 + 20 + 4 = 253 KiB
-```
+## Step 4: Fill The Selection Table
 
-The 512 KiB SRAM window leaves room, but placement still matters. Draw actual intervals from linker and binman maps and prove BSS clearing cannot overwrite the DTB. Preserve warning headroom for key rotation and recovery fixes.
+For each row, name the function, the input, and the result:
 
-## Step 4: Define Selection
+| Selection point | Code | EVM | SK | SK with blank EEPROM |
+|---|---|---|---|---|
+| R5 SPL's own DTB | `do_dt_magic()` → `fdtdec_resetup()` | | | |
+| A53 SPL DTB in `tispl.bin` | `fit_find_config_node()` → `board_fit_config_name_match()` | | | |
+| U-Boot DTB in `u-boot.img` | same, in the A53 SPL | | | |
+| Linux DTB file | `setup_board_eeprom_env()` → `ti_set_fdt_env()` | | | |
 
-EEPROM record:
-
-```text
-magic | format-version | board-id | revision | feature-bits | CRC
-```
-
-Policy:
-
-1. reject invalid magic, format, length, or CRC
-2. map known Board A revisions to `board-a`
-3. map known Board B revisions to `board-b`
-4. reject unsupported IDs into authenticated recovery
-5. record raw identity source and normalized selection in the handoff
-
-Do not default an unknown ID to Board A: incompatible PMIC or DRAM settings can damage hardware or corrupt memory.
+Read `board_detect.c` to see that the EEPROM is tried at `0x50`, then `0x51`; the EVM's is at `0x50` and the SK's at `0x51`. For the blank-EEPROM column, follow every fallback: `board_fit_config_name_match()` accepts the EVM name when the EEPROM was not read, `fit_find_config_node()` falls back to `default = "conf-0"`, and `ti_set_fdt_env()` falls back to `CONFIG_DEFAULT_DEVICE_TREE`.
 
 ## Step 5: Inspect FIT Pairing
 
-A simplified configuration section:
-
-```dts
-configurations {
-        default = "conf-a";
-
-        conf-a {
-                description = "Product Board A";
-                kernel = "kernel";
-                fdt = "fdt-a";
-                signature {
-                        algo = "sha256,rsa2048";
-                        key-name-hint = "prod";
-                        sign-images = "kernel", "fdt";
-                };
-        };
-
-        conf-b {
-                description = "Product Board B";
-                kernel = "kernel";
-                fdt = "fdt-b";
-                signature {
-                        algo = "sha256,rsa2048";
-                        key-name-hint = "prod";
-                        sign-images = "kernel", "fdt";
-                };
-        };
-};
-```
-
-Use current FIT syntax and tooling for a real build. Prove that explicit selection overrides an unsuitable default and that the configuration signature protects the kernel/DTB association. Confirm the production key is required by the authenticated control DTB.
+In the binman source, confirm that `conf-0` pairs `fdt-0` (EVM) and `conf-1` pairs `fdt-1` (SK) in both FITs, and that configurations are matched by `description`. Explain what would happen if a developer renamed `conf-1`'s description to `k3-am642-sk-rev2` without changing `board_fit_config_name_match()`.
 
 ## Step 6: Plan DRAM Addresses
 
-Assume:
+From `ti_common.env` and `am64x.env`:
 
 ```text
-U-Boot relocated    [0xbf000000, 0xbf200000)
-malloc/stack reserve[0xbee00000, 0xbf000000)
-FIT source          [0x90000000, 0x94000000)
-kernel output       [0x80080000, 0x84080000)
-initrd              [0x88000000, 0x8a000000)
-working FDT         [0x87000000, 0x87040000)
-overlay blob        [0x87100000, 0x87110000)
+loadaddr / kernel_addr_r  0x82000000
+fdtaddr / fdt_addr_r      0x88000000
+rdaddr / ramdisk_addr_r   0x88080000
+dtboaddr                  0x89000000
+addr_fit                  0x90000000
+rd_spec                   -          (no initrd by default)
 ```
 
-All intervals are illustrative and nonoverlapping. Confirm decompressor behavior, actual image sizes, reserved memory, and architecture constraints. The 256 KiB working-FDT window must cover base, overlay growth, and later fixups.
+`get_overlay_mmc` runs `fdt resize 0x100000` on the DTB at `fdtaddr`. Compute the largest base DTB plus overlays that fits before it reaches `rdaddr`, and decide whether that matters with the default `rd_spec=-` and with an initrd loaded. Also compute the largest `Image` that fits below `fdtaddr`.
 
 ## Step 7: Execute And Capture Selection
 
-Host-side:
-
-```sh
-mkimage -l product.itb
-binman ls -i firmware.bin
-fdtdump build/u-boot.dtb
-fdtdump build/spl/u-boot-spl.dtb
-sha256sum firmware.bin product.itb board-a.dtb board-b.dtb mezzanine.dtbo
-```
-
-U-Boot-side:
+On the SK, capture the full serial log from power-on. Expected markers include:
 
 ```text
-=> bdinfo
-=> fdt addr -c
-=> fdt print -c /model
-=> printenv fdtcontroladdr fdt_addr_r fdtfile
-=> iminfo ${fit_addr}
-=> fdt addr
-=> fdt print /model
+EEPROM not available at 0x50, trying to read at 0x51
 ```
 
-Capture SPL board-ID log, chosen control tree, FIT configuration, signature result, working-FDT address, overlay decision, and the final boot command.
+At the U-Boot prompt:
 
-## Step 8: Apply The Mezzanine Overlay
+```text
+=> printenv board_name fdtfile
+=> fdt addr
+=> fdt addr -c
+=> fdt print -c /model
+```
 
-Only after the signed product manifest authorizes it:
+Expected: `board_name=am64x_skevm`, `fdtfile=ti/k3-am642-sk.dtb`, and a control-FDT model of `Texas Instruments AM642 SK`. Repeat on the EVM if available.
 
-1. load and authenticate `mezzanine.dtbo`
-2. validate it against selected board/revision and kernel bundle
-3. copy the verified base DTB to the working buffer
-4. reserve sufficient space
-5. apply the overlay once
-6. inspect expected nodes and conflicting resources
-7. on failure, discard the buffer and enter defined fallback
+## Step 8: Apply An Overlay
 
-Record ordered input hashes and final DTB hash. Do not apply it to the control FDT; U-Boot does not need to bind the mezzanine merely because Linux will.
+On the EVM, set `name_overlays` to `ti/k3-am642-evm-icssg1-dualemac.dtbo` and boot through the default `bootcmd`. Confirm that `get_overlay_mmc` loaded and applied it (`fdt print /icssg1-eth` before `booti`, if you stop there). Then set it to a file that does not exist, and note that the boot continues without any error that stops it.
 
 ## Step 9: Confirm Linux Handoff
 
-Before the final jump, capture the working DTB from memory using a platform-appropriate U-Boot command or debugger. After boot:
-
 ```sh
-tr -d '\\0' </proc/device-tree/model
-tr '\\0' '\\n' </proc/device-tree/compatible
-cat /proc/cmdline
-dtc -I fs -O dts -o linux-live.dts /sys/firmware/devicetree/base
+cat /proc/device-tree/model
+tr '\0' '\n' < /proc/device-tree/compatible
+dmesg | grep -i 'machine model'
 ```
 
-Compare:
-
-```text
-packaged base DTB
-  -> authorized overlay result
-  -> U-Boot final captured DTB
-  -> Linux live tree
-```
-
-Expected differences after unflattening or kernel interpretation should be understood. The U-Boot capture is the best boundary artifact for later mutation analysis.
+Compare with the U-Boot `fdtfile` and control-FDT model. Explain why the control model and the Linux model come from different DTB files that happen to agree.
 
 ## Step 10: Diagnose Deliberate Faults
 
-### Fault A: EEPROM CRC Fails
+### Fault A: The SK's EEPROM Cannot Be Read
 
-Do not choose the FIT default or a board control tree by guess. Enter the defined authenticated recovery path and report the raw failure safely.
+Predict the chain from Step 4's last column. In particular, the R5 SPL stays on `k3-am642-r5-evm.dts`, which includes `k3-am64-evm-ddr4-1600MTs.dtsi`, while the SK has LPDDR4 (`k3-am64-sk-lp4-1600MTs.dtsi`). Expect DDR initialization to fail before any later stage runs. Explain why “safe default” is board-specific: falling back to the EVM is harmless on an EVM and fatal on an SK.
 
-### Fault B: EEPROM I²C Pinctrl Is Missing From SPL
+### Fault B: An Unknown Board Name
 
-The full U-Boot tree contains it, but the filtered SPL tree does not. Inspect phase properties on the controller, pinctrl state, clock, bus parent, and GPIO/regulator dependencies. Do not hard-code Board A as a workaround.
+Program (or simulate) a name that is neither EVM nor SK. Predict `Unidentified board claims ... in eeprom header` from U-Boot proper, and work out which DTB each earlier stage chose.
 
-### Fault C: SPL Binary Fits ROM, Then Crashes While Clearing BSS
+### Fault C: `bootph-all` Removed From `main_i2c0`
 
-The packaged DTB or handoff data overlaps runtime BSS. Use ELF/linker and binman interval maps; file-size success did not prove runtime layout.
+In a scratch Linux tree used by the U-Boot build, delete `bootph-all` from `&main_i2c0`. Predict that the SPL DTB no longer contains the controller and the EEPROM read fails. On an SK the result matches Fault A, so U-Boot proper never runs. On an EVM the fallback happens to be right, and U-Boot proper, which probes the full control tree after relocation, reads the EEPROM normally. Explain why a fault that is invisible on one board is fatal on the other.
 
-### Fault D: FIT Signature Passes For Board A On Board B
+### Fault D: A Saved `fdtfile` Override
 
-Cryptography authenticated the selected configuration but selection chose the wrong valid one. Fix the trusted identity-to-configuration mapping. Signature validity does not prove hardware compatibility.
+At the U-Boot prompt on the SK, run `setenv fdtfile ti/k3-am642-evm.dtb; saveenv` and reboot. Predict that `fdtfile` is back to `ti/k3-am642-sk.dtb`, because `board_late_init()` calls `setup_board_eeprom_env()` after the environment is loaded and sets it unconditionally. Decide where a deliberate override should live instead.
 
-### Fault E: Base DTB Is Signed, Overlay Is Not
+### Fault E: A Renamed FIT Description
 
-Reject the overlay. Applying it would create an unauthorized final hardware description even though the base and kernel are authentic.
+Using Step 5, rebuild with `conf-1`'s description changed. Predict which stage first picks the EVM tree on an SK and what the log shows.
 
-### Fault F: `fdt apply` Returns An Error
+### Fault F: A Large Overlay With An Initrd
 
-Discard the working tree and overlay buffers according to U-Boot's documented invalidation behavior. Reload the pristine base or enter fallback; do not continue with partial state.
-
-### Fault G: Linux Shows Board A But SPL Logged Board B
-
-Trace explicit FIT configuration, environment/script overrides, `fdtfile`, bootflow metadata, and working-FDT address. The control tree selection and OS tree selection diverged.
-
-### Fault H: Linux DTB Is Corrupted Only With A Large Initrd
-
-Build the full DRAM interval map. The initrd relocation or kernel decompression overlaps the expanded working FDT. Moving an address without recalculating every range is not sufficient.
+Using Step 6, construct the base-plus-overlay size and initrd placement at which the expanded working FDT would overlap the ramdisk at `rdaddr`. Explain which of the two would be corrupted, and why the failure would appear only on some boots.
 
 ## Exit Review
 
-The lab is complete when you can provide:
+The lab is complete when you can present:
 
-- a complete artifact ledger and source/build provenance
-- filtered SPL dependency audit
-- ROM and SRAM interval maps with headroom
-- deterministic identity and fallback policy
-- FIT configuration and required-key verification evidence
-- nonoverlapping DRAM load/relocation map
-- authenticated overlay compatibility and order record
-- final U-Boot handoff DTB plus Linux live-tree comparison
-- root-cause evidence for every deliberate fault
+- the artifact ledger with hashes and FIT configuration listings
+- the SPL dependency closure for the EEPROM read, with the source of each `bootph-*`
+- the SRAM interval map and measured sizes
+- the completed four-point selection table, including every fallback
+- the DRAM address plan and its two limits
+- serial logs from at least one board showing selection
+- the overlay test, including the missing-file behavior
+- Linux handoff evidence
+- a predicted and, where safe, observed result for each fault
 
 ## Authoritative References
 

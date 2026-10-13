@@ -18,33 +18,39 @@ For an ordinary addressable child, each `reg` entry contains:
 parent #address-cells cells + parent #size-cells cells
 ```
 
+The AM64x OSPI controller sits on the `fss` bus, which declares two address and two size cells (`k3-am64-main.dtsi`):
+
 ```dts
-/ {
+fss: bus@fc00000 {
         #address-cells = <2>;
         #size-cells = <2>;
+        ranges;
 
-        device@120000000 {
-                reg = <0x00000001 0x20000000
-                       0x00000000 0x00001000>;
+        ospi0: spi@fc40000 {
+                reg = <0x00 0x0fc40000 0x00 0x100>,
+                      <0x05 0x00000000 0x01 0x00000000>;
+                /* ... */
         };
 };
 ```
 
-The address cells concatenate to `0x0000000120000000`; the size cells concatenate to `0x1000`. Cells are 32-bit big-endian quantities in the DTB. Multi-cell values are not separate fields unless the binding says they are.
+Each entry is four cells. The first is a 256-byte register window at `0xfc40000`; in the second, the address cells concatenate to `0x0000000500000000` and the size cells to `0x0000000100000000`—the 4 GiB flash data window. Cells are 32-bit big-endian quantities in the DTB. Multi-cell values are not separate fields unless the binding says they are.
 
 `#address-cells` and `#size-cells` describe the encoding of direct children. They do not describe the bus node's own `reg`, which is encoded by its parent. They are also not inherited through arbitrary levels. The specification defines defaults when they are absent, but production trees should state them explicitly on addressable buses; implicit defaults hide integration mistakes and produce poor diagnostics.
 
 ## Zero Size Cells
 
-Some buses identify children but do not encode a range size:
+Some buses identify children but do not encode a range size. The OSPI controller itself declares this for its flash children (`k3-am64-main.dtsi` and `k3-am642-sk.dts`):
 
 ```dts
-spi@1000 {
-        #address-cells = <1>;
-        #size-cells = <0>;
+ospi0: spi@fc40000 {
+        #address-cells = <0x1>;
+        #size-cells = <0x0>;
 
         flash@0 {
-                reg = <0>; /* chip select, not address-plus-size */
+                compatible = "jedec,spi-nor";
+                reg = <0x0>;            /* chip select, not address-plus-size */
+                /* ... */
         };
 };
 ```
@@ -53,29 +59,25 @@ With `#size-cells = <0>`, each entry contains only address cells. Do not append 
 
 ## Multiple Register Regions
 
-A device may expose several resource windows:
+A device may expose several resource windows. The TI-SCI secure proxy mailbox (`k3-am64-main.dtsi`):
 
 ```dts
-mailbox@2000 {
-        reg = <0x2000 0x100>,
-              <0x3000 0x20>;
-        reg-names = "control", "doorbell";
+secure_proxy_main: mailbox@4d000000 {
+        compatible = "ti,am654-secure-proxy";
+        reg-names = "target_data", "rt", "scfg";
+        reg = <0x00 0x4d000000 0x00 0x80000>,
+              <0x00 0x4a600000 0x00 0x80000>,
+              <0x00 0x4a400000 0x00 0x80000>;
 };
 ```
 
-Here the parent has one address and one size cell. `reg-names` labels entries positionally. The consumer binding defines the accepted names, their order, and whether they are required. Linux drivers commonly request these resources by index or name; reordering `reg` without the names—or names without `reg`—changes which physical resource a driver maps.
+Entries follow the binding's name order, not ascending address. `reg-names` follows the same positional rules as other [resource-name lists](../provider-consumer-relationships/specifier-decoding-and-resource-names.md#resource-names): reordering `reg` without the names changes which physical resource a driver maps.
 
 Treat `[address, address + size)` as a half-open interval. A zero size, wraparound, overflow, overlap, or range outside the containing bus window is a defect even if `dtc` emits a blob.
 
 ## Unit Address Consistency
 
-The text after `@` is the node's unit address. For a simple memory-mapped device it normally equals the first address in `reg`, written without leading zeros:
-
-```dts
-uart@2000 {
-        reg = <0x2000 0x100>;
-};
-```
+The text after `@` is the node's unit address. For a memory-mapped device it normally equals the first address in `reg`, written in lowercase hexadecimal without leading zeros: `serial@2800000` for `reg = <0x00 0x02800000 0x00 0x100>`, and `mailbox@4d000000` above even though its other two windows are at lower addresses.
 
 The unit address is a node-name discriminator, not a second resource declaration. Software consumes `reg`; it does not derive a size or translated CPU address from the node name. Bus bindings can define non-numeric or multi-field unit-address formats, so use the bus rule rather than applying a generic formatting assumption.
 
@@ -83,19 +85,18 @@ Nodes without `reg` generally have no unit address. Exceptions exist only when a
 
 ## Decode Cells Mechanically
 
-For a raw cell stream:
+For the OSPI raw cell stream printed by `fdtget -tx` from the AM642 SK DTB:
 
 ```text
-00000001 20000000 00000000 00001000
-00000002 00000000 00000000 00002000
+0 fc40000 0 100 5 0 1 0
 ```
 
 under a two-address/two-size parent:
 
 | Entry | Address cells | Address | Size cells | Size |
 |---|---|---:|---|---:|
-| 0 | `1 20000000` | `0x120000000` | `0 1000` | `0x1000` |
-| 1 | `2 00000000` | `0x200000000` | `0 2000` | `0x2000` |
+| 0 | `0 fc40000` | `0xfc40000` | `0 100` | `0x100` |
+| 1 | `5 0` | `0x500000000` | `1 0` | `0x100000000` |
 
 Use unsigned arithmetic wide enough for all cells. A convenient reconstruction is:
 
@@ -107,15 +108,7 @@ In C, Python, shell utilities, or spreadsheets, verify that intermediate values 
 
 ## Binding Semantics Come First
 
-The generic shape does not tell you what the address means:
-
-- MMIO bus: offset or bus address plus length
-- I2C: target address with no size
-- SPI: chip-select index with no size
-- CPU container: hardware CPU identifier with no size
-- PCI: flags, bus/device/function, and register fields spread over three cells
-
-The same property name therefore cannot be decoded correctly without the parent bus binding.
+The generic shape does not tell you what the address means: it may be an MMIO offset plus length, an I2C target address, an SPI chip select, a CPU identifier, or a three-cell PCI address. [Bus-Specific Child Addressing](bus-specific-child-addressing.md) covers these formats.
 
 ## Linux Resource View
 

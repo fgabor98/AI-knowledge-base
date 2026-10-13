@@ -136,20 +136,7 @@ Never continue with a partially applied overlay, truncated reservation, or unval
 
 ## Reproducibility Manifest
 
-For a field issue, collect:
-
-```text
-bootloader and firmware versions
-base DTB name and hash
-ordered overlay names and hashes
-board/module identity records and validation status
-DRAM and secure-firmware results
-environment/configuration inputs
-mutation implementation version
-final DTB hash
-```
-
-Sensitive raw values can be held in privileged diagnostics while public reports use normalized IDs.
+For a field issue, collect the [field provenance bundle](final-tree-validation-diffing-and-runtime-forensics.md#field-provenance-bundle). Sensitive raw values can be held in privileged diagnostics while public reports use normalized IDs.
 
 ## Authoritative References
 

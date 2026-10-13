@@ -25,23 +25,27 @@ After this, the overlay is internally consistent with the target phandle namespa
 
 ## Worked Phandle Example
 
-Assume:
+Apply the HDMI audio overlay to the AM625 SK DTB with `fdtoverlay` and compare:
 
 ```text
-maximum base phandle = 100
-overlay local phandle for module_reg = 1
-overlay property vdd-supply refers to local phandle 1
-base symbol gpio1 has phandle 37
-overlay reset-gpios contains external placeholder for gpio1
+maximum base phandle                                0xd6
+overlay local phandle of simple-audio-card,cpu      0x01
+overlay local phandle of sound-sii9022              0x02
+bitclock-master (local reference)                   0x01
+base symbol mcasp1 -> /bus@f0000/audio-controller@2b10000, phandle 0x4a
+cpu sound-dai (external placeholder)                0xffffffff
 ```
 
-After relocation and resolution, conceptually:
+After relocation and resolution:
 
 ```text
-module_reg phandle        1 + 100 = 101
-vdd-supply local ref      1 + 100 = 101
-reset-gpios provider ref  external placeholder -> 37
+simple-audio-card,cpu phandle   0x01 + 0xd6 = 0xd7
+sound-sii9022 phandle           0x02 + 0xd6 = 0xd8
+bitclock-master                 0x01 + 0xd6 = 0xd7   (via __local_fixups__)
+cpu sound-dai                   0xffffffff -> 0x4a   (via __fixups__)
 ```
+
+Check it with `fdtget -tx merged.dtb /sound-sii9022 phandle` and the other paths. `fdtoverlay` also copies the overlay's `__symbols__`, so the merged tree contains `hdmi_audio = "/sound-sii9022"` for a later overlay.
 
 Provider arguments following phandles—GPIO line 12 and flags, for example—remain arguments. Only cells recorded as fixup locations are patched.
 
@@ -68,40 +72,44 @@ For each resolved fragment:
 - child nodes add or recursively merge by full node name
 - overlay-local phandles and references now use the target namespace
 
-Conceptual example:
+The HDMI audio overlay's third fragment:
 
 ```text
-base /soc/spi@2000000:
-  status = "disabled"
+base /sound (label codec_audio):
+  status absent (the node is enabled)
 
 overlay:
-  status = "okay"
-  sensor@0 { ... }
+  status = "disabled"
 
 result:
-  status = "okay"
-  sensor@0 { ... }
+  status = "disabled"
 ```
 
 The final result contains no abstract relationship to “disabled before.” Pre-boot consumers see only the merged value.
 
 ## Same-Name Child Merge
 
-If the base already contains `sensor@0`, an overlay child with the same full name merges into it. That may be intentional enablement:
+If the base already contains a node with the same full name, an overlay child merges into it. That is how the OV5640 overlay enables the receiver port that the SoC file declared disabled:
 
 ```dts
-/* Base owns complete but disabled hardware description. */
-sensor@0 {
-        compatible = "acme,temp100";
+/* Base, k3-am62-main.dtsi: complete but disabled. */
+csi0_port0: port@0 {
         reg = <0>;
         status = "disabled";
 };
 ```
 
 ```dts
-/* Overlay changes population state only. */
-&sensor0 {
-        status = "okay";
+/* Overlay: same node name under the same parent, so it merges. */
+&cdns_csi2rx0 {
+        ports {
+                csi0_port0: port@0 {
+                        reg = <0>;
+                        status = "okay";
+
+                        csi2rx0_in_sensor: endpoint { /* ... */ };
+                };
+        };
 };
 ```
 

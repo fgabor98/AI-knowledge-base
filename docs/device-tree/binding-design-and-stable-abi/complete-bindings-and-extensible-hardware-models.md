@@ -46,14 +46,17 @@ This table exposes whether one compatible can honestly describe both versions an
 
 ## Describe Unsupported Resources Now
 
-Suppose hardware has completion and error interrupts, but the first driver only handles completion. The binding and DTS should still describe both if both are architected outputs and the intended binding makes them required:
+The Cadence CSI-2 receiver shows what happens otherwise. Its hardware has always had an error interrupt and a data interrupt, but the first `cdns,csi2rx.yaml` binding and the AM62x DTS described neither. In April 2025, “dt-bindings: media: cdns,csi2rx.yaml: Add optional interrupts for cdns-csi2rx” added them, and the driver started enabling error reporting. Four months later, “arm64: dts: ti: k3-am62-main: Add CSI2 interrupts property” described them for AM62x, citing the TRM:
 
 ```dts
-interrupts = <42>, <43>;
-interrupt-names = "completion", "error";
+interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH>,
+             <GIC_SPI 141 IRQ_TYPE_LEVEL_HIGH>;
+interrupt-names = "error_irq", "irq";
 ```
 
-The initial driver may request only `completion`. A later driver can use `error` without changing deployed DTBs. The same principle applies to clocks, resets, register windows, and graph endpoints.
+Because DTBs without the property had already shipped, the interrupts can never become required for `cdns,csi2rx`. The driver must call `platform_get_irq_byname_optional()` forever, and a board that forgets the property loses error reporting silently.
+
+Describe architected outputs from the start, even if the first driver ignores them. A later driver can then use them without changing deployed DTBs. The same principle applies to clocks, resets, register windows, and graph endpoints.
 
 Do not describe a hazardous resource that firmware owns as though Linux can use it. Completeness includes ownership and access boundaries.
 

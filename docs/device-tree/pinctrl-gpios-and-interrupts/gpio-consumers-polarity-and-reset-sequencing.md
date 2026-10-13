@@ -12,24 +12,27 @@ Consumer GPIO properties describe named logical signals. The provider binding de
 
 ## Named Consumer Relationship
 
+Two consumers on the AM642 EVM's TCA6424 expander (`k3-am642-evm.dts`):
+
 ```dts
-sensor@48 {
-        compatible = "vendor,sensor";
-        reset-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;
-        enable-gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
+transceiver1: can-phy0 {
+        compatible = "ti,tcan1042";
+        #phy-cells = <0>;
+        max-bitrate = <5000000>;
+        standby-gpios = <&exp1 8 GPIO_ACTIVE_HIGH>;
+};
+
+display@3c {
+        compatible = "solomon,ssd1306fb-i2c";
+        reg = <0x3c>;
+        reset-gpios = <&exp1 14 GPIO_ACTIVE_LOW>;
+        /* ... */
 };
 ```
 
-Linux descriptor lookup uses the consumer prefix:
+Descriptor lookup maps connection ID `"standby"` to `standby-gpios` and `"reset"` to `reset-gpios` ([Function Names And GPIO Lookup](../provider-consumer-relationships/gpio-and-interrupt-relationships.md#function-names-and-gpio-lookup)). The binding, not driver preference, decides whether those properties are required, optional, singular, or arrays.
 
-```c
-reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
-enable = devm_gpiod_get(dev, "enable", GPIOD_OUT_LOW);
-```
-
-`"reset"` maps to `reset-gpios`; `"enable"` maps to `enable-gpios`. The binding, not driver preference, decides whether those properties are required, optional, singular, or arrays.
-
-Legacy singular `*-gpio` spellings exist in old bindings, but new bindings normally use `*-gpios`. Do not rename deployed properties without preserving ABI support.
+Legacy singular spellings exist in old bindings and still ship: the fixed-regulator binding uses `gpio = <&exp1 3 GPIO_ACTIVE_HIGH>;`, as on the AM642 SK's `vdd_mmc1`. New bindings normally use `*-gpios`. Do not rename deployed properties without preserving ABI support.
 
 ## Logical Versus Physical Values
 
@@ -105,9 +108,7 @@ Software cannot eliminate a hardware glitch that occurs before it controls the p
 
 ## Optional GPIOs And Errors
 
-Use optional descriptor getters only when the binding makes absence valid. An optional getter can return no descriptor for absence, but malformed specifiers, unavailable providers, and deferral remain errors.
-
-Do not convert every error to “GPIO not fitted.” That hides disabled controllers and broken phandles. Use `dev_err_probe()` and preserve `-EPROBE_DEFER`.
+Use optional descriptor getters only when the binding makes absence valid, and preserve real errors and `-EPROBE_DEFER` as described in [Optional And Required Resources](../provider-consumer-relationships/specifier-decoding-and-resource-names.md#optional-and-required-resources). Converting every error to “GPIO not fitted” hides disabled controllers and broken phandles.
 
 ## Reset Cleanup And Ownership
 

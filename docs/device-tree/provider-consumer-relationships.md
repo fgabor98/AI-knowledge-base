@@ -38,24 +38,14 @@ Complete [Syntax, Values, And Source Composition](syntax-values-and-source-compo
 
 ## The Core Decoding Algorithm
 
-Given a property such as:
-
-```dts
-clocks = <&osc>, <&clock_controller 4 1>;
-clock-names = "reference", "bus";
-```
-
-decode it in this order:
+For any phandle-array property such as `clocks = <&k3_clks 162 0>, <&k3_clks 162 1>, <&serdes_refclk>;` on the AM64x SERDES wrapper:
 
 1. Read the consumer binding to learn the property, entry count, order, and names.
-2. Resolve the first phandle to its provider node.
-3. Read that provider's `#clock-cells`.
-4. Consume exactly that many cells after the phandle.
-5. Decode those cells using that provider's binding.
-6. Repeat from the next phandle.
-7. Pair the completed entries positionally with `clock-names`.
+2. Resolve the next phandle to its provider node.
+3. Consume exactly the provider's `#*-cells` argument cells and decode them with the provider binding.
+4. Repeat until the property ends, then pair entries positionally with the `*-names` list.
 
-For this example, `&osc` may declare `#clock-cells = <0>`, so its entry ends immediately after the phandle. If `&clock_controller` declares `#clock-cells = <2>`, the cells `4 1` belong to its provider-defined specifier.
+[Specifier Decoding And Resource Names](provider-consumer-relationships/specifier-decoding-and-resource-names.md) works through this example in detail.
 
 ## Dependency Graph Mental Model
 

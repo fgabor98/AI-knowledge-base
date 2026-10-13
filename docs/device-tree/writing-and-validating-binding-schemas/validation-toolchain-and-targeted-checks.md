@@ -35,7 +35,7 @@ This validates binding documents against the DT meta-schema, resolves and proces
 The upstream workflow also supports building an individual schema target:
 
 ```bash
-make Documentation/devicetree/bindings/media/acme,ax-capture.yaml
+make Documentation/devicetree/bindings/media/ti,am437x-vpfe.yaml
 ```
 
 Exact invocation details can vary with kernel version and working directory; use the current kernel documentation and nearby build conventions.
@@ -46,14 +46,14 @@ Use `DT_SCHEMA_FILES` for quick iterations:
 
 ```bash
 make dt_binding_check \
-  DT_SCHEMA_FILES=Documentation/devicetree/bindings/media/acme,ax-capture.yaml
+  DT_SCHEMA_FILES=Documentation/devicetree/bindings/media/ti,am437x-vpfe.yaml
 ```
 
 The value supports fixed-string partial matches. Multiple patterns are colon-separated:
 
 ```bash
 make dt_binding_check \
-  DT_SCHEMA_FILES=acme,ax-capture.yaml:video-interface-devices.yaml
+  DT_SCHEMA_FILES=ti,am437x-vpfe.yaml:video-interfaces.yaml
 ```
 
 A directory fragment can select a group:
@@ -85,8 +85,8 @@ Depending on environment, set `CROSS_COMPILE` or use a native-capable compiler a
 Limit schemas during iteration:
 
 ```bash
-make O=build ARCH=arm64 dtbs_check \
-  DT_SCHEMA_FILES=Documentation/devicetree/bindings/media/acme,ax-capture.yaml
+make O=build ARCH=arm dtbs_check \
+  DT_SCHEMA_FILES=Documentation/devicetree/bindings/media/ti,am437x-vpfe.yaml
 ```
 
 This limits matching schemas, not necessarily the set of platform DTBs built. Use architecture-specific DTB targets and the current kernel build interface to reduce the instance set when needed.

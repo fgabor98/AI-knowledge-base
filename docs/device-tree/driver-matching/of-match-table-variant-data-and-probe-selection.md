@@ -12,67 +12,73 @@ A driver's `of_match_table` declares which DT hardware contracts it implements. 
 
 ## Complete Match Table Pattern
 
+The 8250 OMAP UART driver that binds every AM64x UART (`drivers/tty/serial/8250/8250_omap.c`, trimmed):
+
 ```c
-#include <linux/mod_devicetable.h>
-#include <linux/module.h>
-#include <linux/of.h>
-#include <linux/platform_device.h>
-
-struct acme_uart_data {
-        unsigned int fifo_depth;
-        bool needs_status_readback;
+struct omap8250_platdata {
+        struct omap8250_dma_params *dma_params;
+        u8 habit;
 };
 
-static const struct acme_uart_data ax100_data = {
-        .fifo_depth = 16,
+static struct omap8250_platdata am654_platdata = {
+        .dma_params     = &am654_dma,
+        .habit          = UART_HAS_EFR2 | UART_HAS_RHR_IT_DIS |
+                          UART_RX_TIMEOUT_QUIRK | UART_HAS_NATIVE_RS485,
 };
 
-static const struct acme_uart_data ax200_data = {
-        .fifo_depth = 64,
-        .needs_status_readback = true,
+static const struct of_device_id omap8250_dt_ids[] = {
+        { .compatible = "ti,am654-uart", .data = &am654_platdata, },
+        { .compatible = "ti,omap2-uart" },
+        { .compatible = "ti,omap3-uart" },
+        { .compatible = "ti,omap4-uart", .data = &omap4_platdata, },
+        { .compatible = "ti,am3352-uart", .data = &am33xx_platdata, },
+        { .compatible = "ti,am4372-uart", .data = &am33xx_platdata, },
+        { .compatible = "ti,dra742-uart", .data = &omap4_platdata, },
+        {},
 };
+MODULE_DEVICE_TABLE(of, omap8250_dt_ids);
 
-static const struct of_device_id acme_uart_of_match[] = {
-        { .compatible = "acme,ax200-uart", .data = &ax200_data },
-        { .compatible = "acme,ax100-uart", .data = &ax100_data },
-        { }
-};
-MODULE_DEVICE_TABLE(of, acme_uart_of_match);
-
-static int acme_uart_probe(struct platform_device *pdev)
+static int omap8250_probe(struct platform_device *pdev)
 {
-        const struct acme_uart_data *data;
-
-        data = device_get_match_data(&pdev->dev);
-        if (!data)
-                return dev_err_probe(&pdev->dev, -EINVAL,
-                                     "missing variant data\n");
-
-        /* Acquire resources, initialize hardware, register the UART. */
-        return 0;
+        const struct omap8250_platdata *pdata;
+        /* ... */
+        pdata = of_device_get_match_data(&pdev->dev);
+        if (pdata)
+                priv->habit |= pdata->habit;
+        /* ... */
 }
 
-static struct platform_driver acme_uart_driver = {
-        .probe = acme_uart_probe,
+static struct platform_driver omap8250_platform_driver = {
         .driver = {
-                .name = "acme-uart",
-                .of_match_table = acme_uart_of_match,
+                .name           = "omap8250",
+                .of_match_table = omap8250_dt_ids,
+                /* ... */
         },
+        .probe                  = omap8250_probe,
+        /* ... */
 };
-module_platform_driver(acme_uart_driver);
-
-MODULE_LICENSE("GPL");
+module_platform_driver(omap8250_platform_driver);
 ```
 
-The terminating empty entry is required. The array and variant data are `const` because they describe immutable hardware facts shared by instances.
+The terminating empty entry is required. Match data is optional per entry: `ti,omap2-uart` and `ti,omap3-uart` carry none, and probe handles `NULL`. The data objects describe immutable hardware facts shared by every instance of a compatible.
+
+`drivers/remoteproc/ti_k3_r5_remoteproc.c` uses the stricter pattern in which every entry must have data, and probe fails if it does not:
+
+```c
+data = of_device_get_match_data(&pdev->dev);
+if (!data) {
+        dev_err(dev, "SoC-specific data is not defined\n");
+        return -ENODEV;
+}
+```
 
 ## Match Table Versus Module Table
 
 Two lines serve different stages:
 
 ```c
-.of_match_table = acme_uart_of_match;
-MODULE_DEVICE_TABLE(of, acme_uart_of_match);
+.of_match_table = omap8250_dt_ids,
+MODULE_DEVICE_TABLE(of, omap8250_dt_ids);
 ```
 
 The driver's table pointer lets the bus match an already registered driver. `MODULE_DEVICE_TABLE` exposes the IDs to `modpost`, which generates module alias metadata for autoloading. Omitting the macro can still allow matching after a manual module load, while automatic loading fails.
@@ -81,15 +87,7 @@ Built-in drivers do not need module loading, but keeping correct device-table me
 
 ## Selecting The Match
 
-For a node:
-
-```dts
-compatible = "acme,ax200-uart", "acme,ax100-uart";
-```
-
-a table containing both entries should select AX200 data. An older driver containing only AX100 can match the fallback. If a driver's table accidentally has duplicate entries for the same compatible, table order can influence the tie; duplicates should be removed rather than used as control flow.
-
-Do not treat the match table as a version comparison. Every supported literal string must appear explicitly or be represented by a legitimate fallback in the DT list.
+For `compatible = "ti,am64-uart", "ti,am654-uart";` the table above has no `ti,am64-uart` entry, so the fallback selects `am654_platdata`; a future table that added `ti,am64-uart` would win for the same DTB ([How Linux Uses A List](compatible-contracts-and-fallback-chains.md#how-linux-uses-a-list)). Remove duplicate entries for the same compatible rather than relying on table order, and list every supported literal string explicitly; the table is not a version comparison.
 
 ## Variant Data Design
 
@@ -104,11 +102,13 @@ Good match data contains facts implied by the compatible:
 
 Avoid mutable state, per-board wiring, allocated resources, or values that can differ between two instances with the same compatible. Those belong in per-device state, properties, discoverable registers, or provider relationships.
 
-Keep variant behavior explicit:
+Keep variant behavior explicit. `8250_omap` tests the habit flags copied from match data at each point where hardware differs:
 
 ```c
-if (data->needs_status_readback)
-        readl(base + STATUS_REG);
+/* omap_8250_shutdown() */
+serial_out(up, UART_OMAP_WER, 0);
+if (priv->habit & UART_HAS_EFR2)
+        serial_out(up, UART_OMAP_EFR2, 0x0);
 ```
 
 Large forests of compatible-string comparisons inside `probe()` are harder to review and often signal missing structured match data.
@@ -121,7 +121,7 @@ A driver should not require `dev->of_node` if it advertises ACPI or other firmwa
 
 ## Driver Name Is Not The Compatible
 
-`.driver.name = "acme-uart"` identifies the Linux driver. It need not equal `acme,ax100-uart`, the module filename, or the platform device's sysfs name. With OF-populated platform devices, compatible matching is the important contract.
+`.driver.name = "omap8250"` identifies the Linux driver. It equals neither `ti,am654-uart`, the module name `8250_omap`, nor the platform device's sysfs name `2800000.serial`. With OF-populated platform devices, compatible matching is the important contract.
 
 Name-based platform matching exists for legacy/non-DT platform devices. Avoid relying accidentally on a matching driver/device name that hides a broken OF table.
 

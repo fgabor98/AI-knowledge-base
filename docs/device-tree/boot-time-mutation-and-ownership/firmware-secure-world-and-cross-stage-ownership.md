@@ -53,6 +53,8 @@ Normal-world validation should confirm:
 
 It must not shrink or drop an authenticated secure reservation merely to recover RAM.
 
+On TI K3, U-Boot is the writer that reconciles these reservations: `fdt_fixup_reserved()` replaces the `tfa` and `optee` children of `/reserved-memory` with carveouts at the addresses the SPL actually loaded TF-A and OP-TEE to ([Secure Reserved Memory](../memory-firmware-and-heterogeneous-socs/trusted-firmware-op-tee-and-secure-world-boundaries.md#secure-reserved-memory)). The DTS values are therefore defaults, and the build configuration is the authority.
+
 ## Handoff Contracts
 
 For each boundary—ROM→SPL, SPL→U-Boot, trusted firmware→normal world, U-Boot→Linux—define:
@@ -109,17 +111,7 @@ Every new boot must rebuild or validate checkpoints, clear one-time seeds, and r
 
 ## Measured And Verified Boot
 
-If a stage verifies a base tree and a later trusted stage mutates it, attestation should describe the final state or authorized transformation sequence.
-
-Possible measurements:
-
-- base and ordered overlay hashes
-- normalized firmware reservation manifest
-- board identity/policy version
-- hardware-composition tree before ephemeral secrets
-- final redacted/canonical DTB
-
-Never measure and publish secret seed bytes. Define how dynamic but legitimate hardware changes affect expected measurements.
+If a stage verifies a base tree and a later trusted stage mutates it, attestation must describe the final state or the authorized transformation sequence; choose between component-ledger and final-handoff measurement as described in [Measure Components Or Final State](../security-and-production-lifecycle/measured-boot-attestation-and-runtime-evidence.md#measure-components-or-final-state). Never measure and publish secret seed bytes.
 
 ## Failure Escalation
 

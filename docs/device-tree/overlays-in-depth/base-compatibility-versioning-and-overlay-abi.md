@@ -16,12 +16,12 @@ Inventory every dependency:
 
 | Dependency | Example | Breakage mode |
 |---|---|---|
-| exported symbol | `spi2`, `gpio1` | missing or renamed label |
-| target path | `/soc/spi@2000000` | hierarchy/name/address changed |
-| target binding | SPI controller child rules | child no longer valid |
-| provider contract | `#gpio-cells = <2>` | specifier decoded differently |
-| prior node state | bus disabled, CS0 unused | overwrite or duplicate resource |
-| address/cell context | child `reg = <0>` | different bus encoding |
+| exported symbol | `mcasp1`, `sii9022`, `codec_audio` | missing or renamed label |
+| target path | `/` for the new sound card | hierarchy/name/address changed |
+| target binding | `simple-audio-card` rules | card no longer valid |
+| provider contract | `#sound-dai-cells = <0>` on McASP and SiI9022 | specifier decoded differently |
+| prior node state | analog card enabled and using `mcasp1` | two cards claim one McASP |
+| address/cell context | `reg` of the PCIe EP node under `cbass_main` | different bus encoding |
 | electrical resource | pins, voltage, clock | structurally valid hardware conflict |
 | schema/compatible | module device binding | final tree fails validation |
 | lifecycle support | removable driver stack | apply works, teardown unsafe |
@@ -55,17 +55,24 @@ A base refactor that nests a controller under a new bus breaks the path even if 
 
 ## Define A Public Overlay Surface
 
-Instead of letting overlays target arbitrary internals, publish a bounded surface:
+TI's `k3-am62x-sk-hdmi-audio.dtso` shows both the need and the risk. The kernel `Makefile` composes the same overlay with three bases:
+
+```make
+k3-am625-sk-hdmi-audio-dtbs := k3-am625-sk.dtb k3-am62x-sk-hdmi-audio.dtbo
+k3-am62-lp-sk-hdmi-audio-dtbs := k3-am62-lp-sk.dtb k3-am62x-sk-hdmi-audio.dtbo
+k3-am62a7-sk-hdmi-audio-dtbs := k3-am62a7-sk.dtb k3-am62x-sk-hdmi-audio.dtbo
+```
+
+So `mcasp1`, `sii9022`, and `codec_audio` form an unwritten interface. The AM625 and AM62 LP SKs get them from `k3-am62x-sk-common.dtsi`, but the AM62A7 SK defines its own `codec_audio`, `sii9022`, and `&mcasp1` in `k3-am62a7-sk.dts`. Nothing ties the two files together except convention: renaming a label, or wiring a different McASP to the bridge, in either file would break one composition while the other still builds. A written surface would state:
 
 ```text
-base family: acme,falcon
+bases: k3-am625-sk, k3-am62-lp-sk, k3-am62a7-sk
 exported targets:
-  expansion_spi -> SPI controller, CS0/CS1 available
-  expansion_i2c -> I2C controller, addresses 0x20-0x6f subject to manifest
-  expansion_gpio -> provider contract, allowed line set
-  expansion_connector -> graph endpoint and lane mapping
+  mcasp1      -> McASP instance wired to the SiI9022 I2S input, #sound-dai-cells = <0>
+  sii9022     -> SiI9022 HDMI bridge, #sound-dai-cells = <0>
+  codec_audio -> the analog sound card that shares mcasp1; may be disabled
 forbidden:
-  PMIC internals, secure peripherals, reserved-memory ownership, boot console
+  pinmux, clocks, and supplies of either audio path
 ```
 
 The surface should describe allowed operations and resources, not only label names.
@@ -75,14 +82,16 @@ The surface should describe allowed operations and resources, not only label nam
 The overlay format has no universal built-in product compatibility negotiation. A product manifest can add:
 
 ```text
-base_abi: falcon-expansion-v3
-overlay_id: acme,temp-module
-overlay_version: 2
-supports_base_abi: [falcon-expansion-v2, falcon-expansion-v3]
-requires: [spi2-export-v1, gpio-export-v2]
-conflicts: [display-module]
+base_abi: am62x-sk-audio-v1
+overlay_id: ti,am62x-sk-hdmi-audio
+overlay_version: 1
+supports_base_abi: [am62x-sk-audio-v1]
+requires: [mcasp1, sii9022, codec_audio]
+conflicts: []
 lifecycle: boot-only
 ```
+
+This manifest is illustrative: mainline has no such file, which is exactly the gap it would close.
 
 Keep this metadata authenticated and bound to the DTBO hash. A filename containing `v3` is not enforceable compatibility.
 
@@ -90,7 +99,7 @@ The identifier must map to concrete tests. Increment or split it when an exporte
 
 ## Compatible Strings Do Not Version Overlay Mechanics
 
-An overlay may introduce a device with `compatible = "acme,temp100"`; that string defines the device binding. It does not state which Falcon base labels, pins, or overlay order are supported.
+The HDMI audio overlay introduces a node with `compatible = "simple-audio-card"`; that string defines the card binding. It does not state which bases export the right labels, or that the analog card must be disabled first.
 
 Likewise, adding `compatible` to the overlay root is not automatically interpreted by generic overlay resolvers as a base compatibility gate. Product tooling must define and enforce its manifest semantics before application.
 
@@ -126,14 +135,7 @@ The DTBO binary itself should be immutable under a release hash.
 
 ## Four-Way Compatibility Matrix
 
-| Base | overlay | Required result |
-|---|---|---|
-| old | old | released baseline |
-| old | new | supported merge, explicit rejection, or unreachable update order |
-| new | old | preserved overlay surface or explicit rejection |
-| new | new | intended complete behavior |
-
-Extend the matrix for prior overlays, bootloader versions, kernels, and module firmware. A base/overlay pair can merge identically yet behave differently under a kernel lacking the introduced binding or teardown support.
+Apply the same old/new × old/new matrix used for [compatible evolution](../driver-matching/compatible-evolution-and-stable-abi-decisions.md#compatibility-in-both-directions) to base and overlay versions: each cell must yield intended behavior, a supported merge, or an explicit rejection. Extend it for prior overlays, bootloader versions, kernels, and module firmware; a pair can merge identically yet behave differently under a kernel lacking the introduced binding or teardown support.
 
 ## Preconditions And Postconditions
 

@@ -27,46 +27,57 @@ Keep other inherited controllers disabled.
 
 ## Minimal Source Skeleton
 
-This schematic example is not a binding substitute:
+BeaglePlay is a real custom AM625 board whose first boot needs only a few nodes on top of the SoC file. Reduced from `k3-am625-beagleplay.dts`:
 
 ```dts
 /dts-v1/;
 
-#include "acme-ax9.dtsi"
-#include "acme-px901.dtsi"
+#include "k3-am625.dtsi"
 
 / {
-    model = "Acme AXC300 Revision B";
-    compatible = "acme,axc300-revb", "acme,ax9";
+    compatible = "beagle,am625-beagleplay", "ti,am625";
+    model = "BeagleBoard.org BeaglePlay";
 
     aliases {
-        serial0 = &uart2;
-        mmc0 = &mmc1;
+        serial2 = &main_uart0;
+        mmc0 = &sdhci0;
     };
 
     chosen {
-        stdout-path = "serial0:115200n8";
+        stdout-path = "serial2:115200n8";
+    };
+
+    memory@80000000 {
+        device_type = "memory";
+        /* 2G RAM */
+        reg = <0x00000000 0x80000000 0x00000000 0x80000000>;
     };
 };
 
-&uart2 {
-    pinctrl-names = "default";
-    pinctrl-0 = <&uart2_default>;
+&main_pmx0 {
+    main_uart0_pins_default: main-uart0-default-pins {
+        pinctrl-single,pins = <
+            AM62X_IOPAD(0x01c8, PIN_INPUT, 0) /* (D14) UART0_RXD */
+            AM62X_IOPAD(0x01cc, PIN_OUTPUT, 0) /* (E14) UART0_TXD */
+        >;
+    };
+};
 
+&main_uart0 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&main_uart0_pins_default>;
     status = "okay";
 };
 
-&mmc1 {
-    bus-width = <8>;
+&sdhci0 {
     non-removable;
     pinctrl-names = "default";
-    pinctrl-0 = <&mmc1_default>;
-    vmmc-supply = <&vcc_3v3>;
-    vqmmc-supply = <&vcc_1v8>;
-
+    pinctrl-0 = <&emmc_pins_default>;
     status = "okay";
 };
 ```
+
+The full file uses `serial0` for the mikroBUS UART and keeps the console at `serial2`, which matches TI's starter kits. That choice keeps `stdout-path`, U-Boot's console index, and existing documentation consistent with the reference design.
 
 Verify every compatible, property, and provider against current schemas. Do not copy `aliases` solely to preserve reference-board numbering unless the boot/update contract needs it.
 
@@ -75,8 +86,8 @@ Verify every compatible, property, and provider against current schemas. Do not 
 At build/package/boot checkpoints capture:
 
 ```bash
-sha256sum path/to/acme/axc300-revb.dtb
-fdtdump path/to/acme/axc300-revb.dtb | sed -n '1,100p'
+sha256sum arch/arm64/boot/dts/ti/k3-am625-beagleplay.dtb
+fdtdump arch/arm64/boot/dts/ti/k3-am625-beagleplay.dtb | sed -n '1,100p'
 ```
 
 In U-Boot, commands vary by configuration, but useful evidence includes:

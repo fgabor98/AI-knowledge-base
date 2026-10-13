@@ -29,7 +29,8 @@ After completing this module, you should be able to:
 
 ## Prerequisites
 
-Complete [Boot-Time Mutation And Ownership](boot-time-mutation-and-ownership.md). You should understand compatible matching, provider-consumer relationships, final-tree provenance, and the difference between a compiled source tree and the DTB a kernel actually receives.
+Complete [Memory, Firmware, And Heterogeneous SoCs](memory-firmware-and-heterogeneous-socs.md). You should understand compatible matching, provider-consumer relationships, the hardware subsystems covered so far, and the difference between a compiled source tree and the DTB a kernel actually receives.
+
 
 ## Learning Path
 
@@ -70,17 +71,7 @@ If the answer to the first question is no, the value usually belongs in firmware
 
 ## Compatibility Is A Matrix
 
-Never evaluate an ABI change only with a newly built kernel and newly built DTB:
-
-```text
-                    old software       new software
-old deployed DTB    released baseline  backward compatibility
-new DTB             forward behavior   intended new behavior
-```
-
-The new-DTB/old-software cell may mean safe reduced functionality, deliberate non-binding, or an unsupported update order. State which. A fallback compatible is a claim that the old behavior is safe, not a promise that probe merely reaches completion.
-
-For real products, expand “software” into boot firmware, bootloader, kernel, modules, and auxiliary firmware. Add every separately updated DTB or overlay producer.
+Never evaluate an ABI change only with a newly built kernel and newly built DTB; use the old/new DTB × old/new software matrix from [Compatibility In Both Directions](driver-matching/compatible-evolution-and-stable-abi-decisions.md#compatibility-in-both-directions) and state what the new-DTB/old-software cell means: safe reduced functionality, deliberate non-binding, or an unsupported update order. For real products, expand “software” into boot firmware, bootloader, kernel, modules, and auxiliary firmware, and add every separately updated DTB or overlay producer.
 
 ## ABI Decision Record
 

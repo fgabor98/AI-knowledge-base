@@ -14,7 +14,7 @@ Linux unflattens DT nodes into `struct device_node` objects. Separate population
 
 ```bash
 dtroot=/sys/firmware/devicetree/base
-node="$dtroot/soc/device@48000000"
+node="$dtroot/bus@f4000/mmc@fa00000"
 
 test -d "$node"
 tr '\0' '\n' <"$node/compatible"
@@ -61,7 +61,7 @@ Depending on kernel/subsystem, related firmware-node links may have different na
 Given a device directory:
 
 ```bash
-dev=/sys/devices/platform/soc/48000000.device
+dev=/sys/devices/platform/bus@f4000/fa00000.mmc
 
 readlink -f "$dev/subsystem"
 readlink -f "$dev/driver" 2>/dev/null
@@ -73,41 +73,14 @@ The `subsystem` symlink identifies the bus/class association used for matching a
 
 ## Population Is Hierarchical
 
-Common paths:
-
-```text
-live SoC/simple-bus node
-  -> platform population creates controller device
-  -> controller driver probes
-  -> controller enumerates DT child devices on its bus
-  -> child drivers match/probe
-```
-
-If an I2C controller never binds, its child sensor node can remain visible in DT while no I2C client device appears. Fix the parent/controller stage before debugging the child driver.
-
-For SPI/I2C children, inspect:
+Bus children appear only after their controller probes and enumerates them ([Controller-Enumerated Children](../driver-matching/from-device-tree-nodes-to-linux-devices.md#controller-enumerated-children)). If an I2C controller never binds, its child sensor node stays visible in DT while no I2C client appears, so fix the controller stage first. For SPI/I2C children, inspect:
 
 ```bash
 ls -l /sys/bus/i2c/devices
 ls -l /sys/bus/spi/devices
 ```
 
-Device names encode bus numbering and addresses/chip selects according to subsystem conventions, not necessarily the full DT path.
-
-## Availability Is Necessary, Not Sufficient
-
-OF availability normally accepts absent `status`, `okay`, or `ok`. A device still may not be created because:
-
-- parent bus/node is unavailable
-- parent device was not populated
-- controller driver has not probed
-- subsystem intentionally handles child nodes internally
-- node represents data/topology, not an independently registered device
-- firmware/secure world owns the function
-- architecture/platform code excludes it
-- a runtime overlay transition is incomplete
-
-Not every node should have a one-to-one sysfs device.
+Device names encode bus numbering and addresses/chip selects according to subsystem conventions, not necessarily the full DT path. An available node can still lack a device for any of the reasons in [Why A Node May Not Become A Device](../driver-matching/from-device-tree-nodes-to-linux-devices.md#why-a-node-may-not-become-a-device).
 
 ## Nodes That Are Not Devices
 
@@ -143,22 +116,14 @@ This avoids blaming a child compatible when the controller never registered its 
 Platform device names can include translated addresses, node names, or platform-specific naming. Treat them as Linux device-model identifiers, not DT ABI. Always prove with `of_node`:
 
 ```bash
-readlink -f /sys/bus/platform/devices/DEVICE/of_node
+readlink -f /sys/bus/platform/devices/fa00000.mmc/of_node   # .../bus@f4000/mmc@fa00000
 ```
 
 Hard-coding a platform device name into long-lived diagnostics can break when hierarchy or naming changes while the hardware binding remains valid.
 
 ## One Node, Multiple Objects
 
-Complex subsystems can create:
-
-- one parent device plus child devices
-- class devices in `/sys/class`
-- auxiliary/component objects
-- MFD children
-- network, DRM, media, input, hwmon, IIO, or sound interfaces
-
-The OF node association proves origin; follow symlinks and subsystem topology to the functional interface. A class device may point back through a physical device chain rather than expose its own direct `of_node`.
+Complex subsystems can create child, class, auxiliary, MFD, or subsystem interface objects from one node ([Multi-Function And Child Devices](../driver-matching/from-device-tree-nodes-to-linux-devices.md#multi-function-and-child-devices)). The OF node association proves origin; follow symlinks and subsystem topology to the functional interface. A class device may point back through a physical device chain rather than expose its own direct `of_node`.
 
 ## Negative Evidence
 

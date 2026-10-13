@@ -59,22 +59,7 @@ For each rail verify:
 - consumers and supply property names from their bindings
 - suspend state and shared users
 
-Schematic example:
-
-```dts
-vcc_periph_3v3: regulator-periph-3v3 {
-    compatible = "regulator-fixed";
-    regulator-name = "periph_3v3";
-    regulator-min-microvolt = <3300000>;
-    regulator-max-microvolt = <3300000>;
-    gpio = <&gpio2 11 GPIO_ACTIVE_HIGH>;
-    enable-active-high;
-    startup-delay-us = <5000>;
-    vin-supply = <&vcc_main_5v0>;
-};
-```
-
-Check the current binding: accepted GPIO property spelling and polarity representation can vary by binding/version. Never infer `GPIO_ACTIVE_*` from a signal name alone.
+Model GPIO-switched rails with the fixed-regulator binding as shown in [Fixed Regulators](../clocks-resets-regulators-and-power/regulators-supplies-and-board-constraints.md#fixed-regulators); the accepted GPIO property spelling and polarity representation vary by binding version, and `GPIO_ACTIVE_*` must never be inferred from a signal name alone.
 
 ## Treat Pinctrl As Electrical Configuration
 
@@ -159,18 +144,7 @@ Also map the consumer's live DT properties to actual provider nodes and Linux de
 
 ## Diagnose One Provider Edge At A Time
 
-```text
-consumer property exists?
-  -> phandle resolves to intended live provider?
-  -> provider specifier cell count/value correct?
-  -> provider node available and populated?
-  -> provider driver bound?
-  -> physical resource enabled/configured?
-  -> consumer probe retries/succeeds?
-  -> subsystem function works?
-```
-
-Persistent deferral often names only the nearest unavailable resource. Follow dependencies recursively.
+Walk each consumer property to its live provider, specifier, provider driver, and physical resource before moving on, recursing when the provider itself waits ([Recursive Diagnosis Worksheet](../runtime-inspection/probe-deferral-supplier-links-and-resource-state.md#recursive-diagnosis-worksheet)). Persistent deferral often names only the nearest unavailable resource.
 
 ## Safe Enablement Patch Pattern
 

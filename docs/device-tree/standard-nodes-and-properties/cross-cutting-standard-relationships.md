@@ -12,26 +12,16 @@ Several standard properties describe dependencies or address-space crossings out
 
 ## `interrupts-extended`
 
-`interrupts-extended` puts an interrupt-parent phandle directly in every entry:
+`interrupts-extended` puts an interrupt-parent phandle directly in every entry, so entries from different parents can have different widths and meanings. The BeagleBoard-X15 UART3 functional and wake-up interrupts (`am57xx-beagle-x15-common.dtsi`):
 
 ```dts
-device@1000 {
-        interrupts-extended = <&gpio0 9 2>,
-                              <&gic 0 42 4>;
+&uart3 {
+        interrupts-extended = <&crossbar_mpu GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>,
+                              <&dra7_pmx_core 0x3f8>;
 };
 ```
 
-Decode one entry at a time:
-
-1. Resolve the phandle.
-2. Read that provider's `#interrupt-cells`.
-3. Consume exactly that many argument cells.
-4. Interpret them using that interrupt-controller binding.
-5. Repeat at the next phandle.
-
-The two entries can have different widths and meanings. The numbers above are illustrative; interrupt number spaces and flag encodings are provider-specific.
-
-`interrupts-extended` is useful when a device has interrupts from different parents or when an explicit parent per entry is clearer. If both `interrupts` and `interrupts-extended` exist, the specification gives `interrupts-extended` precedence, but bindings should normally avoid such ambiguity.
+Decode it with the [standard phandle-array algorithm](../provider-consumer-relationships.md#the-core-decoding-algorithm), using each provider's `#interrupt-cells` (three for the IRQ crossbar, one for the pad-wakeup controller). If both `interrupts` and `interrupts-extended` exist, the specification gives `interrupts-extended` precedence, but bindings should normally avoid such ambiguity.
 
 ## Interrupt Nexus Mapping
 
@@ -54,81 +44,65 @@ Every field width comes from a node:
 | parent unit address | parent interrupt controller `#address-cells` |
 | parent interrupt specifier | parent interrupt controller `#interrupt-cells` |
 
-Example with one child address cell, one child interrupt cell, no parent address cells, and two parent interrupt cells:
+The Arm Juno PCIe host bridge is a real nexus for legacy INTx (`arch/arm64/boot/dts/arm/juno-base.dtsi`, trimmed):
 
 ```dts
-intc: interrupt-controller {
-        interrupt-controller;
-        #address-cells = <0>;
-        #interrupt-cells = <2>;
+gic: interrupt-controller@2c010000 {
+        #address-cells = <1>;
+        #interrupt-cells = <3>;
+        /* ... */
 };
 
-nexus {
-        #address-cells = <1>;
+pcie_ctlr: pcie@40000000 {
+        #address-cells = <3>;
         #interrupt-cells = <1>;
-        interrupt-map-mask = <0xffffffff 0xffffffff>;
-        interrupt-map = <0x20 1 &intc 17 4>;
+        interrupt-map-mask = <0 0 0 7>;
+        interrupt-map = <0 0 0 1 &gic 0 GIC_SPI 136 IRQ_TYPE_LEVEL_HIGH>,
+                        <0 0 0 2 &gic 0 GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>,
+                        <0 0 0 3 &gic 0 GIC_SPI 138 IRQ_TYPE_LEVEL_HIGH>,
+                        <0 0 0 4 &gic 0 GIC_SPI 139 IRQ_TYPE_LEVEL_HIGH>;
+        /* ... */
 };
 ```
 
-The mask has the combined width of the child unit address and child interrupt specifier. Matching applies the mask to the candidate and row key. Here both cells match exactly. A mask that ignores address bits can make one mapping apply to several children; an overly broad mask can silently route an interrupt to the wrong parent input.
+Each row is 3 child-address cells (PCI), 1 child interrupt cell (INTA–INTD as 1–4), the GIC phandle, 1 parent address cell (`0`, because the GIC node has `#address-cells = <1>`), and 3 GIC specifier cells: nine cells after expansion.
+
+The mask has the combined width of the child unit address and child interrupt specifier. Matching applies the mask to the candidate and row key. Here `<0 0 0 7>` ignores the device address completely and matches only the pin, so every device's INTA goes to SPI 136; there is no per-slot swizzling. A mask that ignores address bits makes one mapping apply to several children; an overly broad mask can silently route an interrupt to the wrong parent input.
 
 Never split rows by visual grouping alone. Walk the flat cell stream using the governing counts, especially when different rows target parents with different widths.
 
 ## `dma-coherent`
 
-`dma-coherent` is an empty boolean property declaring that the device's DMA transactions are coherent with CPU caches under the platform's coherency model:
+`dma-coherent` is an empty boolean property declaring that the device's DMA transactions are coherent with CPU caches under the platform's coherency model. The same SDHCI IP shows why it is an integration fact. On AM65x it is marked coherent (`k3-am65-main.dtsi`):
 
 ```dts
-accelerator@4000 {
+sdhci1: mmc@4fa0000 {
+        compatible = "ti,am654-sdhci-5.1";
+        /* ... */
         dma-coherent;
 };
 ```
+
+while the AM64x `sdhci0` and `sdhci1` nodes in `k3-am64-main.dtsi` have no `dma-coherent`, and AM65x also places `dma-coherent` on the whole `main_navss` bus node.
 
 This is a hardware fact, not a performance toggle. Adding it to hide missing cache maintenance can cause data corruption. Omitting it on coherent hardware can impose unnecessary synchronization and restrict optimizations.
 
 Some bus bindings allow coherency to be inherited from a parent. Check the architecture and bus binding before relying on inheritance. Coherency also does not remove the need for the DMA API: address translation, barriers, ownership transitions, and device-specific ordering still matter.
 
-## `iommus`
+## `iommus`, `phys`, And `phy-names`
 
-`iommus` associates a device with one or more IOMMU specifiers:
+These are ordinary phandle arrays decoded through `#iommu-cells` and `#phy-cells`; see [DMA, IOMMU, PHY, And Regulator Dependencies](../provider-consumer-relationships/dma-iommu-phy-and-regulator-dependencies.md). Two standard-level cautions apply:
 
-```dts
-accelerator@4000 {
-        iommus = <&smmu 0x42>;
-};
-```
-
-The provider's `#iommu-cells` and binding define `0x42`—perhaps a stream ID, but never assume that generically. An IOMMU relationship does not prove that isolation is enabled at boot, that the correct domain is attached, or that all DMA paths pass through that IOMMU. Validate firmware bypass state, requester identifiers, grouping, and runtime domain attachment.
-
-Bus-level mapping properties such as `iommu-map` may translate child requester IDs through a nexus. That deeper address/requester mapping belongs with the relevant bus binding; do not replace it casually with per-device `iommus` properties.
-
-## `phys` And `phy-names`
-
-`phys` is a phandle array decoded through each provider's `#phy-cells`. `phy-names` labels entries positionally:
-
-```dts
-usb@5000 {
-        phys = <&usb2_phy 0>, <&usb3_phy 1>;
-        phy-names = "usb2", "usb3";
-};
-```
-
-The consumer binding defines the allowed names and order; the provider binding defines each numeric argument. Names are API tokens, not prose. Changing them can break driver lookup even if the phandles remain correct.
-
-A PHY relationship describes a logical hardware resource. It does not replace pinctrl, clocks, resets, regulators, connector graph links, or protocol configuration when those are separately required.
+- An IOMMU relationship does not prove that isolation is enabled at boot, that the correct domain is attached, or that all DMA paths pass through that IOMMU. Validate firmware bypass state, requester identifiers, grouping, and runtime domain attachment. Bus-level `iommu-map` translations belong with the bus binding; do not replace them casually with per-device `iommus`.
+- A PHY relationship describes a logical hardware resource. It does not replace pinctrl, clocks, resets, regulators, connector graph links, or protocol configuration when those are separately required.
 
 ## A Unified Review Method
 
-For each cross-cutting property:
+For each cross-cutting property, decode every entry in the final DTB with the [decoding worksheet](../provider-consumer-relationships/specifier-decoding-and-resource-names.md#a-mechanical-decoding-worksheet), then:
 
-1. Read the consumer binding for allowed properties, cardinality, and names.
-2. Resolve every phandle in the final DTB.
-3. Read the referenced provider's cell count.
-4. Decode arguments with the provider binding.
-5. Check nexus translations along the actual path.
-6. Verify that firmware and kernel drivers enable the described hardware behavior.
-7. Inspect runtime subsystem state rather than equating DT presence with enforcement.
+1. Check nexus translations along the actual path.
+2. Verify that firmware and kernel drivers enable the described hardware behavior.
+3. Inspect runtime subsystem state rather than equating DT presence with enforcement.
 
 ## Failure Patterns Worth Recognizing
 

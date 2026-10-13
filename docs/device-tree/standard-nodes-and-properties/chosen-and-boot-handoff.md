@@ -19,20 +19,25 @@ Typical data includes:
 - architecture- or OS-specific initrd boundaries
 - bootloader-provided entropy or firmware handoff metadata where a binding defines it
 
-```dts
-/ {
-        aliases {
-                serial0 = &uart2;
-        };
+Mainline TI board files contain only the console choice; boot arguments come from U-Boot at boot time. Two real forms:
 
-        chosen {
-                stdout-path = "serial0:115200n8";
-                bootargs = "console=ttyS0,115200 rootwait ro";
-        };
+```dts
+/* k3-am642-sk.dts: label reference, compiled to a full path, no options */
+chosen {
+        stdout-path = &main_uart0;
+};
+
+/* k3-am625-beagleplay.dts: alias plus serial options */
+aliases {
+        serial2 = &main_uart0;
+};
+
+chosen {
+        stdout-path = "serial2:115200n8";
 };
 ```
 
-The part before the colon in `stdout-path` is a full path or alias. The suffix is interpreted by the target device binding; serial devices conventionally use baud, parity, bits, and flow-control fields. The path must resolve in the final tree.
+The part before the colon in `stdout-path` is a full path or alias; without a colon the whole value is the path, and the console keeps its default settings. The suffix is interpreted by the target device binding; serial devices conventionally use baud, parity, bits, and flow-control fields. The path must resolve in the final tree.
 
 An early console still requires working hardware state: the UART must be available and its clocks, power, and pins must permit access. `stdout-path` selects a route; it does not configure every dependency by itself.
 
@@ -67,25 +72,13 @@ When initrd unpacking fails, compare bootloader load addresses, `/chosen` in the
 
 ## Firmware Mutation Is Part Of The Interface
 
-Think of the final tree as an artifact assembled by several owners:
-
-```text
-base DTS + board includes + build overlays
-        ↓
-packaged DTB
-        ↓ firmware selection and fixups
-handed-off DTB
-        ↓ kernel unflattening
-runtime tree
-```
-
-Capture all three relevant states when diagnosing boot handoff:
+The handed-off tree is assembled by several owners (see [What The Bootloader Can Change](../foundations/source-and-binary-artifacts.md#what-the-bootloader-can-change)). When diagnosing boot handoff, capture:
 
 1. the built DTB and its hash
 2. the DTB immediately before kernel entry, if the bootloader can save it
 3. `/sys/firmware/devicetree/base` or `/proc/device-tree` at runtime
 
-Diffing only source files misses runtime memory sizing, MAC address injection, console selection, initrd metadata, and overlay application.
+Diffing only source files misses runtime memory sizing, MAC address injection, console selection, initrd metadata, and overlay application. [Boot-Time Mutation And Ownership](../boot-time-mutation-and-ownership.md) covers this pipeline in depth.
 
 ## Console Failure Checklist
 

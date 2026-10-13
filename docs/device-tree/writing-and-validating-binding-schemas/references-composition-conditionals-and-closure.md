@@ -23,18 +23,39 @@ Use references to share established semantics. Do not reproduce a common schema 
 
 ## `allOf` Means Every Constraint Applies
 
+From `gpu/img,powervr-rogue.yaml` (trimmed):
+
 ```yaml
 allOf:
-  - $ref: /schemas/spi/spi-peripheral-props.yaml#
   - if:
       properties:
         compatible:
           contains:
-            const: acme,axc200
+            enum:
+              - ti,am62-gpu
+              - ti,j721s2-gpu
     then:
+      properties:
+        clocks:
+          maxItems: 1
+
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: img,img-axe-1-16m
+    then:
+      properties:
+        power-domains:
+          maxItems: 1
+        power-domain-names:
+          maxItems: 1
       required:
-        - resets
+        - power-domains
+        - power-domain-names
 ```
+
+The AM62x GPU node contains both `ti,am62-gpu` and `img,img-axe-1-16m`, so both branches apply to it at once.
 
 The instance must satisfy both branches and the top-level schema. `allOf` is intersection, not ordered inheritance; later branches do not override earlier constraints.
 
@@ -54,107 +75,91 @@ Do not use `oneOf` merely to organize text. Use it when exclusivity is part of t
 
 ## Conditionals Narrow Top-Level Definitions
 
-Define a property's broadest permitted shape in `properties`, then narrow it in conditions:
+Define a property's broadest permitted shape in `properties`, then narrow it in conditions. The same PowerVR binding declares the widest clock list once:
 
 ```yaml
 properties:
-  interrupts:
+  clocks:
     minItems: 1
-    maxItems: 2
+    maxItems: 3
 
-  interrupt-names:
+  clock-names:
+    items:
+      - const: core
+      - const: mem
+      - const: sys
     minItems: 1
-    maxItems: 2
-
-allOf:
-  - if:
-      properties:
-        compatible:
-          contains:
-            const: acme,axc100
-    then:
-      properties:
-        interrupts:
-          maxItems: 1
-        interrupt-names:
-          items:
-            - const: completion
-        resets: false
-
-  - if:
-      properties:
-        compatible:
-          contains:
-            const: acme,axc200
-    then:
-      properties:
-        interrupts:
-          minItems: 2
-        interrupt-names:
-          items:
-            - const: completion
-            - const: error
-      required:
-        - resets
 ```
+
+The branches above then cut it to one clock for TI integrations, while another branch requires all three for the Renesas and T-Head GPUs. Removing `power-domain-names` from the AM625 SK DTB produces `gpu@fd00000 (ti,am62-gpu): 'power-domain-names' is a required property`, and adding a second clock produces `clocks: [[2, 187, 0], [2, 187, 1]] is too long`.
 
 Do not introduce an otherwise unknown property only inside `then`; the top-level closure may reject it, and the overall schema becomes harder to understand. Declare the broad property once and specialize it.
 
 ## Conditions Need Presence Guards
 
-This condition:
+A condition written only with `properties` can be true when the property is absent, because `properties` alone does not require presence. When presence is the trigger, guard it with `required`. `mfd/ti,tps6594.yaml` uses this to keep multiphase buck combinations exclusive:
 
 ```yaml
-if:
-  properties:
-    acme,external-trigger:
-      const: true
+allOf:
+  - if:
+      required:
+        - buck12
+    then:
+      properties:
+        buck123: false
+        buck1234: false
+  - if:
+      required:
+        - buck123
+    then:
+      properties:
+        buck34: false
 ```
 
-can validate when the property is absent because `properties` alone does not require presence. When presence is the trigger, add:
-
-```yaml
-if:
-  required:
-    - acme,external-trigger
-then:
-  required:
-    - trigger-gpios
-```
+If a board declares a dual-phase `buck12` regulator node, the schema forbids `buck123` and `buck1234` nodes, because the same physical phases cannot be in two groups.
 
 For compatible conditions, `compatible` is normally top-level required, but including an explicit presence guard can still make a standalone conditional clearer when context is uncertain.
 
 ## `else` Can Forbid Variant-Only Data
 
+`thermal/ti,j72xx-thermal.yaml` uses `else` to give the two VTM generations different register-window counts:
+
 ```yaml
-if:
-  properties:
-    compatible:
-      contains:
-        const: acme,axc200
-then:
-  required:
-    - resets
-else:
-  properties:
-    resets: false
+allOf:
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: ti,j721e-vtm
+    then:
+      properties:
+        reg:
+          minItems: 3
+    else:
+      properties:
+        reg:
+          maxItems: 2
 ```
 
-Without the `else`, AXC100 might be allowed to carry `resets` if it was broadly declared at top level. Decide whether this is legitimate optional wiring or a contradiction, then encode the decision.
+Without the `else`, a `ti,j7200-vtm` node (used by AM62x) could carry a third window that its hardware does not have. The DSS binding uses the other form: a `then` that sets `oldi-transmitters: false` for `ti,am62a7-dss`, whose SoC has no OLDI. Decide whether variant-only data is legitimate optional wiring or a contradiction, then encode the decision.
 
 ## Dependencies Express Co-Presence
 
 Some properties form pairs or groups independent of a variant. Examples include data plus names, or a mode marker plus its associated resource. Use the dependency vocabulary supported by current DT meta-schemas and neighboring bindings.
 
-Conceptually:
+From `regulator/ti,tps65132.yaml` and `display/bridge/ti,sn65dsi86.yaml`:
 
 ```yaml
 dependencies:
-  acme,external-trigger: [trigger-gpios]
-  trigger-gpios: [acme,external-trigger]
+  active-discharge-gpios: [ 'ti,active-discharge-time-us' ]
 ```
 
-The two directions mean both are present or both absent. A one-way dependency means only that one property requires the other. Use conditionals instead when value-specific narrowing is needed.
+```yaml
+dependencies:
+  lane-polarities: [data-lanes]
+```
+
+Both are one-way: a discharge GPIO needs its timing, and lane polarities make sense only after lanes are mapped, but either right-hand property can appear alone. The two directions mean both are present or both absent. A one-way dependency means only that one property requires the other. Use conditionals instead when value-specific narrowing is needed.
 
 ## Close Every Object
 

@@ -8,315 +8,136 @@ last_reviewed: null
 
 # Boot-Time Mutation Provenance Lab
 
-This lab follows one Linux DTB through trusted-firmware reservations, a board-revision overlay, per-unit identity injection, RAM discovery, and `/chosen` preparation. It produces checkpoint artifacts and a mutation manifest that explain every difference between the built base and Linux's live tree.
+This lab reconstructs every change TI U-Boot makes to the AM62x SK's Linux DTB between the file on disk and the tree Linux receives. You will predict each mutation from source, capture the final blob from `/sys/firmware/fdt`, and attribute every difference to one function. Sources are mainline Linux (`k3-am625-sk.dts`, `k3-am62x-sk-hdmi-audio.dtso`) and TI U-Boot v2026.01-rc3 (`boot/image-fdt.c`, `boot/fdt_support.c`, `arch/arm/mach-k3/am62x/am625_fdt.c`, `arch/arm/mach-k3/common_fdt.c`, `include/env/ti/*.env`).
 
-## Objectives
+## Checkpoints On This Platform
 
-By the end, you should be able to:
-
-- define owners, inputs, preconditions, and failure policy for every mutation
-- calculate safe DTB capacity and all boot-image intervals
-- reconcile installed RAM and secure reservations
-- encode initrd and console handoff correctly
-- inject identity without ambiguous precedence
-- apply overlays transactionally in canonical order
-- compare deterministic hardware state separately from ephemeral seed data
-- bisect deliberate failures to the responsible stage
-
-## Platform Contract
-
-Assume:
-
-- the base DTS describes a maximum 1 GiB DRAM bank at `0x80000000`
-- this unit discovers 768 MiB, ending at `0xb0000000`
-- trusted firmware owns the top 16 MiB: `[0xaf000000, 0xb0000000)`
-- Board revision 4 requires one authenticated `rev4.dtbo`
-- a secure provisioning service supplies one Ethernet MAC and public serial
-- U-Boot loads a 32 MiB initrd at `[0x98000000, 0x9a000000)`
-- the final working-FDT buffer is `[0x97000000, 0x97080000)` (512 KiB)
-- `serial0` is the intended boot console
-- a trusted hardware RNG supplies independent `rng-seed` and `kaslr-seed` values
-- U-Boot and every mutation input are authenticated under the product boot chain
-
-Addresses and interfaces are illustrative.
-
-## Step 1: Define The Base
-
-Relevant base fragment:
-
-```dts
-/ {
-        #address-cells = <2>;
-        #size-cells = <2>;
-        model = "Example Product";
-        compatible = "example,product", "example,soc";
-
-        aliases {
-                serial0 = &uart0;
-                ethernet0 = &ethernet0;
-        };
-
-        chosen {
-                stdout-path = "serial0:115200n8";
-        };
-
-        memory@80000000 {
-                device_type = "memory";
-                reg = <0x0 0x80000000 0x0 0x40000000>;
-        };
-
-        reserved-memory {
-                #address-cells = <2>;
-                #size-cells = <2>;
-                ranges;
-        };
-};
-
-&ethernet0 {
-        status = "okay";
-};
-```
-
-The maximum memory description is a product convention; the validated boot fixup narrows it to detected RAM before Linux receives the tree.
-
-## Step 2: Build The Mutation Manifest
-
-| ID | Owner | Input | Target | Failure |
-|---|---|---|---|---|
-| `DTM-100` | trusted-firmware bridge | authenticated reservation response | `/reserved-memory/secure@af000000` | abort normal boot |
-| `DTM-120` | product composition | signed board manifest | apply `rev4.dtbo` | recovery |
-| `DTM-200` | memory-init authority | training result | `/memory@80000000/reg` | abort |
-| `DTM-220` | provisioning bridge | secure service | MAC and root serial | provisioning recovery |
-| `DTM-300` | boot policy | signed boot config | `/chosen/bootargs` | recovery |
-| `DTM-320` | image loader | verified initrd placement | initrd start/end | boot without initrd only if policy allows |
-| `DTM-340` | entropy handoff | trusted RNG | seed properties | security-policy failure |
-
-Define allowed paths for every ID. Any change outside them fails the postcondition.
-
-## Step 3: Establish Checkpoints
+The chapter's timeline names roles, not a fixed order. On the AM62x SK, the default environment produces this sequence:
 
 ```text
-C0 base.dtb from release build
-C1 verified base copied/opened at working-FDT buffer
-C2 secure reservation serialized
-C3 rev4 overlay applied
-C4 RAM and identity fixed
-C5 deterministic bootargs/initrd/console complete
-C6 seeds added immediately before handoff
-C7 Linux live tree
+C0  k3-am625-sk.dtb as built
+C1  loaded by get_fdt_mmc to fdtaddr=0x88000000 (no authentication in the default env)
+C3  overlays from $name_overlays applied by get_overlay_mmc (fdt resize 0x100000 first)
+    booti: FDT relocated with CONFIG_SYS_FDT_PAD (0x3000) extra space
+C4  image_setup_libfdt(): fdt_root, fdt_chosen, arch_fixup_fdt, OP-TEE nodes,
+    fdt_fixup_ethernet, [ft_board_setup], ft_system_setup, fdt_initrd
+C2  the firmware reservations (tfa, optee) are rewritten inside ft_system_setup,
+    after the overlays, not before them
+C5  shrunk with fdt_shrink_to_minimum() and passed to Linux
+C6  Linux live tree; C5 itself is visible as /sys/firmware/fdt
 ```
 
-Save packed development copies at `C0` through `C5`. At `C6`, save only a protected/redacted artifact and record a final hash in the secure diagnostic channel.
+Note the reversal: on this platform the “firmware-adjusted” step runs after overlays and board fixups. Record the real order for your build before reasoning about conflicts.
 
-## Step 4: Prove Capacity And Intervals
+## Inputs
 
-Assume measured worst cases:
+- `k3-am625-sk.dtb` and `k3-am62x-sk-hdmi-audio.dtbo`, built as in the [Overlays lab](../overlays-in-depth/overlay-composition-and-lifecycle-lab.md)
+- an AM62x SK booting TI U-Boot from SD with the default environment
+- `dtc`, `fdtget`, and `fdtoverlay` on the host
 
-```text
-base DTB totalsize        82 KiB
-rev4 overlay growth       21 KiB
-secure/memory fixups       3 KiB
-identity and /chosen       5 KiB
-future bounded margin     64 KiB
-required                 175 KiB
-reserved capacity        512 KiB
-```
-
-The 512 KiB interval is sufficient. Now prove it does not overlap:
-
-```text
-kernel output      [0x80200000, 0x85000000)
-working FDT        [0x97000000, 0x97080000)
-overlay input      [0x97100000, 0x97110000)
-initrd             [0x98000000, 0x9a000000)
-secure reservation [0xaf000000, 0xb0000000)
-```
-
-Also include FIT source, U-Boot relocation/malloc/stack, and DMA writers from the actual platform.
-
-## Step 5: Serialize Secure Memory
-
-Expected result:
-
-```dts
-reserved-memory {
-        #address-cells = <2>;
-        #size-cells = <2>;
-        ranges;
-
-        secure@af000000 {
-                reg = <0x0 0xaf000000 0x0 0x01000000>;
-                no-map;
-        };
-};
-```
-
-Validate:
-
-- base and size equal the authenticated response
-- end is exactly `0xb0000000` without overflow
-- region lies within discovered DRAM
-- no other normal-world region overlaps it
-- hardware security configuration covers the same interval
-
-The `no-map` property does not create the security boundary.
-
-## Step 6: Apply The Revision Overlay
-
-Assume revision 4 changes a GPIO-controlled peripheral:
-
-```dts
-/dts-v1/;
-/plugin/;
-
-&expansion_device {
-        reset-gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;
-        status = "okay";
-};
-```
-
-Authenticate it, confirm base/revision compatibility, apply it to the disposable working copy, check the return code, and assert:
-
-- only approved paths changed
-- GPIO 2.11 has no other active consumer
-- providers and ancestors remain available
-- final composed tree passes schema checks
-
-Record base, overlay, and `C3` hashes.
-
-## Step 7: Narrow RAM And Inject Identity
-
-Expected memory tuple:
-
-```dts
-memory@80000000 {
-        device_type = "memory";
-        reg = <0x0 0x80000000 0x0 0x30000000>;
-};
-```
-
-This describes 768 MiB; the secure 16 MiB remains inside it but reserved separately.
-
-Provisioning writes:
-
-```dts
-/ {
-        serial-number = "EXAMPLE-000042";
-};
-
-&ethernet0 {
-        local-mac-address = [00 1a 2b 3c 4d 5e];
-};
-```
-
-Validate source authentication, format, six-byte unicast MAC, uniqueness, and existing-property policy. Use development values only; production artifacts must protect identifiers according to privacy policy.
-
-## Step 8: Prepare `/chosen`
-
-After verified image placement:
-
-```dts
-chosen {
-        stdout-path = "serial0:115200n8";
-        bootargs = "root=PARTUUID=... ro rootwait";
-        linux,initrd-start = <0x0 0x98000000>;
-        linux,initrd-end = <0x0 0x9a000000>;
-};
-```
-
-The end is exclusive, so size is:
-
-```text
-0x9a000000 - 0x98000000 = 0x02000000 = 32 MiB
-```
-
-Assert one `root=` policy, valid alias target, root cell width, and no interval overlap. If initrd loading fails, remove both initrd properties before any permitted no-initrd fallback.
-
-Add independent seed properties only after deterministic checkpoint `C5`. Do not print them in the lab report.
-
-## Step 9: Capture Evidence
-
-Host/replay environment:
+## Step 1: Freeze C0 And C3 On The Host
 
 ```sh
-sha256sum base.dtb rev4.dtbo
-fdtoverlay -i base.dtb -o c3-merged.dtb rev4.dtbo
-dtc -I dtb -O dts -o c3-merged.dts c3-merged.dtb
+sha256sum k3-am625-sk.dtb k3-am62x-sk-hdmi-audio.dtbo
+fdtoverlay -i k3-am625-sk.dtb -o c3.dtb k3-am62x-sk-hdmi-audio.dtbo
+dtc -I dtb -O dts -s -o c3.dts c3.dtb
 ```
 
-U-Boot:
+`-s` sorts nodes and properties, which keeps later diffs readable.
 
-```text
-=> fdt addr
-=> fdt header
-=> fdt print /memory@80000000
-=> fdt print /reserved-memory
-=> fdt print /chosen
-=> fdt print /soc/ethernet@...
-```
+## Step 2: Predict Every Mutation
 
-Export exactly `totalsize` bytes from the final handoff in a controlled development build. Redact seeds and sensitive identifiers from general logs.
+Read the functions named under C4 and fill the table before booting:
 
-Linux:
+| Function | Writes | Condition | Prediction for your SK |
+|---|---|---|---|
+| `fdt_root()` | `/serial-number` | env `serial#` set | |
+| `fdt_chosen()` | `/chosen/bootargs`, `/chosen/u-boot,version` | always (bootargs if set) | |
+| `fdt_chosen()` | `/chosen/kaslr-seed`, `/chosen/rng-seed` | `DM_RNG` / `BOARD_RNG_SEED` enabled | |
+| `arch_fixup_fdt()` | `/memory@80000000/reg` | DRAM banks known to U-Boot | |
+| `fdt_fixup_ethernet()` | `mac-address` (replace), `local-mac-address` (create) on the `ethernet0` alias target | env `ethaddr` set | |
+| `fdt_fixup_cores_nodes_am625()` | deletes `/cpus/cpu@N`, `cpu-map` cores, and per-core watchdogs | fewer than 4 cores | |
+| `fdt_fixup_gpu_nodes_am625()` | deletes `gpu@fd00000` and its watchdog | no GPU in this part | |
+| `fdt_fixup_pru_node_am625()` | deletes `pruss@30040000` | no PRU | |
+| `fdt_fixup_thermal_critical_trips_k3()` | every `critical` trip `temperature` | always: 95, 105, or 125 °C by temperature grade | |
+| `fdt_fixup_thermal_cooling_device_cpus_am625()` | `cooling-device` in both zones | always, truncated to 3 cells per remaining core | |
+| `fdt_fixup_reserved()` | deletes and re-adds `tfa@...`, `optee@...` | always | |
+| `fdt_initrd()` | `/chosen/linux,initrd-*` | initrd given | |
+
+Use `k3_get_max_temp()` in `am62_hardware.h` to read the temperature grade mapping: commercial and unknown give 95, industrial 105, automotive 125.
+
+## Step 3: Capture C5 And C6 On The Board
 
 ```sh
-dtc -I fs -O dts -o linux-live.dts /sys/firmware/devicetree/base
-cat /proc/cmdline
-cat /proc/iomem
-ip -br link
-dmesg | grep -Ei 'Machine model|reserved memory|Kernel command line'
+cp /sys/firmware/fdt c5.dtb
+sha256sum c5.dtb
+dtc -I dtb -O dts -s -o c5.dts c5.dtb 2>/dev/null
 ```
 
-Compare every checkpoint semantically using the manifest's allowed paths.
+Copy `c5.dtb` to the host. `/sys/firmware/fdt` is the blob as Linux received it; `/sys/firmware/devicetree/base` is the C6 view after unflattening.
 
-## Step 10: Diagnose Deliberate Faults
+## Step 4: Attribute Every Difference
 
-### Fault A: Trusted Firmware Reports Size `0x02000000`
+```sh
+diff -u c3.dts c5.dts
+```
 
-The secure region becomes `[0xaf000000, 0xb1000000)`, extending beyond detected DRAM. Reject the response or boot. Do not truncate a secure reservation.
+Expected classes of difference, each to be mapped to one row of your Step 2 table:
 
-### Fault B: RAM Fixup Runs Before Discovery Validation
+- `/chosen` gains `bootargs` and `u-boot,version`
+- `cpsw_port1`'s all-zero `mac-address` becomes the board's address and `local-mac-address` appears, if `ethaddr` was set
+- `critical` trip temperatures under both thermal zones change from the DTS value (105000) to the grade value
+- the `tfa` and `optee` reservations are re-created; compare their addresses with your build's `CONFIG_K3_ATF_LOAD_ADDR` and `CONFIG_K3_OPTEE_LOAD_ADDR` and explain any change
+- on a 4-core, GPU, PRU part, no nodes are deleted
 
-A corrupted training result reports 4 GiB. Range and SKU-bound validation must happen before `fdt_setprop`; later reservations cannot make invented RAM safe.
+Any difference you cannot attribute is a finding, not noise.
 
-### Fault C: Overlay Application Returns `FDT_ERR_NOSPACE`
+## Step 5: Check Cross-Stage Consistency
 
-Discard the working base and overlay according to U-Boot's invalidation warning. Fix capacity calculation and replay from `C1`; do not continue to identity fixups.
+1. Compare the passive trip (`main0-alert`, 95 °C in the DTS) with the rewritten critical trip on a commercial-grade part. If both are 95 °C, explain what that leaves of the passive cooling range and who owns the decision: the DTS author, the U-Boot fixup, or the product.
+2. Explain why `fdt_fixup_thermal_cooling_device_cpus_am625()` must run whenever CPU nodes are deleted, and what would remain in `cooling-device` otherwise.
+3. Compare `/memory@80000000/reg` in C3 and C5 and decide whether U-Boot or the DTS is the authority on this board.
 
-### Fault D: MAC Exists In Both Base And Provisioning
+## Step 6: Check Capacity And Failure Behavior
 
-Apply the documented precedence. If the base contains a valid production value unexpectedly, flag the release input rather than silently overwriting it.
+1. From `fdt header` at the U-Boot prompt after `get_overlay_mmc`, record `totalsize` and `size_dt_struct`. Compare the free space with the growth you measured in Step 4.
+2. Read the error handling in `image_setup_libfdt()` and the functions it calls. Which failures reach `- must RESET the board to recover.`? Note that `fdt_chosen()` prints `WARNING: could not set bootargs` and then returns the error, so that “warning” is fatal, while `ft_system_setup()` for AM62x returns 0 even when an individual fixup fails.
+3. Find the environment variable that skips `ft_board_setup()` (`skip_board_fixup`) and decide whether a product should allow it.
 
-### Fault E: Initrd End Is Written As `0x02000000`
+## Step 7: Diagnose Deliberate Faults
 
-That is a size, not the exclusive end address. Linux will see an invalid/wrapped interval. Correct it to `0x9a000000` with two root address cells.
+### Fault A: A Missing Overlay File
 
-### Fault F: Final DTB Hash Changes, Hardware Did Not
+Set `name_overlays` to a file that does not exist. Predict that `get_overlay_mmc` skips it (`load ... && fdt apply ...`) and the boot continues; C5 equals the no-overlay tree plus C4 fixups. Decide where the boot should have failed.
 
-Seeds and possibly bootargs/slot state vary per boot. Compare deterministic checkpoint `C5` and a redacted semantic diff. Never make seeds deterministic to stabilize a test.
+### Fault B: An Overlay That Re-Enables The Analog Card
 
-### Fault G: Linux Reports 768 MiB But Uses Secure Top 16 MiB
+Write a scratch overlay that sets `&codec_audio { status = "okay"; };` and list it after the HDMI audio overlay. Predict the C3 result (both cards enabled, both using `mcasp1`) and the runtime symptom. Explain why ordering alone decided the result.
 
-The `/memory` fixup succeeded, but reservation serialization or early consumption failed. Compare `C6`, Linux live `/reserved-memory`, early memblock logs, `/proc/iomem`, and hardware firewall range.
+### Fault C: A Single-Core Part
 
-### Fault H: Warm Boot Retains Old Initrd Properties
+Without hardware, simulate `fdt_fixup_cores_nodes_am625(blob, 1)` on a copy of C3 with `fdtput -r` for `cpu@1`–`cpu@3`, their `cpu-map` cores, and watchdogs `e010000`–`e030000`. Run `dtc` and note the dangling `cooling-device` phandles:
 
-The failed loader reused a prior working buffer. Recreate from a trusted base/checkpoint and remove paired transient properties on failure.
+```text
+Warning (cooling_device_property): /thermal-zones/main0-thermal/cooling-maps/map0:cooling-device: Could not get phandle node for (cell 3)
+Warning (cooling_device_property): /thermal-zones/main1-thermal/cooling-maps/map0:cooling-device: Could not get phandle node for (cell 3)
+```
+
+Then truncate each `cooling-device` to its first three cells and confirm the warnings disappear. This shows why the two fixups are a pair.
+
+### Fault D: A Wrong Temperature Grade
+
+Explain the consequence if `k3_get_temp_grade()` misread an automotive part as commercial: critical shutdown at 95 °C instead of 125 °C. Then the reverse case. Decide which error is the safety problem.
 
 ## Exit Review
 
-The lab is complete when you can provide:
+The lab is complete when you can present:
 
-- mutation ownership manifest
-- C0–C6 checkpoint strategy and protected evidence
-- full capacity and memory interval proof
-- canonical RAM/reservation model
-- overlay compatibility and resource-conflict result
-- identity precedence and validation record
-- `/chosen` encoding and initrd arithmetic
-- deterministic and ephemeral comparison strategy
-- Linux runtime reconciliation
-- root cause for every deliberate fault
+- the platform-specific checkpoint order with the C2/C3 reversal explained
+- the prediction table and the C3-to-C5 diff with every line attributed
+- the cross-stage consistency findings, including the thermal trip interaction
+- capacity measurements and the abort-versus-warn classification
+- predicted and observed results for each fault
 
 ## Authoritative References
 
@@ -328,4 +149,4 @@ The lab is complete when you can provide:
 
 ## Continue
 
-Proceed to [Binding Design And Stable ABI](../binding-design-and-stable-abi.md).
+Proceed to [Build And Diagnostic Tools](../build-and-diagnostic-tools.md).

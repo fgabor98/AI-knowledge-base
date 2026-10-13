@@ -26,18 +26,29 @@ This table is a starting point, not a replacement for the specific controller an
 ## I2C Children
 
 ```dts
-i2c@4000 {
+/* k3-am64-main.dtsi: the controller, addressed on the MMIO bus */
+main_i2c1: i2c@20010000 {
+        compatible = "ti,am64-i2c", "ti,omap4-i2c";
+        reg = <0x00 0x20010000 0x00 0x100>;
         #address-cells = <1>;
         #size-cells = <0>;
+};
 
-        temperature-sensor@48 {
-                compatible = "ti,tmp102";
+/* k3-am642-sk.dts: the children, addressed on the I2C bus */
+&main_i2c1 {
+        exp1: gpio@70 {
+                compatible = "nxp,pca9538";
+                reg = <0x70>;
+        };
+
+        tmp100@48 {
+                compatible = "ti,tmp100";
                 reg = <0x48>;
         };
 };
 ```
 
-`0x48` is the I2C target address as encoded by the binding, not an offset inside the controller's register window. The controller node's own `reg` is interpreted by its parent MMIO bus; the sensor's `reg` is interpreted by the I2C controller. The same property changes namespace at the boundary.
+`0x48` and `0x70` are I2C target addresses as encoded by the binding, not offsets inside the controller's register window. The controller node's own `reg` is interpreted by its parent MMIO bus; the sensor's `reg` is interpreted by the I2C controller. The same property changes namespace at the boundary.
 
 Ten-bit targets and address-related flags require the common I2C binding's encoding. Do not invent extra address cells or store an 8-bit wire value that includes the read/write bit.
 
@@ -45,32 +56,52 @@ I2C multiplexers add further bus levels. Each channel node can become a logical 
 
 ## SPI Children
 
-```dts
-spi@5000 {
-        #address-cells = <1>;
-        #size-cells = <0>;
+The AM642 EVM has a Microwire-style EEPROM on McSPI0 (`k3-am642-evm.dts`):
 
-        flash@0 {
-                compatible = "jedec,spi-nor";
+```dts
+&main_spi0 {
+        ti,pindir-d0-out-d1-in;
+
+        eeprom@0 {
+                compatible = "microchip,93lc46b";
                 reg = <0>;
-                spi-max-frequency = <50000000>;
+                spi-max-frequency = <1000000>;
+                spi-cs-high;
+                data-size = <16>;
         };
 };
 ```
 
 `reg = <0>` selects chip select 0. The SPI peripheral's internal register addresses are part of its transaction protocol and are not child `reg` resources. Some bindings allow several chip selects or special slave-mode layouts; follow the schema rather than assuming one cell always means one device.
 
-Chip-select GPIOs are controller resources and have their own indexing/polarity rules. They do not change the child's logical chip-select number.
+`spi-cs-high` says this device's select is active-high; it changes polarity, not the logical chip-select number. Chip-select GPIOs are controller resources with their own indexing and polarity rules.
 
 ## MDIO And Other Numbered Buses
 
+The AM642 EVM shows both a direct PHY and one behind a GPIO-controlled MDIO multiplexer (`k3-am642-evm.dts`, trimmed):
+
 ```dts
-mdio {
+&cpsw3g_mdio {
+        cpsw3g_phy0: ethernet-phy@0 {
+                reg = <0>;
+        };
+};
+
+mdio_mux_1: mdio-mux-1 {
+        compatible = "mdio-mux-multiplexer";
+        mux-controls = <&mdio_mux>;
+        mdio-parent-bus = <&cpsw3g_mdio>;
         #address-cells = <1>;
         #size-cells = <0>;
 
-        ethernet-phy@1 {
-                reg = <1>;
+        mdio@1 {
+                reg = <0x1>;            /* mux channel */
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                cpsw3g_phy3: ethernet-phy@3 {
+                        reg = <3>;      /* PHY address on that channel */
+                };
         };
 };
 ```
@@ -81,17 +112,7 @@ Other bindings use `reg` for slots, ports, endpoints, functions, or controller-l
 
 ## Discoverable Versus Non-Discoverable Buses
 
-SoC MMIO devices usually need explicit nodes because no standard enumeration mechanism discovers them. PCI and USB can enumerate devices, so firmware generally describes the host controller and non-discoverable board integration rather than duplicating every discoverable function.
-
-Device Tree nodes may still be needed for discoverable devices when the binding must provide information that enumeration cannot, such as:
-
-- fixed board wiring and GPIOs
-- regulators, clocks, or reset controls outside the protocol
-- MAC addresses or calibration data
-- interrupt routing not discoverable through the bus
-- platform-specific mode or lane configuration
-
-The node address then follows that discoverable bus's binding and topology.
+For PCI and USB, firmware generally describes the host controller and non-discoverable board integration rather than every enumerable function (see [Discoverable And Non-Discoverable Hardware](../foundations/hardware-description-model.md#discoverable-and-non-discoverable-hardware)). When a binding does add a node for a discoverable device—for fixed wiring, supplies, MAC addresses, calibration data, or non-discoverable interrupt routing—its address follows that bus's binding and topology.
 
 ## Bus Nodes Are Devices Too
 

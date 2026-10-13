@@ -21,71 +21,100 @@ One port can have one endpoint for a simple point-to-point link. A port can have
 
 ## Direct `port` Versus `ports`
 
-A simple device can place one `port` directly below itself:
+A device with one interface can place one `port` directly below itself. The AM62x SK HDMI connector, from `k3-am62x-sk-common.dtsi`:
 
 ```dts
-bridge@2c {
-        compatible = "vendor,video-bridge";
-        reg = <0x2c>;
-
+hdmi0: connector-hdmi {
+        compatible = "hdmi-connector";
+        label = "hdmi";
+        type = "a";
         port {
-                bridge_out: endpoint {
-                        remote-endpoint = <&panel_in>;
+                hdmi_connector_in: endpoint {
+                        remote-endpoint = <&sii9022_out>;
                 };
         };
 };
 ```
 
-Multiple ports are commonly wrapped in `ports`:
+Multiple ports are wrapped in `ports`. The SiI9022 HDMI transmitter on the same board:
 
 ```dts
-ports {
-        #address-cells = <1>;
-        #size-cells = <0>;
+sii9022: bridge-hdmi@3b {
+        compatible = "sil,sii9022";
+        reg = <0x3b>;
+        interrupt-parent = <&exp1>;
+        interrupts = <16 IRQ_TYPE_EDGE_FALLING>;
+        #sound-dai-cells = <0>;
+        sil,i2s-data-lanes = < 0 >;
 
-        port@0 {
-                reg = <0>;
-        };
+        ports {
+                #address-cells = <1>;
+                #size-cells = <0>;
 
-        port@1 {
-                reg = <1>;
+                port@0 {
+                        reg = <0>;
+
+                        sii9022_in: endpoint {
+                                remote-endpoint = <&dpi1_out>;
+                        };
+                };
+
+                port@1 {
+                        reg = <1>;
+
+                        sii9022_out: endpoint {
+                                remote-endpoint = <&hdmi_connector_in>;
+                        };
+                };
         };
 };
 ```
 
-The wrapper isolates graph address/size-cell rules from other device children. This matters when the same device also contains addressable blocks or child buses.
+The wrapper gives the ports their own `#address-cells`/`#size-cells`, separate from the device's other children. Here that matters because the bridge is an I²C target: without `ports`, `port@0` would inherit the I²C bus's cell counts.
 
 ## Numbering Domains
 
-`port@1/reg = <1>` selects a provider-defined port number. Inside a multi-endpoint port, `endpoint@0/reg = <0>` selects an endpoint local to that port. Neither value is a memory address unless the device binding explicitly says so.
+`port@1/reg = <1>` selects a binding-defined port number. Inside a multi-endpoint port, `endpoint@0/reg = <0>` selects an endpoint local to that port. Neither value is a memory address.
+
+The Allwinner A64 display engine has two mixers and two timing controllers, and either mixer can feed either controller. From `arch/arm64/boot/dts/allwinner/sun50i-a64.dtsi`:
 
 ```dts
-port@1 {
-        reg = <1>;
+mixer0_out: port@1 {
         #address-cells = <1>;
         #size-cells = <0>;
+        reg = <1>;
 
-        output_a: endpoint@0 {
+        mixer0_out_tcon0: endpoint@0 {
                 reg = <0>;
+                remote-endpoint = <&tcon0_in_mixer0>;
         };
 
-        output_b: endpoint@1 {
+        mixer0_out_tcon1: endpoint@1 {
                 reg = <1>;
+                remote-endpoint = <&tcon1_in_mixer0>;
         };
 };
 ```
 
-Do not add `@0` and `reg` mechanically to single ports/endpoints. Use them when required for disambiguation or by schema, and keep unit addresses consistent with `reg`.
+`tcon0_in: port@0` has the mirror pair, with `endpoint@0` from mixer 0 and `endpoint@1` from mixer 1. The `#address-cells` inside the port are for endpoint numbers. TI's AM625 DSS binding (`ti,am65x-dss.yaml`) uses the same pattern for a different reason: `port@0` may carry `endpoint@0` and `endpoint@1`, one per OLDI transmitter, for dual-link LVDS.
+
+Do not add `@0` and `reg` mechanically to single ports and endpoints. Use them when required for disambiguation or by schema, and keep unit addresses consistent with `reg`.
 
 ## Port Direction Is Binding-Defined
 
-The generic graph schema does not universally declare port 0 input and port 1 output. The device binding defines port meaning and direction. For a display bridge, port 0 may be input and port 1 output; a different IP block can use another numbering scheme.
+The generic graph schema does not declare port 0 input and port 1 output. Each device binding does:
 
-Labels such as `bridge_in` aid source readability but do not carry direction semantics into the DTB. Driver behavior comes from node structure, `reg`, and binding contract.
+| Device | Binding | `port@0` | Other ports |
+|---|---|---|---|
+| SiI9022 | `sil,sii9022.yaml` | parallel RGB input | `port@1` HDMI output, `port@3` sound input |
+| AM625 DSS | `ti,am65x-dss.yaml` | VP1 output (to OLDI) | `port@1` VP2 DPI output |
+| Cadence CSI-2 RX | `cdns,csi2rx.yaml` | CSI-2 input | `port@1`–`port@4` stream outputs |
+
+The same number means input on the bridge and output on the display controller. Labels such as `sii9022_in` aid readability but do not carry direction into the DTB. Driver behavior comes from node structure, `reg`, and the binding contract.
 
 ## Graph Is Not Containment
 
-A panel can be a root-level platform device while its endpoint connects to an I²C-controlled bridge. Moving the panel under the bridge to make the source look like a pipeline would falsely claim containment. Keep each device at its real firmware/bus location and connect only endpoints.
+Keep each device at its real firmware/bus location and connect only endpoints ([Three Different Structures](../graph-bindings-and-complex-data-paths.md#three-different-structures)). On the AM62x SK the HDMI connector is a root node, the SiI9022 is an I²C child of `main_i2c1`, and the DSS sits on the SoC bus. Moving the connector under the bridge to make the source read like a pipeline would falsely claim containment.
 
 ## Review Algorithm
 

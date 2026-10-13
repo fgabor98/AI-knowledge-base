@@ -45,21 +45,7 @@ Unsafe evolution makes a new property required for an old compatible and then fa
 
 ## Choose A New Compatible When Meaning Changes
 
-Use a new specific compatible when:
-
-- register programming model differs
-- property interpretation would differ
-- required resources or sequencing change incompatibly
-- a hardware revision cannot safely use the old behavior
-- fallback is not truly programming-compatible
-
-Example:
-
-```dts
-compatible = "acme,axc-capture-v4", "acme,axc-capture-v3";
-```
-
-Include the fallback only if v4 hardware can operate correctly under the v3 programming contract. A fallback is an executable compatibility claim, not version decoration.
+Use a new specific compatible when programming model, property interpretation, or required resources change incompatibly ([Compatible Evolution And Stable ABI Decisions](../driver-matching/compatible-evolution-and-stable-abi-decisions.md)). Include a fallback such as `"ti,am64-pcie-host", "ti,j721e-pcie-host"` only if the newer hardware operates correctly under the older contract.
 
 ## Model A Migration Window
 
@@ -75,48 +61,35 @@ Phase 6: code removal only if ABI policy truly permits it
 
 Source migration and runtime support removal are different decisions. Removing the last old DTS from the repository does not prove no deployed bootloader still supplies it.
 
+A real family-wide example finished in Linux v6.19. TI's CPSW MACs always add the RGMII TX delay, so `phy-mode = "rgmii-rxid"` never described the board correctly. The migration went in order: the binding example changed to `rgmii-id`; `am65-cpsw-nuss` learned to accept `rgmii-id` and pass `rgmii-rxid` to the PHY (“fixup PHY mode for fixed RGMII TX delay”); `phy-gmii-sel` began always writing the RGMII ID setting; and finally commit `1446fc4dc072` changed 33 DTS and overlay files across AM62, AM64, AM65, J7, and third-party boards. It carries `Tested-by` lines from TQ-Systems and Toradex, owners of downstream products in the blast radius. The driver still accepts `rgmii-rxid`, with a warning, because old DTBs exist.
+
 ## Build A Deployed-Artifact Inventory
 
-Before tightening a schema or removing support, search:
-
-- all maintained upstream/downstream branches
-- shipped DTB and DTBO manifests
-- bootloader-embedded trees
-- recovery images
-- factory and service media
-- hypervisor/firmware-provided trees
-- third-party boards using the binding
-- overlay repositories and customer extensions
-
-Exact artifact hashes and release-set records from the security lifecycle chapter make this tractable.
+Before tightening a schema or removing support, inventory the [compatibility population](../binding-design-and-stable-abi/backward-compatibility-deprecation-and-migration.md#define-the-compatibility-population) at product scale: maintained branches, shipped DTB/DTBO manifests, bootloader-embedded trees, recovery, factory, and service media, firmware-provided trees, third-party boards, and overlay repositories. Exact artifact hashes and release-set records from the security lifecycle chapter make this tractable.
 
 ## Use Schema Deprecation Carefully
 
 JSON Schema can mark a property or compatible deprecated, but operational policy must define what that means:
 
+From `gpu/img,powervr-rogue.yaml`:
+
 ```yaml
-properties:
-  acme,legacy-threshold:
-    $ref: /schemas/types.yaml#/definitions/uint32
-    deprecated: true
-    description: Use the standard threshold-microvolt property for new designs.
+# This legacy combination of compatible strings was introduced early on
+# before the more specific GPU identifiers were used.
+- items:
+    - enum:
+        - ti,am62-gpu
+    - const: img,img-axe
+  deprecated: true
 ```
+
+With `dt-schema` 2026.9, a DTB using the deprecated form still validates without any warning, so deprecation is visible only to people reading the schema.
 
 Deprecation should not make known old DTBs fail validation unexpectedly unless the project intentionally changes its validation baseline. Keep historical validation, new-source policy, and runtime compatibility distinct.
 
 ## Migrate Property Encodings Without Ambiguity
 
-Avoid supporting two properties with unclear precedence forever. Define:
-
-- which compatibles permit each form
-- whether both may coexist
-- precedence if coexistence is temporarily allowed
-- how disagreement is handled
-- old-driver behavior with new DTB
-- new-driver behavior with old DTB
-- removal criteria for transitional parsing
-
-Often a new compatible plus one unambiguous encoding is safer than probing for multiple interpretations.
+Avoid supporting two properties with unclear precedence forever. Define the [dual-property precedence](../binding-design-and-stable-abi/backward-compatibility-deprecation-and-migration.md#dual-property-precedence), which compatibles permit each form, and removal criteria for transitional parsing. Often a new compatible plus one unambiguous encoding is safer than probing for multiple interpretations.
 
 ## Coordinate Across Components
 
@@ -137,14 +110,7 @@ Partial migrations cause failures far from the patch that introduced them.
 
 ## Test The Compatibility Quadrants
 
-```text
-old DTB + old kernel  -> baseline
-old DTB + new kernel  -> normally required stable direction
-new DTB + new kernel  -> target
-new DTB + old kernel  -> required only if product update policy promises it
-```
-
-Add old/new bootloader, overlays, and firmware when they participate. Record explicit expected results, including intentional rejection.
+Test the old/new DTB × old/new kernel quadrants ([Compatibility In Both Directions](../driver-matching/compatible-evolution-and-stable-abi-decisions.md#compatibility-in-both-directions)), adding old/new bootloader, overlays, and firmware when they participate. Old DTB + new kernel is normally required; new DTB + old kernel only if the product update policy promises it. Record explicit expected results, including intentional rejection.
 
 ## Handle Existing Invalid Trees
 
@@ -161,10 +127,10 @@ Do not silently redefine a general property to legitimize one vendor mistake. Bo
 ## Deprecation Register
 
 ```yaml
-contract: acme,legacy-threshold
-replacement: threshold-microvolt
-affected_compatibles: [acme,axc-sensor-v1]
-first_deprecated_release: product-42
+contract: '"ti,am62-gpu", "img,img-axe"'
+replacement: '"ti,am62-gpu", "img,img-axe-1-16m", "img,img-axe", "img,img-rogue"'
+affected_compatibles: [ti,am62-gpu]
+first_deprecated_release: linux-6.16
 runtime_support: required-through-product-55
 source_policy: forbidden-for-new-boards
 known_artifact_count: 1842

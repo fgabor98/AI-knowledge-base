@@ -12,7 +12,7 @@ Device Trees and kernels are often updated independently. Compatible-string desi
 
 ## Start From Observable Hardware Behavior
 
-Introduce a new compatible when software must distinguish an implementation to operate it correctly or expose its hardware accurately. Typical reasons include:
+Introduce a new compatible when software must distinguish an implementation to operate it correctly or expose its hardware accurately. TI's K3 R5F subsystem is a real case: the same Cortex-R5F cluster IP got `ti,am654-r5fss`, `ti,j721e-r5fss`, `ti,j7200-r5fss`, `ti,am64-r5fss`, `ti,am62-r5fss`, and `ti,j721s2-r5fss` because the integrations differ in TCM size behavior, ECC auto-initialization, and supported cluster modes (AM64x adds a Single-CPU mode, AM62x has one core). Typical reasons include:
 
 - changed register layout or field semantics
 - new mandatory clock, reset, regulator, PHY, or power sequence
@@ -57,46 +57,88 @@ The last case determines whether a fallback is valid. “Probe runs” is not a 
 
 ## Schema-Compatible Lists
 
-A schema should constrain valid sequences explicitly:
+A schema should constrain valid sequences explicitly. The K3 UART entries in `Documentation/devicetree/bindings/serial/8250_omap.yaml`:
 
 ```yaml
 properties:
   compatible:
     oneOf:
-      - const: acme,ax100-uart
+      - enum:
+          - ti,am3352-uart
+          - ti,am4372-uart
+          - ti,am654-uart
+          - ti,dra742-uart
+          - ti,omap2-uart
+          - ti,omap3-uart
+          - ti,omap4-uart
       - items:
-          - const: acme,ax200-uart
-          - const: acme,ax100-uart
+          - enum:
+              - ti,am64-uart
+              - ti,j721e-uart
+          - const: ti,am654-uart
 ```
 
-This documents that AX200 may fall back to AX100 and prevents reversed or invented lists. When variants have different requirements, conditional schema rules should make those differences testable.
+This documents that AM64x and J721E UARTs must fall back to `ti,am654-uart`, and rejects a reversed list or `"ti,am64-uart"` alone. When variants have different requirements, conditional schema rules make those differences testable. `ti,k3-r5f-rproc.yaml` restricts the cluster mode per SoC:
 
 ```yaml
 allOf:
   - if:
       properties:
         compatible:
-          contains:
-            const: acme,ax200-uart
+          enum:
+            - ti,am64-r5fss
     then:
-      required:
-        - resets
+      properties:
+        ti,cluster-mode:
+          enum: [0, 2]
+
+  - if:
+      properties:
+        compatible:
+          enum:
+            - ti,am654-r5fss
+            - ti,j7200-r5fss
+            - ti,j721e-r5fss
+            - ti,j721s2-r5fss
+    then:
+      properties:
+        ti,cluster-mode:
+          enum: [0, 1]
 ```
 
-Only use this pattern if the fallback remains safe without the new kernel understanding the new property. If AX100 software cannot operate an AX200 that requires the reset, then the old fallback itself is false.
+Only add a fallback if it remains safe without the new kernel understanding the new requirements. The R5F compatibles have no fallbacks to each other: a driver that believed an AM64x cluster was an AM65x one would try LockStep mode (`1`), which AM64x does not have.
 
 ## Match Data Versus DT Properties
 
-Driver match data is appropriate for facts implied by the compatible:
+Driver match data is appropriate for facts implied by the compatible. `drivers/remoteproc/ti_k3_r5_remoteproc.c`:
 
 ```c
-struct acme_uart_data {
-        u32 fifo_depth;
-        bool needs_status_readback;
+struct k3_r5_soc_data {
+        bool tcm_is_double;
+        bool tcm_ecc_autoinit;
+        bool single_cpu_mode;
+        bool is_single_core;
+        /* ... */
+};
+
+static const struct k3_r5_soc_data am64_soc_data = {
+        .tcm_is_double = true,
+        .tcm_ecc_autoinit = true,
+        .single_cpu_mode = true,
+        .is_single_core = false,
+        /* ... */
 };
 ```
 
-A DT property is appropriate for board- or instance-specific hardware not implied by the IP version, such as a routed clock source, GPIO connection, or actual FIFO size when it varies independently and the binding defines it.
+A DT property is appropriate for board- or instance-specific configuration not implied by the SoC. `ti,cluster-mode` is that kind of property: whether a given device runs the AM64x cluster in Split (`0`) or Single-CPU (`2`) mode is per-device configuration (the driver's default comment ties it to the “most common efuse configurations”), while whether Single-CPU mode exists at all is SoC data. The probe function combines both and rejects impossible combinations:
+
+```c
+if  ((cluster->mode == CLUSTER_MODE_SINGLECPU && !data->single_cpu_mode) ||
+     (cluster->mode == CLUSTER_MODE_SINGLECORE && !data->is_single_core))
+        return dev_err_probe(dev, -EINVAL,
+                             "Cluster mode = %d is not supported on this SoC\n",
+                             cluster->mode);
+```
 
 Do not duplicate the same truth in both match data and an unconstrained property. Conflicting sources lead to ambiguous ownership and unsafe defaults.
 
@@ -116,15 +158,7 @@ Existing properties may fully describe some changes, allowing common drivers wit
 
 ## Deprecation And Migration
 
-Once deployed, a misspelled or poorly designed compatible may still be ABI. Migration normally requires:
-
-1. document the corrected/new compatible
-2. teach new kernels both old and new strings where safe
-3. update DTS producers to emit the new string
-4. preserve old-DTB support for the product's lifetime policy
-5. remove support only with explicit ecosystem agreement
-
-Silently changing a string in DTS and driver together passes same-tree testing but breaks independent upgrades.
+Once deployed, a misspelled or poorly designed compatible or property may still be ABI. `8250_omap.yaml` still documents `ti,hwmods` with `deprecated: true` and the note that it “should not be used on other platforms,” because old OMAP2/3 DTBs carry it. Silently changing a string in DTS and driver together passes same-tree testing but breaks independent upgrades. [Backward Compatibility, Deprecation, And Migration](../binding-design-and-stable-abi/backward-compatibility-deprecation-and-migration.md#incorrect-compatible) gives the migration procedure.
 
 ## Senior Review Questions
 

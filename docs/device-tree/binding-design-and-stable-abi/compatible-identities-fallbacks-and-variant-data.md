@@ -12,35 +12,32 @@ last_reviewed: null
 
 ## When A New Compatible Is Needed
 
-Create a distinct compatible when software must distinguish hardware to operate it correctly and cannot reliably discover the difference. Examples include:
-
-- changed register layout or field semantics
-- a mandatory new clock, reset, supply, PHY, or power sequence
-- interrupt, DMA, endianness, or coherency behavior that differs
-- an erratum requiring a different safe programming path
-- non-discoverable capabilities or limits that affect operation
-- incompatible required properties or operating modes
-
-Do not create one merely because:
-
-- a Linux driver was split, merged, or renamed
-- the source file moved
-- a new kernel implements another feature
-- the board or product has a new sales name
-- a reliable identification register already reports the difference
+Create a distinct compatible when software must distinguish hardware to operate it correctly and cannot reliably discover the difference—not because a driver, file, product name, or kernel version changed. [Compatible Evolution And Stable ABI Decisions](../driver-matching/compatible-evolution-and-stable-abi-decisions.md) lists the typical triggers and a decision matrix. This page focuses on proving fallbacks safe and on separating compatible-implied facts from per-instance properties.
 
 ## Specific-To-General Ordering
 
+The AM62x GPU node in `k3-am62-main.dtsi` carries four levels:
+
 ```dts
-compatible = "acme,ax200-uart", "acme,ax100-uart";
+gpu: gpu@fd00000 {
+        compatible = "ti,am62-gpu", "img,img-axe-1-16m", "img,img-axe",
+                     "img,img-rogue";
+        clocks = <&k3_clks 187 0>;
+        clock-names = "core";
+        power-domains = <&k3_pds 187 TI_SCI_PD_EXCLUSIVE>;
+        power-domain-names = "a";
+        /* reg, interrupts */
+};
 ```
 
-This claims all of the following:
+Each string makes a separate claim:
 
-1. new software may recognize AX200 specifically
-2. software that knows only AX100 may bind using its AX100 path
-3. that older path is safe on AX200 with the properties an old consumer understands
-4. reduced functionality and lifecycle operations remain acceptable
+1. `ti,am62-gpu` — TI's integration. The schema uses it to limit `clocks` to one, because the number of clocks is an integration choice.
+2. `img,img-axe-1-16m` — the exact IP core. The schema uses it to require exactly one power domain, because that is a property of the core.
+3. `img,img-axe` — the original, too-vague family string. It is deprecated but kept so kernels that match only it still bind.
+4. `img,img-rogue` — the architecture. The current `pvr_drv.c` binds on this string.
+
+No current driver matches the first two strings. They exist so that a future quirk can target the exact integration or core without another DT change, and so that schemas can apply the right constraints.
 
 List order is ABI. Do not sort strings alphabetically or use the first match merely as a preferred driver.
 
@@ -74,51 +71,29 @@ Deliberate failure to bind is safer than deceptive partial compatibility.
 
 ## Compatible Versus Properties
 
-Use compatible-specific driver data for facts invariant across every instance of that implementation:
-
-```c
-struct ax_uart_data {
-        unsigned int fifo_depth;
-        bool needs_status_readback;
-};
-
-static const struct of_device_id ax_uart_of_match[] = {
-        { .compatible = "acme,ax100-uart", .data = &ax100_data },
-        { .compatible = "acme,ax200-uart", .data = &ax200_data },
-        { }
-};
-```
-
-Use DT properties for per-instance integration, such as the actual provider clocks, board supply, routed interrupt, or a limit imposed by the carrier. Do not make a property like `acme,is-ax200` duplicate the compatible.
+Use compatible-specific driver match data for facts invariant across every instance of an implementation, and DT properties for per-instance integration such as provider clocks, board supplies, routed interrupts, or carrier-imposed limits ([Match Data Versus DT Properties](../driver-matching/compatible-evolution-and-stable-abi-decisions.md#match-data-versus-dt-properties)). Do not add a property such as a hypothetical `ti,is-am62` that duplicates the compatible.
 
 ## Feature Properties Need Hardware Semantics
 
 A feature bit property can be valid when the feature varies independently per instance, cannot be discovered, and has clear hardware meaning. It is not valid merely to avoid adding match data.
 
-Compare:
+Compare a real board-wiring property with a hypothetical driver-shaped one:
 
 ```dts
-/* Driver-shaped. */
-acme,enable-v2-code-path;
+/* Real (ti,am62-usb.yaml): VBUS reaches the SoC through a 1/3 divider on this board. */
+ti,vbus-divider;
 
-/* Potentially hardware-shaped, if the binding proves the board has this wiring. */
-acme,external-sample-clock;
+/* Hypothetical and driver-shaped: names a code path, not hardware. */
+ti,use-new-vbus-detect;
 ```
 
-Even the second proposal should first be compared with standard `clocks` and assigned-clock mechanisms.
+`ti,vbus-divider` varies per board, cannot be discovered, and has a precise electrical meaning. The second would select software behavior and should be match data or a driver decision.
+
+Before accepting any vendor feature property, first check whether a standard mechanism such as `clocks`, a supply, or a GPIO already expresses it.
 
 ## Root And SoC Compatible Lists
 
-The root compatible identifies boards/products from specific to general. A typical list can express a revision, board family, and SoC, but every fallback level must have meaningful consumers and safe semantics.
-
-```dts
-/ {
-        model = "Acme Falcon Carrier revision B";
-        compatible = "acme,falcon-revb", "acme,falcon", "acme,ax9";
-};
-```
-
-`model` is descriptive and is not a replacement for machine identity. A revision-specific compatible is warranted when firmware, early platform code, or software-visible board behavior must distinguish it. Peripheral compatibles need not change when existing properties completely describe the wiring delta.
+Root lists follow the same rules ([Root Versus Device Compatible](../driver-matching/compatible-contracts-and-fallback-chains.md#root-versus-device-compatible)); every fallback level must have meaningful consumers and safe semantics. A revision-specific root compatible is warranted when firmware, early platform code, or software-visible board behavior must distinguish it. Peripheral compatibles need not change when existing properties completely describe the wiring delta.
 
 ## Unknown Compatible Behavior
 
@@ -128,14 +103,7 @@ Conversely, adding a new property beside an old fallback does not teach an old c
 
 ## Four-Way Test Matrix
 
-| DTB | consumer | expected result |
-|---|---|---|
-| old | old | released baseline |
-| old | new | old compatible and absence defaults still work |
-| new | new | specific match enables complete behavior |
-| new | old | safe fallback, explicit non-bind, or unsupported update order |
-
-Record exact versions and tests. Repeat across any bootloader or firmware component that also parses the node.
+Run the old/new DTB × old/new consumer matrix from [Compatibility In Both Directions](../driver-matching/compatible-evolution-and-stable-abi-decisions.md#compatibility-in-both-directions). Record exact versions and tests, and repeat across any bootloader or firmware component that also parses the node.
 
 ## Authoritative References
 

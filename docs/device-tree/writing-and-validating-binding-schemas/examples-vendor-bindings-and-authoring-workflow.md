@@ -27,8 +27,8 @@ Do not clone a superficially similar schema without re-deriving every field. Cop
 Vendor-specific compatibles and properties use a registered prefix:
 
 ```text
-acme,axc200
-acme,burst-length
+ti,am437x-vpfe
+ti,am437x-vpfe-interface
 ```
 
 The prefix identifies the organization responsible for the namespace, not necessarily the chip's distributor or board vendor. Reuse the existing registered prefix where applicable. Add a prefix entry as its own logical change when introducing a genuinely new vendor.
@@ -42,21 +42,34 @@ An example should normally include only the node being bound:
 ```yaml
 examples:
   - |
-    capture@48000000 {
-        compatible = "acme,axc100";
-        reg = <0x48000000 0x1000>;
-        interrupts = <42>;
-        interrupt-names = "completion";
-        clocks = <&capture_bus_clk>, <&capture_sample_clk>;
-        clock-names = "bus", "sample";
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+
+    vpfe@0 {
+        compatible = "ti,am437x-vpfe";
+        reg = <0x0 0x2000>;
+        interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
+
+        port {
+            endpoint {
+                remote-endpoint = <&ov2659_ep>;
+                ti,am437x-vpfe-interface = <0>;
+                bus-width = <8>;
+                hsync-active = <0>;
+                vsync-active = <0>;
+            };
+        };
     };
 ```
+
+`dt-extract-example` wraps this in `/dts-v1/; /plugin/;` so the unresolved `&ov2659_ep` becomes an overlay fixup instead of a compile error. The sensor is not part of the example.
 
 The example build supplies surrounding scaffolding and dummy providers for ordinary references. Avoid unrelated consumer nodes, complete SoC trees, aliases, and board policy unless parent-bus context is necessary to express the binding.
 
 ## Address And Size Cells In Examples
 
 Examples have default address/size-cell assumptions. If the node's `reg` encoding depends on a different parent bus, show the smallest appropriate parent:
+
+The PowerVR binding's example shows the default case: it writes `reg = <0x0fd00000 0x20000>;` with one address and one size cell, although the real AM62x node uses two of each. A two-cell parent would be needed only if the binding itself depended on 64-bit addressing:
 
 ```yaml
 examples:
@@ -65,9 +78,11 @@ examples:
         #address-cells = <2>;
         #size-cells = <2>;
 
-        capture@0,48000000 {
-            compatible = "acme,axc100";
-            reg = <0x0 0x48000000 0x0 0x1000>;
+        gpu@fd00000 {
+            compatible = "ti,am62-gpu", "img,img-axe-1-16m", "img,img-axe",
+                         "img,img-rogue";
+            reg = <0x0 0x0fd00000 0x0 0x20000>;
+            /* ... */
         };
     };
 ```
@@ -78,17 +93,7 @@ Only add that wrapper when it demonstrates real required encoding. An unnecessar
 
 If an example uses symbolic constants, include the header in the DTS fragment:
 
-```yaml
-examples:
-  - |
-    #include <dt-bindings/interrupt-controller/irq.h>
-
-    capture@48000000 {
-        compatible = "acme,axc100";
-        reg = <0x48000000 0x1000>;
-        interrupts = <42 IRQ_TYPE_LEVEL_HIGH>;
-    };
-```
+The VPFE example above uses `GIC_SPI` and `IRQ_TYPE_LEVEL_HIGH`, so it includes `<dt-bindings/interrupt-controller/arm-gic.h>`. Without the `#include`, the example fails at the preprocessing and compile step, before any schema rule runs.
 
 Do not assume includes from a real board DTS are present in the isolated example.
 
@@ -99,9 +104,9 @@ YAML convention uses two spaces for schema structure; DTS inside the literal blo
 ```yaml
 examples:
   - |
-    device@1000 {
-        compatible = "vendor,device";
-        reg = <0x1000 0x100>;
+    vpfe@0 {
+        compatible = "ti,am437x-vpfe";
+        reg = <0x0 0x2000>;
     };
 ```
 

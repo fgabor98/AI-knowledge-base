@@ -10,33 +10,9 @@ last_reviewed: null
 
 The file an engineer edits is rarely the complete source compiled by `dtc`. Kernel-style builds combine a board entry point, DTSI includes, C-preprocessor headers/macros, generated files, architecture include paths, and build flags. Prove that chain before interpreting the output.
 
-## Two Include Mechanisms
+## Preprocessing Recap
 
-| Source form | Processor | Typical use |
-|---|---|---|
-| `/include/ "file.dtsi"` | `dtc` | native DTS source inclusion |
-| `#include "file.dtsi"` or `<dt-bindings/...>` | C preprocessor | kernel-style composition, constants, macros |
-
-The C preprocessor runs before `dtc`; native includes are consumed by `dtc`. A missing or shadowed file can therefore arise at different stages.
-
-Do not infer precedence from the editor's include search. Capture the exact build command and include directories.
-
-## Simplified Standalone Pipeline
-
-For controlled experiments, a kernel-like preprocessing command is conceptually:
-
-```bash
-cpp -nostdinc -undef -D__DTS__ -x assembler-with-cpp \
-  -I include \
-  -I arch/arm64/boot/dts \
-  board.dts > board.preprocessed.dts
-
-dtc -I dts -O dtb -o board.dtb board.preprocessed.dts
-```
-
-This is illustrative, not a substitute for the target tree's build rule. Kernel builds add generated include paths, dependency generation, warning flags, symbol options, and architecture-specific behavior.
-
-Never feed untrusted macros or paths into an ad hoc shell command. Preserve the preprocessed output as a diagnostic artifact, not the maintainable source.
+The C preprocessor (`#include`, macros, `dt-bindings` constants) runs before `dtc`, which then consumes native `/include/` directives, so a missing or shadowed file can arise at different stages. [Includes, Preprocessing, And Macros](../syntax-values-and-source-composition/includes-preprocessing-and-macros.md) shows a simplified standalone `cpp` + `dtc` pipeline; it is illustrative only. For provenance, capture the target tree's real build rule as described below, and preserve the preprocessed output as a diagnostic artifact, not maintainable source.
 
 ## Kbuild Is The Reproducible Entry Point
 
@@ -50,14 +26,14 @@ Target one artifact using the path expected by the architecture makefiles:
 
 ```bash
 make O=build ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-  arch/arm64/boot/dts/acme/falcon.dtb
+  arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
 ```
 
 Exact target paths vary by architecture and kernel version. First find the source and its Makefile entry:
 
 ```bash
-rg -n 'falcon.*\.dtb' arch/arm64/boot/dts
-rg --files arch/arm64/boot/dts | rg 'falcon.*\.dts$'
+rg -n 'k3-am62-lp-sk.*\.dtb' arch/arm64/boot/dts
+rg --files arch/arm64/boot/dts | rg 'k3-am62-lp-sk.*\.dts$'
 ```
 
 Use `make help` and neighboring platform conventions when a direct target is rejected.
@@ -66,7 +42,7 @@ Use `make help` and neighboring platform conventions when a direct target is rej
 
 ```bash
 make O=build ARCH=arm64 V=1 \
-  arch/arm64/boot/dts/acme/falcon.dtb
+  arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
 ```
 
 Verbose output reveals:
@@ -93,7 +69,7 @@ Find candidates:
 
 ```bash
 find build/arch/arm64/boot/dts -name '*.cmd' -print
-rg -n 'falcon\.dtb|falcon\.dts' build/arch/arm64/boot/dts -g '*.cmd'
+rg -n 'k3-am62-lp-sk\.dtb|k3-am62-lp-sk\.dts' build/arch/arm64/boot/dts -g '*.cmd'
 ```
 
 Treat these as generated evidence tied to one build tree, not portable configuration files.
@@ -114,7 +90,7 @@ Look for:
 Search narrowly:
 
 ```bash
-rg -n 'ethernet@|acme,temp100|module_3v3|status' board.preprocessed.dts
+rg -n 'bridge-hdmi@3b|tps65219|vddshv_sdio|status' board.preprocessed.dts
 ```
 
 Do not edit the preprocessed file and deploy its result as a normal fix. Correct the owning source or generated input.
@@ -126,9 +102,9 @@ With `O=build`, generated artifacts belong under the output tree. The source tre
 Before copying a DTB, record:
 
 ```bash
-realpath build/arch/arm64/boot/dts/acme/falcon.dtb
-stat build/arch/arm64/boot/dts/acme/falcon.dtb
-sha256sum build/arch/arm64/boot/dts/acme/falcon.dtb
+realpath build/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
+stat build/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
+sha256sum build/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
 ```
 
 Never choose “the newest `*.dtb` found anywhere” as a release rule. Map one build target to one packaging input explicitly.
@@ -150,7 +126,7 @@ Record generator version, input, output hash, and ownership. A clean DTS diff ca
 After build, find every consumer of the output:
 
 ```bash
-rg -n 'falcon\.dtb|fdtfile|FDT|devicetree' \
+rg -n 'k3-am62-lp-sk\.dtb|fdtfile|FDT|devicetree' \
   Makefile scripts arch boot packaging recipes
 ```
 

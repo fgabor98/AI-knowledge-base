@@ -20,55 +20,27 @@ DRM/KMS runtime objects do not map one-to-one to DT nodes. Planes and CRTCs may 
 
 ## Controller To Bridge
 
-```dts
-&display_controller {
-        ports {
-                #address-cells = <1>;
-                #size-cells = <0>;
+The AM62x SK HDMI path has three graph vertices. The full nodes are in [Graph Vocabulary](graph-vocabulary-containers-and-numbering.md#direct-port-versus-ports); the edges are:
 
-                port@1 {
-                        reg = <1>;
-
-                        display_out: endpoint {
-                                remote-endpoint = <&bridge_in>;
-                        };
-                };
-        };
-};
-
-bridge@2c {
-        compatible = "vendor,display-bridge";
-        reg = <0x2c>;
-        vdd-supply = <&reg_bridge>;
-
-        ports {
-                #address-cells = <1>;
-                #size-cells = <0>;
-
-                port@0 {
-                        reg = <0>;
-                        bridge_in: endpoint {
-                                remote-endpoint = <&display_out>;
-                        };
-                };
-
-                port@1 {
-                        reg = <1>;
-                        bridge_out: endpoint {
-                                remote-endpoint = <&panel_in>;
-                        };
-                };
-        };
-};
+```text
+dss port@1 (VP2, DPI)  dpi1_out <-> sii9022_in          port@0 of bridge-hdmi@3b
+bridge-hdmi@3b port@1  sii9022_out <-> hdmi_connector_in  connector-hdmi
 ```
 
-The bridge remains on its I²C control bus in a real tree; the shortened example focuses on its graph. Its supplies, reset, reference clock, DDC bus, AUX channel, GPIOs, and interrupts are not implied by the endpoints.
+The edges say nothing about how each vertex is controlled or powered. Those relationships are ordinary properties, and some are absent:
+
+- the DSS has registers, a TI-SCI power domain, three clocks (`fck`, `vp1`, `vp2`), and pinctrl for the 24-bit DPI pins
+- the SiI9022 is an I²C target at `0x3b` on `main_i2c1`, and its hotplug interrupt arrives on line 16 of the expander `exp1`
+- the binding allows `reset-gpios`, `iovcc-supply`, and `cvcc12-supply`, but the SK sets none, so Linux assumes the bridge is powered and out of reset
+- the connector has no `ddc-i2c-bus` and no `hpd-gpios`. The `sii902x` driver reads EDID through an I²C bypass mux that it registers on its own parent bus, and reports hotplug from its interrupt
+
+Remove the `interrupts` property and the display still works, but `sii902x` switches the connector from `DRM_CONNECTOR_POLL_HPD` to periodic connect polling. The graph is unchanged; the resource edge changed the behavior.
 
 ## Panels And Connectors
 
 A fixed panel node can carry supplies, enable/reset GPIOs, timing/mode data, physical dimensions, orientation, and a backlight phandle according to its panel schema. A connector represents a physical port and may reference DDC, hotplug, or other connector resources.
 
-Do not represent a removable monitor as a fixed panel. HDMI/DisplayPort monitors are discovered through hotplug and EDID; DT describes the controller/bridge/connector wiring. Conversely, a fixed panel without usable EDID needs binding-defined timing or mode information.
+Do not represent a removable monitor as a fixed panel. HDMI and DisplayPort monitors are discovered through hotplug and EDID; DT describes the controller, bridge, and connector wiring, as the SK's `hdmi-connector` with `type = "a"` does. Conversely, a fixed panel without usable EDID needs binding-defined timing or mode information.
 
 ## Bridges Are Ordered Components
 

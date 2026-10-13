@@ -10,27 +10,28 @@ last_reviewed: null
 
 ## References Are Context-Sensitive
 
-A label identifies source material:
+A label identifies source material. In `k3-am64-main.dtsi`:
 
 ```dts
-osc: clock-24000000 {
-        compatible = "fixed-clock";
-        #clock-cells = <0>;
-        clock-frequency = <24000000>;
+k3_clks: clock-controller {
+        compatible = "ti,k2g-sci-clk";
+        #clock-cells = <2>;
 };
+
+main_uart0: serial@2800000 { /* ... */ };
 ```
 
-Inside a cell array, `&osc` becomes a phandle cell:
+Inside a cell array, a reference becomes a phandle cell:
 
 ```dts
-clocks = <&osc>;
+clocks = <&k3_clks 146 0>;
 ```
 
-Outside a cell array, a node reference becomes its full path string:
+Outside a cell array, a node reference becomes its full path string. The AM642 SK board uses this in `/chosen`:
 
 ```dts
-aliases {
-        clock0 = &osc;
+chosen {
+        stdout-path = &main_uart0;      /* "/bus@f4000/serial@2800000" */
 };
 ```
 
@@ -41,64 +42,63 @@ The same token therefore produces a different binary representation based on con
 Labels are preferred for maintainable in-tree composition:
 
 ```dts
-&uart0 {
+&main_uart0 {
         status = "okay";
 };
 ```
 
-A full-path reference can target an unlabeled node:
+A full-path reference can name an unlabeled node. NVIDIA's Tegra20 boards use one inside a cell array (`arch/arm/boot/dts/nvidia/tegra20-ventana.dts`):
 
 ```dts
-&{/soc/serial@1000} {
-        status = "okay";
+i2c-parent = <&{/i2c@7000c400}>;
+```
+
+TI's overlays use the root path to amend `/`, which has no label (`k3-am642-evm-icssg1-dualemac.dtso`):
+
+```dts
+&{/} {
+        aliases {
+                ethernet1 = "/icssg1-eth/ethernet-ports/port@1";
+        };
 };
 ```
 
-Path references are more fragile because renaming or moving any path component breaks the reference. They can still be useful when modifying imported source that does not expose a suitable label.
+Path references are more fragile because renaming or moving any path component breaks the reference. They are useful when the target has no suitable label.
 
 Labels can also mark properties and locations within values, but node labels cover most ordinary DTS composition.
 
 ## Extending A Previously Defined Node
 
-An included SoC description can define a disabled controller:
+`k3-am64-main.dtsi` defines `main_uart0` and `main_uart1` with `status = "disabled"`. Board files amend them. In `k3-am642-sk.dts`:
 
 ```dts
-uart0: serial@1000 {
-        compatible = "example,trainer-uart";
-        reg = <0x1000 0x100>;
-        status = "disabled";
-};
-```
-
-The board amends the same node:
-
-```dts
-&uart0 {
-        clocks = <&osc>;
-        pinctrl-0 = <&uart0_pins>;
+&main_uart0 {
+        status = "okay";
         pinctrl-names = "default";
-        status = "okay";
+        pinctrl-0 = <&main_uart0_pins_default>;
+};
+
+&main_uart1 {
+        /* main_uart1 is reserved for firmware usage */
+        status = "reserved";
+        pinctrl-names = "default";
+        pinctrl-0 = <&main_uart1_pins_default>;
 };
 ```
 
-The effective tree contains one `serial@1000` node with the combined properties. Repeating an existing property replaces its earlier value:
-
-```dts
-&uart0 {
-        status = "okay";
-};
-```
+The effective tree contains one `serial@2800000` node with the combined properties. Repeating an existing property replaces its earlier value: `status` changes from `"disabled"` to `"okay"` for UART0 and to `"reserved"` for UART1.
 
 This is source merge behavior, not a runtime overlay and not object-oriented inheritance.
 
 ## Reopening By Structural Path
 
-Source can also repeat a path structurally when composition order permits:
+Source can also repeat a path structurally when composition order permits. This is legal but not how the TI sources do it:
 
 ```dts
+/* Illustrative equivalent of &main_uart0 { status = "okay"; }; */
 / {
-        soc {
-                serial@1000 {
+        bus@f4000 {
+                serial@2800000 {
                         status = "okay";
                 };
         };
@@ -109,37 +109,43 @@ Label amendments are usually clearer and less error-prone. Structural reopening 
 
 ## Deleting A Property
 
-Use `/delete-property/` inside the effective node:
+Use `/delete-property/` inside the effective node. The SolidRun HummingBoard-T has a USB3 variant that includes the base board DTS, whose SoM include sets `ti,usb2-only` on `usbss0`, and removes it (`k3-am642-hummingboard-t-usb3.dts`):
 
 ```dts
-&uart0 {
-        /delete-property/ wakeup-source;
+#include "k3-am642-hummingboard-t.dts"
+
+&usbss0 {
+        /delete-property/ ti,usb2-only;
 };
 ```
 
-This removes the property from the composed source tree. It is different from assigning an empty value:
-
-```dts
-/* This creates or replaces a zero-length property. */
-wakeup-source;
-```
+This removes the property from the composed source tree. It is different from assigning an empty value: writing `ti,usb2-only;` again would create or keep a zero-length property, which still means true.
 
 Deletion is ordering-sensitive: the property must have been introduced before the deletion for the intended result, and a later include can add it again.
 
 ## Deleting A Node
 
-Delete a child by name within its parent:
+Delete a child by name within its parent. The Seeed BeagleBone Green Eco reuses the shared BeagleBone include but has a different PMIC, so it removes the inherited TPS65217 node and adds its own (`arch/arm/boot/dts/ti/omap/am335x-bonegreen-eco.dts`):
 
 ```dts
 &i2c0 {
-        /delete-node/ sensor@48;
+        /delete-node/ pmic@24;
+
+        tps65214: pmic@30 {
+                compatible = "ti,tps65214";
+                reg = <0x30>;
+                /* ... */
+        };
 };
 ```
 
-Or delete a labeled node by reference where supported by the source layout:
+Or delete a labeled node by reference. The AM62D2 SoC reuses the AM62A description but lacks two accelerators (`k3-am62d2.dtsi`):
 
 ```dts
-/delete-node/ &unused_sensor;
+#include "k3-am62a7.dtsi"
+
+/delete-node/ &vpu;   /* Video Codec is disabled in AM62D2 SoC */
+/delete-node/ &e5010; /* JPEG Encoder is disabled in AM62D2 SoC */
 ```
 
 Deleting is stronger than disabling:
@@ -147,9 +153,9 @@ Deleting is stronger than disabling:
 | Action | Node remains in effective tree? | Typical intent |
 |---|---:|---|
 | `status = "disabled"` | yes | hardware block exists but is unavailable on this board |
-| `/delete-node/` | no | inherited description is not part of the effective hardware model or must be removed structurally |
+| `/delete-node/` | no | inherited description is not part of this hardware at all |
 
-Prefer disabling SoC-integrated hardware that exists in silicon. Delete inherited board-level nodes when the underlying component truly is absent and the layering cannot be corrected more cleanly.
+Prefer disabling SoC-integrated hardware that exists in silicon but is unused on a board. Delete when the component truly is absent—a different PMIC on the board, or a block missing from the SoC variant as on AM62D2—and the layering cannot be corrected more cleanly.
 
 ## Composition Order
 
@@ -204,7 +210,7 @@ When reviewing an amendment:
 ## Exercises
 
 1. Predict the final `status` after a base sets `disabled` and two later amendments set `okay`, then `disabled`.
-2. Show how `serial0 = &uart0;` and `clocks = <&osc>;` encode their targets differently.
+2. Show how `stdout-path = &main_uart0;` and `clocks = <&k3_clks 146 0>;` encode their targets differently.
 3. Remove an inherited boolean property without leaving a zero-length value.
 4. Explain when disabling is more truthful than deleting.
 5. Rewrite a structural path amendment using a label.

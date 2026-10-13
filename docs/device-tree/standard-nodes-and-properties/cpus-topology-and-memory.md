@@ -12,7 +12,7 @@ last_reviewed: null
 
 ## The `/cpus` Container
 
-The `/cpus` node defines how CPU child unit addresses are encoded:
+The `/cpus` node defines how CPU child unit addresses are encoded. The dual-core AM642 (`k3-am642.dtsi`, cache properties trimmed):
 
 ```dts
 cpus {
@@ -20,34 +20,41 @@ cpus {
         #size-cells = <0>;
 
         cpu0: cpu@0 {
-                device_type = "cpu";
                 compatible = "arm,cortex-a53";
-                reg = <0>;
+                reg = <0x000>;
+                device_type = "cpu";
                 enable-method = "psci";
+                next-level-cache = <&L2_0>;
         };
 
         cpu1: cpu@1 {
-                device_type = "cpu";
                 compatible = "arm,cortex-a53";
-                reg = <1>;
+                reg = <0x001>;
+                device_type = "cpu";
                 enable-method = "psci";
+                next-level-cache = <&L2_0>;
         };
 };
 ```
 
 `#size-cells = <0>` means CPU `reg` values carry identifiers but no size field. The identifier is architecture-defined: for Arm it is related to the hardware affinity value, while other architectures define their own meaning. It is not necessarily the Linux logical CPU number shown in `/proc/cpuinfo`.
 
-Each CPU binding can add cache, clock, capacity, power, idle-state, and bring-up properties. `enable-method` describes how secondary CPUs are started; it must agree with the architecture and firmware interface. Copying `psci` into a tree does not create a working PSCI implementation.
+Each CPU binding can add cache, clock, capacity, power, idle-state, and bring-up properties; AM62x CPUs, for example, also carry `operating-points-v2`, `clocks = <&k3_clks 135 0>`, and `#cooling-cells`. `enable-method` describes how secondary CPUs are started; it must agree with the architecture and firmware interface. On AM64x the `psci` method relies on the `arm,psci-1.0` node under `/firmware` in `k3-am64.dtsi`, implemented by Trusted Firmware-A. Copying `psci` into a tree does not create a working PSCI implementation.
 
 ## CPU Topology
 
-Hardware ID and scheduler topology are separate. Where the architecture binding uses a `cpu-map`, it explicitly groups phandles into sockets, clusters, cores, and threads:
+Hardware ID and scheduler topology are separate. Where the architecture binding uses a `cpu-map`, it explicitly groups phandles into sockets, clusters, cores, and threads. AM642 places both cores in one cluster sharing `L2_0`:
 
 ```dts
 cpu-map {
-        cluster0 {
-                core0 { cpu = <&cpu0>; };
-                core1 { cpu = <&cpu1>; };
+        cluster0: cluster0 {
+                core0 {
+                        cpu = <&cpu0>;
+                };
+
+                core1 {
+                        cpu = <&cpu1>;
+                };
         };
 };
 ```
@@ -66,22 +73,28 @@ A CPU disabled by firmware, fused off, or absent from the final DTB may make a s
 
 ## The `/memory` Node
 
-A memory node uses the root node's `#address-cells` and `#size-cells`:
+A memory node uses the root node's `#address-cells` and `#size-cells`. The AM642 SK has one 2 GiB bank (`k3-am642-sk.dts`):
 
 ```dts
-/ {
-        #address-cells = <2>;
-        #size-cells = <2>;
-
-        memory@80000000 {
-                device_type = "memory";
-                reg = <0x0 0x80000000 0x0 0x40000000>,
-                      <0x8 0x00000000 0x0 0x80000000>;
-        };
+memory@80000000 {
+        device_type = "memory";
+        /* 2G RAM */
+        reg = <0x00000000 0x80000000 0x00000000 0x80000000>;
 };
 ```
 
-Each entry is two address cells followed by two size cells. The example describes 1 GiB at `0x80000000` and 2 GiB at `0x800000000`. One memory node may contain several ranges, or a platform may use multiple memory nodes.
+Larger K3 parts need a second bank above 4 GiB. The J784S4 EVM (`k3-j784s4-evm.dts`):
+
+```dts
+memory@80000000 {
+        /* 32G RAM */
+        reg = <0x00000000 0x80000000 0x00000000 0x80000000>,
+              <0x00000008 0x80000000 0x00000007 0x80000000>;
+        device_type = "memory";
+};
+```
+
+Each entry is two address cells followed by two size cells. The second entry is 30 GiB (`0x7_8000_0000`) at `0x8_8000_0000`. One memory node may contain several ranges, or a platform may use multiple memory nodes.
 
 `device_type = "memory"` is required. The unit address is the first range's base address. The `reg` ranges should describe physical memory presented to the operating system; reserved regions are then excluded separately.
 
@@ -99,7 +112,7 @@ early kernel usable memory
 runtime allocatable memory
 ```
 
-A board DTS may contain a maximum or default RAM layout while the bootloader patches `/memory` for the fitted module. That is legitimate only when ownership is documented and the final values are validated. Never diagnose a memory-size problem solely from the checked-in DTS.
+A board DTS may contain a maximum or default RAM layout while the bootloader patches `/memory` for the fitted module. TI's AM64x U-Boot SPL does this in `spl_perform_board_fixups()` (`board/ti/am64x/evm.c`): with the K3 DDRSS driver and inline ECC enabled, `k3_ddrss_ddr_fdt_fixup()` shrinks the top bank by the ECC storage and rewrites `/memory` with `fdt_fixup_memory_banks()`; without the DDRSS driver, `fixup_memory_node()` writes the banks reported by `dram_init_banksize()`. That is legitimate only when ownership is documented and the final values are validated. Never diagnose a memory-size problem solely from the checked-in DTS.
 
 Compare at least:
 

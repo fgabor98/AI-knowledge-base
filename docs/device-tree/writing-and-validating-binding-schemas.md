@@ -71,30 +71,27 @@ A useful schema defines two sets:
 - every supported hardware instance must be accepted
 - every unsupported or contradictory description must be rejected
 
-For each rule, create at least one positive and one negative mental example. If AX200 requires two interrupts, validate a complete two-interrupt node and reason about a one-interrupt failure. If AX100 forbids a reset, ensure a reset-bearing AX100 node cannot slip through an unconstrained common property.
+For each rule, create at least one positive and one negative example. If `img,img-axe-1-16m` requires `power-domain-names`, validate the AM62x GPU node with it and confirm the error without it. If the VPFE needs a `bus-width` between 8 and 16, confirm that `bus-width = <20>` is rejected and that a node without it fails as required.
 
 ## Minimal Schema Skeleton
+
+The first draft of the module's running example, a conversion of the AM437x VPFE text binding:
 
 ```yaml
 # SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
 %YAML 1.2
 ---
-$id: http://devicetree.org/schemas/media/acme,ax-capture.yaml#
+$id: http://devicetree.org/schemas/media/ti,am437x-vpfe.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
-title: Acme AX capture engine
+title: Texas Instruments AM437x Video Processing Front End (VPFE)
 
 maintainers:
-  - Example Maintainer <maintainer@example.com>
-
-description: |
-  The AX capture engine transfers samples from an external interface to memory.
+  - Lad Prabhakar <prabhakar.csengg@gmail.com>
 
 properties:
   compatible:
-    enum:
-      - acme,axc100
-      - acme,axc200
+    const: ti,am437x-vpfe
 
   reg:
     maxItems: 1
@@ -107,13 +104,19 @@ additionalProperties: false
 
 examples:
   - |
-    capture@48000000 {
-        compatible = "acme,axc100";
-        reg = <0x48000000 0x1000>;
+    vpfe@0 {
+        compatible = "ti,am437x-vpfe";
+        reg = <0x0 0x2000>;
     };
 ```
 
-This is only a structural starting point. Real schemas must constrain the full resource contract and variants.
+This is only a structural starting point. Run against the real AM437x SK DTB, it already fails, because `additionalProperties: false` admits only declared properties:
+
+```text
+vpfe@0 (ti,am437x-vpfe): 'interrupts', 'port' do not match any of the regexes: '^pinctrl-[0-9]+$'
+```
+
+The SK's second, disabled VPFE has no `port` and reports only `'interrupts'`, because schemas validate disabled nodes too. The [lab](writing-and-validating-binding-schemas/binding-schema-authoring-and-validation-lab.md) completes it.
 
 ## Core Review Loop
 

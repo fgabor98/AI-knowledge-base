@@ -12,20 +12,20 @@ The root node answers “what machine is this?”, `status` answers “may the o
 
 ## Root Contract
 
-A typical root begins as follows:
+The SolidRun HummingBoard-T root (`k3-am642-hummingboard-t.dts`, with cell counts inherited from `k3-am64.dtsi`):
 
 ```dts
 / {
-        model = "Example Systems Atlas Controller Rev C";
-        compatible = "example,atlas-revc", "example,atlas";
+        model = "SolidRun AM642 HummingBoard-T";
+        compatible = "solidrun,am642-hummingboard-t", "solidrun,am642-sr-som", "ti,am642";
         #address-cells = <2>;
         #size-cells = <2>;
 };
 ```
 
-The root `compatible` is an ordered string list, from the most specific compatible implementation to broader compatible implementations. Linux uses it for early machine selection and platform matching. Add a fallback only when software written for that fallback can really operate the newer machine; a shared vendor or similar marketing name is not sufficient.
+The root `compatible` is an ordered string list, from the most specific compatible implementation to broader compatible implementations. Linux uses it for early machine selection and platform matching. Here the list runs board, SoM, SoC. Add a fallback only when software written for that fallback can really operate the newer machine; a shared vendor or similar marketing name is not sufficient.
 
-`model` is a human-readable product description. It is valuable in logs and inventory, but it is not a substitute for a stable compatible string. Changing punctuation in `model` should not alter driver behavior.
+`model` is a human-readable product description. The PCIe and USB3 variants of the same board change only `model` ("... with PCI-E", "... with USB-3.1 Gen 1") and keep the compatible list, because the machine identity is unchanged; only the use of one SERDES lane differs. Changing `model` must not alter driver behavior.
 
 The root cell-count properties govern addresses and sizes in direct children such as `/memory` and `/reserved-memory`. They are part of the encoding contract, not declarations of the CPU's register width.
 
@@ -49,51 +49,69 @@ Do not encode software versions, deployment roles, or serial numbers in `compati
 - `reserved`: operational, but reserved for another software component
 - `fail` or `fail-...`: a serious detected fault
 
-If `status` is absent, the node is normally treated as available. Consequently, a SoC `.dtsi` often declares integrated devices as `disabled`, and a board DTS enables only the wired instances:
+If `status` is absent, the node is normally treated as available. Consequently, a SoC `.dtsi` declares integrated devices as `disabled`, and a board DTS enables only the wired instances. The AM642 SK uses three different values for UARTs and GPIO (`k3-am642-sk.dts`):
 
 ```dts
-&uart2 {
+&main_uart0 {
+        status = "okay";
+};
+
+&main_uart1 {
+        /* main_uart1 is reserved for firmware usage */
+        status = "reserved";
+};
+
+/* mcu_gpio0 and mcu_gpio_intr are reserved for mcu firmware usage */
+&mcu_gpio0 {
+        status = "reserved";
+};
+```
+
+`reserved` tells Linux the hardware exists and is in use by another execution environment—here the R5F or M4F firmware—so Linux must not claim it.
+
+Availability is effectively hierarchical during normal Linux platform population: a disabled parent is not instantiated and its children are not walked as available devices. In `k3-am64-main.dtsi` both the R5F cluster and its cores are disabled; `k3-am64-ti-ipc-firmware.dtsi` must enable both levels:
+
+```dts
+&main_r5fss0 {
+        status = "okay";
+};
+
+&main_r5fss0_core0 {
+        mboxes = <&mailbox0_cluster2 &mbox_main_r5fss0_core0>;
+        memory-region = <&main_r5fss0_core0_dma_memory_region>,
+                        <&main_r5fss0_core0_memory_region>;
         status = "okay";
 };
 ```
 
-Availability is effectively hierarchical during normal Linux platform population: a disabled bus is not instantiated and its children are not walked as available platform devices. Setting a child to `okay` does not make a disabled parent bus operational:
-
-```dts
-soc {
-        status = "disabled";
-
-        serial@1000 {
-                status = "okay"; /* Cannot make the disabled ancestor available. */
-        };
-};
-```
+Setting only `main_r5fss0_core0` to `okay` would not make the disabled `r5fss@78000000` cluster operational, so its driver would never populate the core.
 
 Treat `status` as hardware/ownership policy, not as a convenient way to make a driver stop probing while hiding the actual defect. A node can be available but still fail because clocks, pins, power, or its driver are missing.
 
 ## `/aliases`: Short Paths, Not Source Labels
 
-The `/aliases` node maps a name to an absolute node path:
+The `/aliases` node maps a name to an absolute node path. The AM642 SK, and an EVM overlay that writes a literal path:
 
 ```dts
-/ {
-        aliases {
-                serial0 = &uart2;
-                ethernet0 = "/soc/ethernet@30000000";
-        };
+/* k3-am642-sk.dts */
+aliases {
+        serial0 = &mcu_uart0;
+        serial1 = &main_uart1;
+        serial2 = &main_uart0;
+        mmc0 = &sdhci0;
+        mmc1 = &sdhci1;
+        ethernet0 = &cpsw_port1;
+};
+
+/* k3-am642-evm-icssg1-dualemac.dtso */
+aliases {
+        ethernet1 = "/icssg1-eth/ethernet-ports/port@1";
 };
 ```
 
-In DTS source, `&uart2` is resolved by the compiler to the full path stored in the property. The resulting DTB does not preserve that expression as an alias-to-label relationship.
+Note that `serial2` is the SoC's `main_uart0`: alias numbers follow board and firmware conventions, not SoC instance numbers.
 
-Keep the concepts separate:
-
-| Construct | Scope | Purpose |
-|---|---|---|
-| `uart2:` label | source composition | target a node while compiling |
-| phandle | compiled tree | identify a node numerically |
-| `/soc/serial@...` path | tree structure | identify a node by location |
-| `serial0` alias | logical tree | provide a short, named path |
+In DTS source, `&main_uart0` is resolved by the compiler to the full path stored in the property; the DTB does not preserve an alias-to-label relationship. [Tree Anatomy And Vocabulary](../foundations/tree-anatomy-and-vocabulary.md#aliases) compares labels, phandles, paths, and aliases.
 
 Aliases are used by firmware and some Linux subsystems, and may influence instance numbering. That behavior is subsystem-specific. Do not promise that `/aliases` alone creates a permanent userspace device name; use an explicit userspace naming policy where a stable ABI is required.
 

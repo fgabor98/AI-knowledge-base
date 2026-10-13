@@ -8,250 +8,196 @@ last_reviewed: null
 
 # Heterogeneous SoC Integration And Recovery Lab
 
-This lab integrates a fictional Cortex-R5 remote processor with fixed firmware memory, RPMsg vrings and buffers, a mailbox pair, a system IOMMU, and a secure-firmware-mediated lifecycle. It focuses on proving ownership and address contracts, then recovering safely from faults.
+This lab audits the first Cortex-R5F core of the TI AM642 SK (`main_r5fss0_core0`) as Linux sees it: memory reservations, address views, the mailbox doorbell, firmware placement, the TI-SCI-mediated lifecycle, and recovery. The description is real: `k3-am64-main.dtsi`, `k3-am642-sk.dts`, and `k3-am64-ti-ipc-firmware.dtsi` from mainline Linux, with `ti_k3_r5_remoteproc` and `ti_k3_common`.
 
 ## Objectives
 
 By the end, you should be able to:
 
-- audit physical memory reservations and consumers
-- distinguish host physical, DMA/IOMMU, and remote device addresses
-- reconcile DT regions with ELF segments and a resource table
-- derive the remoteproc and RPMsg lifecycle
-- identify secure firmware as an authority rather than another register provider
-- gather evidence for boot, transport, coherency, and recovery failures
+- audit physical memory reservations and their consumers
+- distinguish A53 physical, R5F device, and TCM addresses
+- reconcile DT regions with ELF segments and the resource table
+- derive the remoteproc and RPMsg lifecycle, including IPC-only attach
+- identify system firmware as an authority rather than another register provider
+- predict the failure signature of five description faults
 
-## Hardware Contract
+## Inputs
 
-Assume:
+- `k3-am642-sk.dtb` (it includes the IPC firmware `.dtsi`)
+- for Steps 4–8, an AM642 SK with TI's R5F IPC example firmware installed as `/lib/firmware/am64-main-r5f0_0-fw`
 
-- 2 GiB of DRAM begins at CPU physical address `0x80000000`
-- the R5 has a 32-bit device-address view
-- system firmware owns the R5 reset and authenticates its image
-- Linux stages and manages nonsecure memory, then requests start/stop
-- R5 device address `0x9d000000` maps directly to the same CPU physical address
-- firmware code/data uses 8 MiB from `0x9d000000`
-- two vrings and their guard/alignment allowance use 1 MiB from `0x9d800000`
-- RPMsg buffers use 4 MiB from `0x9d900000`
-- an SMMU stream context constrains R5 DMA to approved mappings
-- mailbox channel 4 kicks the remote, and channel 5 notifies the host
-
-The compatible strings and property names below are illustrative. A real board must use its platform remoteproc, system-firmware, IOMMU, and mailbox schemas.
+```sh
+D=k3-am642-sk.dtb
+R=/bus@f4000/r5fss@78000000/r5f@78000000
+```
 
 ## Step 1: Read The Description
 
+The SoC half, from `k3-am64-main.dtsi` (trimmed):
+
 ```dts
-/ {
-        #address-cells = <2>;
-        #size-cells = <2>;
+main_r5fss0: r5fss@78000000 {
+        compatible = "ti,am64-r5fss";
+        ti,cluster-mode = <0>;
+        ranges = <0x78000000 0x00 0x78000000 0x10000>,
+                 <0x78100000 0x00 0x78100000 0x10000>,
+                 /* core1 TCMs */;
+        power-domains = <&k3_pds 119 TI_SCI_PD_EXCLUSIVE>;
 
-        memory@80000000 {
-                device_type = "memory";
-                reg = <0x0 0x80000000 0x0 0x80000000>;
-        };
-
-        reserved-memory {
-                #address-cells = <2>;
-                #size-cells = <2>;
-                ranges;
-
-                r5f_fw: r5f-firmware@9d000000 {
-                        reg = <0x0 0x9d000000 0x0 0x00800000>;
-                        no-map;
-                };
-
-                r5f_vrings: r5f-vrings@9d800000 {
-                        reg = <0x0 0x9d800000 0x0 0x00100000>;
-                        no-map;
-                };
-
-                r5f_buffers: r5f-buffers@9d900000 {
-                        compatible = "shared-dma-pool";
-                        reg = <0x0 0x9d900000 0x0 0x00400000>;
-                        no-map;
-                };
+        main_r5fss0_core0: r5f@78000000 {
+                compatible = "ti,am64-r5f";
+                reg = <0x78000000 0x00010000>,
+                      <0x78100000 0x00010000>;
+                reg-names = "atcm", "btcm";
+                ti,sci = <&dmsc>;
+                ti,sci-dev-id = <121>;
+                ti,sci-proc-ids = <0x01 0xff>;
+                resets = <&k3_reset 121 1>;
+                firmware-name = "am64-main-r5f0_0-fw";
+                ti,atcm-enable = <1>;
+                ti,btcm-enable = <1>;
+                ti,loczrama = <1>;
         };
 };
-
-r5f@5d00000 {
-        compatible = "example,soc-r5f-secure-rproc";
-        reg = <0x0 0x05d00000 0x0 0x10000>;
-        firmware-name = "product/r5f-control.elf";
-        memory-region = <&r5f_fw>, <&r5f_vrings>, <&r5f_buffers>;
-        memory-region-names = "firmware", "vrings", "buffers";
-        mboxes = <&mailbox0 4>, <&mailbox0 5>;
-        mbox-names = "tx", "rx";
-        iommus = <&smmu 0x42>;
-        power-domains = <&system_firmware 27>;
-        status = "okay";
-};
 ```
 
-In a real secure-lifecycle binding, the node might not expose direct registers or might use a firmware-specific handle. Never infer those details from this example.
+The board half: `optee@9e800000` and the core's two regions in `k3-am642-sk.dts`; `mailbox0_cluster2`, the `mboxes`/`memory-region` amendment, and `main_timer8` marked `status = "reserved"` (“used by r5f0-0”) in `k3-am64-ti-ipc-firmware.dtsi`.
 
-## Step 2: Prove The Physical Layout
+## Step 2: Audit The Memory Map
 
-Calculate each half-open interval:
-
-```text
-DRAM        [0x80000000, 0x100000000)
-firmware    [0x9d000000, 0x9d800000)
-vrings      [0x9d800000, 0x9d900000)
-buffers     [0x9d900000, 0x9dd00000)
+```sh
+fdtget -tx $D /memory@80000000 reg
+for n in $(fdtget -l $D /reserved-memory); do
+        echo "$n $(fdtget -tx $D /reserved-memory/$n reg)"
+done
+fdtget -tx $D $R memory-region
 ```
 
-All carveouts lie within DRAM, are adjacent but do not overlap, and consume 13 MiB total. Confirm that boot firmware does not reserve a conflicting interval and that Linux reports all three exclusions.
+Build the table from [Memory Ownership](memory-ownership-ram-and-reserved-regions.md#start-with-a-physical-memory-map) yourself and check:
 
-Explain why the `/memory` node still spans the complete installed bank: `/reserved-memory` records exclusions independently.
+1. every region lies inside the 2 GiB bank and none overlap
+2. which phandles the core references, in which order (expected: `memory@a0000000`, then `memory@a0100000`)
+3. which region has no consumer at all (`memory@a5000000`) and why it is still reserved
+4. where TF-A is (not in DDR on AM64x; see [Secure Reserved Memory](trusted-firmware-op-tee-and-secure-world-boundaries.md#secure-reserved-memory))
 
-## Step 3: Build The Ownership Matrix
+## Step 3: Map The Address Views
 
-| Resource | Before load | During load | Running | After contained stop |
-|---|---|---|---|---|
-| firmware carveout | Linux reserved | host loader writes | R5 executes/uses | host may reload, not page allocator |
-| vrings | remoteproc reserved | host initializes | virtio shared | reinitialize before restart |
-| RPMsg buffers | pool reserved | transport prepares | ownership alternates | reclaim after DMA containment |
-| reset/power | system firmware | system firmware | system firmware policy | system firmware |
-| SMMU context | host/secure cooperation | mapped | enforces aperture | revoke after quiescence |
+Fill in one row per memory:
 
-The static carveouts remain excluded after stop; “host owns for reload” does not mean ordinary pages may use them.
+| Memory | A53 physical | R5F device address | Source of the mapping |
+|---|---|---|---|
+| ATCM (64 KiB) | `0x78000000` | | `ti,loczrama = <1>` |
+| BTCM (64 KiB) | `0x78100000` | | `K3_R5_TCM_DEV_ADDR` |
+| DMA pool | `0xa0000000` | | vring allocations |
+| carveout | `0xa0100000` | | `k3_reserved_mem_init()` |
 
-## Step 4: Reconcile Firmware Metadata
+Expected: with `loczrama` set, ATCM is at R5F address `0x0` and BTCM at `0x41010000`. DDR regions use the same address on both sides, because the driver sets each carveout's device address to its physical address. Explain what breaks if a future SoC put an address translator between the R5F and DDR.
 
-Assume `readelf -l r5f-control.elf` reports:
+## Step 4: Reconcile The Firmware
 
-```text
-LOAD device 0x9d000000 filesz 0x00180000 memsz 0x00200000
-LOAD device 0x9d300000 filesz 0x00080000 memsz 0x00100000
+```sh
+readelf -lW /lib/firmware/am64-main-r5f0_0-fw
+readelf -SW /lib/firmware/am64-main-r5f0_0-fw | grep -i resource
 ```
 
-Both segments fit within the 8 MiB firmware region, with a gap. Verify the entry point also lies in executable remote memory.
-
-Then inspect the resource table and record:
-
-- two vring device addresses and sizes within the vring interval
-- alignment and descriptor count
-- RPMsg virtio device and feature bits
-- buffer-pool expectations
-- trace entry, if any
-
-Reject an image whose resource entry overlaps an ELF segment or extends beyond its DT region before requesting secure authentication.
+Every `LOAD` segment must fall inside ATCM, BTCM, or the carveout `[0xa0100000, 0xa1000000)`. `ti_k3_common` expects the resource table at the base of `memory-region` index 1, and reads at most 256 bytes of it in IPC-only mode. Confirm the `.resource_table` section address is `0xa0100000`, and that the vring addresses it declares are either allocated by Linux from the DMA pool or fall inside it.
 
 ## Step 5: Trace One Message
 
-Write the full path:
+Write the path for one RPMsg message from Linux to the R5F, naming each DT element:
 
 ```text
-host RPMsg payload
-  -> transport buffer allocated from r5f_buffers
-  -> host writes payload
-  -> DMA/cache ownership transition
-  -> host publishes descriptor in r5f_vrings
-  -> memory barrier
-  -> mailbox channel 4 kick
-  -> R5 reads descriptor using its device address
-  -> R5 consumes payload and publishes completion
-  -> mailbox channel 5 interrupt
-  -> host regains buffer ownership
+rpmsg send -> vring in DMA pool (memory@a0000000)
+           -> mailbox0_cluster2, TX FIFO 1, user 2 (mbox-main-r5fss0-core0)
+           -> R5F ISR -> reads vring -> replies via FIFO 0 -> Linux RX callback
 ```
 
-For this direct-mapped example, the remote device and CPU physical numbers match. The host must still use the DMA/remoteproc APIs because the SMMU and cache policy can make the operational DMA address different.
+Explain why the R5F firmware's mailbox configuration must be the mirror image of `ti,mbox-rx = <0 0 2>` and `ti,mbox-tx = <1 0 2>`.
 
 ## Step 6: Derive Boot And Stop
 
-A plausible boot is:
-
-1. remoteproc driver binds after mailbox, IOMMU, and firmware providers
-2. request and parse the ELF and resource table
-3. validate segments and resource entries against carveouts
-4. create required SMMU mappings
-5. load or stage segments and initialize vrings
-6. request system firmware to authenticate and start the R5
-7. wait for readiness and virtio/RPMsg announcement
-8. bind the version-compatible RPMsg service
-
-A safe stop is:
-
-1. reject new application requests
-2. request cooperative remote shutdown
-3. wait for or force containment through system firmware
-4. stop independent DMA and mask notifications
-5. resolve or revoke outstanding shared buffers
-6. tear down transport and SMMU mappings
-7. retain diagnostic evidence and return offline
-
-Actual order is platform-specific, but no buffer can return to another owner while an active master can still write it.
+Linux does not toggle R5F reset registers. It asks system firmware over TI-SCI: `ti,sci-proc-ids` names the processor to request, `ti,sci-dev-id` and `resets` the device and local reset, and the cluster's `power-domains` the power state. Write the cold-start sequence (request processor, power on, load segments, set boot vector, release reset), the stop sequence, and the IPC-only case: if a bootloader already started the core, the driver logs `configured R5F for IPC-only mode` and attaches instead of loading.
 
 ## Step 7: Collect Runtime Evidence
 
 ```sh
-cat /proc/iomem
-dmesg | grep -Ei 'reserved memory|remoteproc|rproc|firmware|iommu|rpmsg|virtio|mailbox'
-ls -l /sys/class/remoteproc
-ls -l /sys/bus/virtio/devices
-ls -l /sys/bus/rpmsg/devices
-cat /proc/interrupts
+for r in /sys/class/remoteproc/remoteproc*; do
+        echo "$r $(cat $r/name) $(cat $r/state) $(cat $r/firmware)"
+done
+grep -i -E 'mailbox|29020000' /proc/interrupts
+ls /sys/bus/rpmsg/devices/
+grep -E 'a0000000|a0100000' /proc/iomem
+dmesg | grep -Ei 'r5f|remoteproc|rpmsg|virtio|reserved mem|mbox'
 ```
 
-Also capture firmware build identity, remote trace where safe, IOMMU mappings/faults, and the live DT properties. Use platform-approved tools for secure-firmware state; do not bypass it through raw register writes.
+Map `remoteprocN` to `r5f@78000000` through its `device` link; numbering is probe-order dependent.
 
 ## Step 8: Test The Lifecycle
 
-Exercise:
-
-1. cold boot with the R5 initially off
-2. repeated start/stop and service bind/unbind
-3. maximum-rate bidirectional messages through ring wrap
-4. system suspend/resume with the R5 stopped
-5. supported low-power behavior with the R5 running
-6. remote watchdog crash at each buffer-ownership state
-7. incompatible and invalidly signed firmware
-8. warm reset and kexec according to product policy
-
-Verify memory remains protected during every failure and recovery is bounded.
+Test cold start from Linux, stop and restart through `/sys/class/remoteproc/remoteprocN/state`, a firmware crash with recovery enabled and disabled, and attach after a bootloader-started core. Record mailbox interrupt counts and RPMsg channel announcements at each step.
 
 ## Step 9: Diagnose Deliberate Faults
 
-### Fault A: Firmware Segment Ends At `0x9d900000`
+Apply each to a copy of `$D`. Confirm phandles first (`fdtget -tx $D /reserved-memory/memory@a0000000 phandle`); a mainline build gives `0x25` for the DMA pool and `0x26` for the carveout. `dtc -I dtb -O dts` reports none of these faults.
 
-The segment crosses the firmware carveout and consumes the vring region. Reject the image. Enlarging only the firmware DTS node would then overlap the next static region; memory layout and firmware must change together.
+### Fault A: The Two Regions Are Swapped
 
-### Fault B: Resource Table Uses R5 Address `0x9e800000` For A Vring
+```sh
+cp $D a.dtb
+fdtput -t x a.dtb $R memory-region 26 25
+```
 
-The entry is outside the DT vring region. Determine whether the firmware used another product's linker/resource configuration or whether a documented remote address translation was omitted. Do not truncate the address.
+The 15 MiB carveout becomes the DMA pool, and the 1 MiB pool becomes the only carveout. Predict that loading fails in the ELF loader with `bad phdr da 0x... mem 0x...`, because the segments linked at `0xa0100000` no longer fall inside any carveout. In IPC-only mode, the driver instead reads the resource table from the wrong base.
 
-### Fault C: Only Mailbox TX Interrupts Increase
+### Fault B: Only One Region
 
-The host can kick the remote, but there is no receive notification. Check remote boot progress, RX channel mapping, remote interrupt routing, queue address, and memory ordering. An RPMsg driver change is premature.
+```sh
+cp $D b.dtb
+fdtput -t x b.dtb $R memory-region 25
+```
 
-### Fault D: Messages Corrupt Only Under Load
+Predict `device needs at least two memory regions to be defined, num = 1` and no remoteproc for this core.
 
-Audit buffer ownership, barriers, cache policy, vring alignment, and ring wrap. Adding sleeps is not a fix. Capture the first corrupt descriptor and both peers' indices.
+### Fault C: Two Cores' Regions Overlap
 
-### Fault E: An SMMU Fault Reports Stream `0x42`
+```sh
+cp $D c.dtb
+fdtput -t x c.dtb /reserved-memory/memory@a1000000 reg 0 a0800000 0 100000
+```
 
-Correlate the faulting IOVA and access type with the active RPMsg buffer and mappings. Check address domain, length, permissions, and stale DMA after stop. Disabling the SMMU removes evidence and isolation.
+R5F0_1's DMA pool now lies inside R5F0_0's carveout. Predict the early boot message `OVERLAP DETECTED!` naming both regions, followed by a system that may still boot. Explain why a warning is not protection, and why the unit address now disagrees with `reg` too.
 
-### Fault F: Restart Works Once, Then Times Out
+### Fault D: The Mailbox Directions Are Swapped
 
-Inspect stale mailbox notifications, remote watchdog state, incomplete reset, retained vring indices, power references, and unrevoked mappings. Reinitialize transport only after the remote and every DMA master are contained.
+```sh
+cp $D d.dtb
+M=/bus@f4000/mailbox@29020000/mbox-main-r5fss0-core0
+fdtput -t u d.dtb $M ti,mbox-rx 1 0 2
+fdtput -t u d.dtb $M ti,mbox-tx 0 0 2
+```
 
-### Fault G: Secure Firmware Rejects The Image
+The core loads and reaches `running`, but Linux now transmits on the FIFO the firmware also transmits on. Predict that no RPMsg channels appear under `/sys/bus/rpmsg/devices` and that the mailbox interrupt count stays flat. Explain why `state = running` proves nothing about IPC.
 
-Preserve its status code and firmware identity. Verify signature, key policy, rollback counter, target core, and staging limits. Do not fall back to an unauthenticated direct-load path.
+### Fault E: No Firmware Name
+
+```sh
+cp $D e.dtb
+fdtput -d e.dtb $R firmware-name
+```
+
+Predict `failed to parse firmware-name property` and a failed cluster probe, so *both* R5F0 cores disappear, not just core 0.
 
 ## Exit Review
 
-The lab is complete when you can provide:
+The lab is complete when you can present:
 
-- a nonoverlapping physical memory map
-- ownership state for every region and lifecycle phase
-- ELF/resource-table/DT consistency report
-- one end-to-end address and cache-ownership trace
-- boot, stop, crash, and recovery sequences
-- runtime evidence for remoteproc, virtio, RPMsg, mailbox, and IOMMU layers
-- root-cause reasoning for every deliberate fault
-- security justification for refusing unsafe workarounds
+- the reserved-memory table with owners, consumers, and the unconsumed RTOS region explained
+- the address-view table for TCMs and DDR
+- the ELF segment and resource-table reconciliation
+- the message path and mailbox mirror contract
+- boot, stop, and IPC-only sequences with the TI-SCI identifiers used
+- runtime evidence and lifecycle results
+- predicted and observed outcomes for each fault
 
 ## Authoritative References
 
@@ -263,4 +209,4 @@ The lab is complete when you can provide:
 
 ## Continue
 
-Proceed to [U-Boot And Bootloader Device Tree](../u-boot-and-bootloader-device-tree.md).
+Proceed to [Binding Design And Stable ABI](../binding-design-and-stable-abi.md).

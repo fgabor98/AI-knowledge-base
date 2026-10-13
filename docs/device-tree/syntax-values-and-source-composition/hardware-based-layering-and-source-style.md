@@ -10,34 +10,38 @@ last_reviewed: null
 
 ## Layer By Physical Reuse
 
-Source boundaries should describe real reuse, not merely reduce file length:
+Source boundaries should describe real reuse, not merely reduce file length. The PHYTEC AM64x boards in mainline Linux follow the physical assemblies exactly:
 
 ```text
-trainer-soc.dtsi
-    silicon-integrated blocks and topology
+k3-am64.dtsi + k3-am64-main.dtsi + k3-am64-mcu.dtsi
+    silicon-integrated blocks and interconnect topology (TI)
             |
-trainer-som.dtsi
-    module RAM, PMIC, oscillator, fitted devices
+k3-am642.dtsi
+    exact SoC variant: two A53 cores and their L2 cache (TI)
             |
-trainer-carrier-common.dtsi
-    hardware genuinely shared by carrier variants
+k3-am64-phycore-som.dtsi
+    module RAM, PMIC, eMMC, OSPI flash, Ethernet PHY, RTC (PHYTEC)
             |
-trainer-carrier-a.dts / trainer-carrier-b.dts
-    exact board model and variant-specific wiring
+k3-am642-phyboard-electra-rdk.dts
+    exact carrier: keys, LEDs, CAN, SPI, USB, SD card, ICSSG Ethernet (PHYTEC)
 ```
 
 The ownership test is simple: if the physical component changes when this assembly is swapped, its description belongs at or below that assembly's layer.
 
 ## SoC Layer
 
-An SoC DTSI describes blocks present in the silicon, their fixed addresses, internal interrupts, and stable provider topology. Controllers often default to disabled because a board must supply pins, clocks, PHY connections, or external devices:
+An SoC DTSI describes blocks present in the silicon, their fixed addresses, internal interrupts, and stable provider topology. Controllers default to disabled because a board must supply pins, clocks, PHY connections, or external devices. `k3-am64-main.dtsi`:
 
 ```dts
-uart0: serial@1000 {
-        compatible = "example,trainer-uart";
-        reg = <0x1000 0x100>;
-        interrupts = <5>;
-
+main_i2c0: i2c@20000000 {
+        compatible = "ti,am64-i2c", "ti,omap4-i2c";
+        reg = <0x00 0x20000000 0x00 0x100>;
+        interrupts = <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+        power-domains = <&k3_pds 102 TI_SCI_PD_EXCLUSIVE>;
+        clocks = <&k3_clks 102 2>;
+        clock-names = "fck";
         status = "disabled";
 };
 ```
@@ -46,57 +50,63 @@ Do not place a carrier-board sensor in the SoC DTSI just because all current pro
 
 ## Module Layer
 
-A system-on-module DTSI can add hardware physically owned by the module:
+A system-on-module DTSI adds hardware physically owned by the module. `k3-am64-phycore-som.dtsi` describes the module's EEPROM, RTC, and PMIC on I2C0 (trimmed):
 
 ```dts
-/ {
-        osc: clock-24000000 {
-                compatible = "fixed-clock";
-                #clock-cells = <0>;
-                clock-frequency = <24000000>;
+&main_i2c0 {
+        /* ... */
+        eeprom@50 {
+                compatible = "atmel,24c32";
+                /* ... */
         };
-};
 
-&uart0 {
-        clocks = <&osc>;
+        i2c_som_rtc: rtc@52 {
+                compatible = "microcrystal,rv3028";
+                /* ... */
+        };
+
+        pmic@61 {
+                compatible = "ti,lp8733";
+                /* ... */
+        };
 };
 ```
 
-If the module routes a controller to edge-connector pins but does not determine its final peripheral, keep the description incomplete or disabled until the carrier supplies the missing facts.
+The module also sets a module-level identity, `compatible = "phytec,am64-phycore-som", "ti,am642";`, which every carrier overrides. If the module routes a controller to edge-connector pins but does not determine its final peripheral, keep the description incomplete or disabled until the carrier supplies the missing facts.
 
 ## Board Layer
 
-The final `.dts` identifies the exact machine and describes fitted board hardware:
+The final `.dts` identifies the exact machine and describes fitted carrier hardware (`k3-am642-phyboard-electra-rdk.dts`):
 
 ```dts
 /dts-v1/;
 
-#include "trainer-som.dtsi"
+#include "k3-am642.dtsi"
+#include "k3-am64-phycore-som.dtsi"
 
 / {
-        model = "Example Trainer Carrier A";
-        compatible = "example,trainer-carrier-a", "example,trainer-soc";
-};
+        compatible = "phytec,am642-phyboard-electra-rdk",
+                     "phytec,am64-phycore-som", "ti,am642";
+        model = "PHYTEC phyBOARD-Electra-AM64x RDK";
 
-&uart0 {
-        pinctrl-0 = <&uart0_pins>;
-        pinctrl-names = "default";
-        status = "okay";
+        chosen {
+                stdout-path = &main_uart0;
+        };
 };
 ```
 
-The root compatible begins with the exact board. A reusable DTSI generally should not claim the final product identity.
+The root compatible begins with the exact board, then the module, then the SoC. The carrier, not a reusable DTSI, owns the final product identity.
 
 ## Variant Strategies
 
 Choose the smallest structure that makes hardware differences explicit:
 
-| Difference | Good starting strategy |
+| Difference | Real example in `arch/arm64/boot/dts/ti/` |
 |---|---|
-| one board, assembly option not auto-detected | separate final DTS or carefully selected overlay |
-| several boards share a real carrier circuit | shared carrier DTSI plus final DTS files |
-| same module on unrelated carriers | module DTSI included by each carrier DTS |
-| silicon revisions with stable programming model | common SoC DTSI plus revision-specific compatible/data as bindings require |
+| same module on unrelated carriers | `k3-am64-phycore-som.dtsi`, `k3-am642-tqma64xxl.dtsi`, and `k3-am642-sr-som.dtsi` each included by their carrier DTS |
+| one carrier, SERDES lane used for PCIe or USB3 | `k3-am642-hummingboard-t-pcie.dts` and `-usb3.dts` each `#include "k3-am642-hummingboard-t.dts"` and change only the lane |
+| optional add-on hardware | `k3-am642-evm-icssg1-dualemac.dtso`, `k3-am642-phyboard-electra-x27-gpio1-spi1-uart3.dtso` overlays |
+| SoC variant missing blocks | `k3-am62d2.dtsi` includes `k3-am62a7.dtsi` and deletes the absent accelerators |
 
 Avoid a “common” DTSI that contains the union of all product hardware followed by many deletions. It obscures what each board actually contains and makes defaults dangerous.
 
@@ -139,18 +149,19 @@ Within a logical group, use natural property-name ordering. Separate child nodes
 
 ## Formatting Multi-Entry Properties
 
-Keep logical entries visible:
+Keep logical entries visible, as `k3-am64-main.dtsi` does for SDHCI0 and ICSSG0:
 
 ```dts
-reg = <0x1000 0x100>,
-      <0x2000 0x80>;
+reg = <0x00 0xfa10000 0x00 0x260>, <0x00 0xfa18000 0x00 0x134>;
 
-clocks = <&clock_controller 3>,
-         <&clock_controller 7>;
-clock-names = "bus", "core";
+clocks = <&k3_clks 81 0>,  /* icssg0_core_clk */
+         <&k3_clks 81 3>,  /* icssg0_iep_clk */
+         <&k3_clks 81 16>, /* icssg0_rgmii_mhz_250_clk */
+         /* ... */
+         <&k3_clks 81 20>; /* icssg0_iclk */
 ```
 
-Align companion lists so reviewers can compare positions. A formatter cannot prove that the third clock name belongs to the third specifier, but consistent layout makes mistakes more visible.
+Per-entry comments name the provider clock behind each opaque ID. Align companion lists such as `clocks`/`clock-names` so reviewers can compare positions. A formatter cannot prove that the third name belongs to the third specifier, but consistent layout makes mistakes more visible.
 
 ## Comments And Documentation Debt
 

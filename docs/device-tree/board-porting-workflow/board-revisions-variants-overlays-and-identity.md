@@ -29,25 +29,7 @@ Do not encode operational modes or commercial entitlements as board hardware var
 
 ## Choose A Representation
 
-### Separate DTS/DTB
-
-Use when fixed assemblies differ in wiring, power, memory, providers, fitted devices, or safety behavior. This gives explicit artifacts and strong validation.
-
-### Shared physical `.dtsi` plus board DTS
-
-Use for real SoC/module/carrier reuse. Put a fact in the common layer only when it is true for every inheritor.
-
-### Compatible fallback
-
-Use when a newer board/device is genuinely backward-compatible under the older programming contract.
-
-### Overlay
-
-Use for independently selectable optional hardware with a defined base/overlay ABI, ordering, authentication, and composition matrix.
-
-### Bootloader fixup
-
-Use for trusted runtime-discovered facts that cannot be static, such as valid memory size or tightly constrained identity data. Record and measure mutations as product policy requires.
+Pick separate DTS files, shared physical `.dtsi` layers, compatible fallback, overlays, bootloader fixups, or userspace configuration for each delta using the criteria in [Represent Variants Deliberately](../product-scale-maintenance-and-engineering/layering-variants-ownership-and-source-architecture.md#represent-variants-deliberately).
 
 ## Design The Identity Chain
 
@@ -112,31 +94,19 @@ Update the hardware delta ledger, inventory, ownership, artifact list, and CI ma
 
 ## Engineer Overlay Selection
 
-An overlay policy should specify:
-
-- base compatible/version range
-- required symbols/labels or stable targets
-- option identity source
-- authorized overlay digest/signer
-- allowed overlay combinations and order
-- conflicts and dependencies
-- whether hot add/remove is supported
-- rollback and recovery behavior
-- final composed-tree evidence
-
-Manual lab application is useful for diagnosis but is not a production selector.
+An overlay selector needs a base/overlay contract, authenticated digests, allowed combinations and order, conflicts, lifecycle, and final-tree evidence ([Overlay Contract Manifest](../overlays-in-depth.md#overlay-contract-manifest)). Manual lab application is useful for diagnosis but is not a production selector.
 
 ## Test Every Declared Composition
 
 ```bash
 fdtoverlay \
-  -i acme/axc300-revb.dtb \
-  -o composed/axc300-revb-radio.dtb \
-  acme/axc300-radio-v1.dtbo
+  -i ti/k3-am625-beagleplay.dtb \
+  -o composed/k3-am625-beagleplay-csi2-ov5640.dtb \
+  ti/k3-am625-beagleplay-csi2-ov5640.dtbo
 
 dtc -I dtb -O dts \
-  -o composed/axc300-revb-radio.dts \
-  composed/axc300-revb-radio.dtb
+  -o composed/k3-am625-beagleplay-csi2-ov5640.dts \
+  composed/k3-am625-beagleplay-csi2-ov5640.dtb
 ```
 
 Test negative pairs too. Successful resolver application proves structural references, not electrical or driver compatibility.
@@ -165,22 +135,7 @@ Support bundles should contain these without leaking unnecessary unique or secre
 
 ## Prevent Variant Drift
 
-Generate or validate from one product inventory:
-
-```yaml
-id: axc300-revb-radio
-identity:
-  product: AXC300
-  board_revision: B
-  option_bits: [RADIO_V1]
-base_dtb: acme/axc300-revb.dtb
-overlays: [acme/axc300-radio-v1.dtbo]
-root_compatible: acme,axc300-revb
-supported_release_set: axc300-42
-owners: [product-platform, radio-option]
-```
-
-CI should fail on orphan DTBs, unlisted overlays, duplicate identity mappings, or ambiguous selectors.
+Generate or validate artifacts from one reviewed [variant inventory](../product-scale-maintenance-and-engineering/layering-variants-ownership-and-source-architecture.md#create-a-variant-inventory) that maps identity and option bits to base DTB, overlays, root compatible, release set, and owners. CI should fail on orphan DTBs, unlisted overlays, duplicate identity mappings, or ambiguous selectors.
 
 ## Stage Exit Gate
 

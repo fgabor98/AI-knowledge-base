@@ -10,258 +10,229 @@ last_reviewed: null
 
 ## Goal
 
-Build two board DTBs from one SoC DTSI and one module DTSI, then inspect preprocessing, amendments, deletions, value encodings, and final artifact differences.
+Build the three SolidRun AM642 HummingBoard-T DTBs from mainline Linux, then use them to trace includes, preprocessing, amendments across four layers, deletions, value encodings, and the semantic difference between variants that share one system-on-module.
 
-## File Layout
+## Sources
 
-Work in a disposable directory:
+All files are in `arch/arm64/boot/dts/ti/` of a mainline Linux checkout:
 
 ```text
-trainer-lab/
-├── include/dt-bindings/trainer.h
-├── trainer-soc.dtsi
-├── trainer-som.dtsi
-├── trainer-carrier-a.dts
-└── trainer-carrier-b.dts
+k3-am64.dtsi, k3-am64-main.dtsi, k3-am64-mcu.dtsi   SoC (TI)
+k3-am642.dtsi                                       SoC variant (TI)
+k3-am642-sr-som.dtsi                                SolidRun SoM
+k3-am642-hummingboard-t.dts                         carrier, SERDES lane unused
+k3-am642-hummingboard-t-pcie.dts                    includes the carrier DTS, lane -> PCIe
+k3-am642-hummingboard-t-usb3.dts                    includes the carrier DTS, lane -> USB3
+k3-pinctrl.h, k3-serdes.h                           TI macro headers
 ```
 
-Create the header:
+The board's single SERDES lane can serve either an M.2 PCIe slot or USB 3, selected by an on-board GPIO mux. The two variant DTS files describe the two assembly/usage choices.
 
-```c
-#define TRAINER_UART_CLOCK_HZ 24000000
-#define TRAINER_FEATURE_BASIC 1
-#define TRAINER_FEATURE_DIAGNOSTIC 2
-```
+## Requirements
 
-Create `trainer-soc.dtsi`:
+- a mainline Linux checkout (the examples were verified against v6.19-rc1)
+- `dtc`, `fdtget`, and a host C preprocessor (`cpp` or `gcc -E`)
+- a disposable output directory; do not edit the checkout
 
-```dts
-/ {
-        #address-cells = <1>;
-        #size-cells = <1>;
-
-        soc {
-                compatible = "simple-bus";
-                #address-cells = <1>;
-                #size-cells = <1>;
-                ranges;
-
-                uart0: serial@1000 {
-                        compatible = "example,trainer-uart";
-                        reg = <0x1000 0x100>;
-                        status = "disabled";
-                };
-        };
-};
-```
-
-Create `trainer-som.dtsi`:
-
-```dts
-#include <dt-bindings/trainer.h>
-#include "trainer-soc.dtsi"
-
-/ {
-        osc: clock-24000000 {
-                compatible = "fixed-clock";
-                #clock-cells = <0>;
-                clock-frequency = <TRAINER_UART_CLOCK_HZ>;
-        };
-
-        module-data {
-                compatible = "example,trainer-module-data";
-                serial-bytes = [01 23 45 67];
-                feature-level = <TRAINER_FEATURE_BASIC>;
-                factory-calibrated;
-        };
-};
-
-&uart0 {
-        clocks = <&osc>;
-};
-```
-
-Create carrier A:
-
-```dts
-/dts-v1/;
-
-#include "trainer-som.dtsi"
-
-/ {
-        model = "Example Trainer Carrier A";
-        compatible = "example,trainer-carrier-a";
-
-        aliases {
-                serial0 = &uart0;
-        };
-};
-
-&uart0 {
-        status = "okay";
-};
-```
-
-Create carrier B:
-
-```dts
-/dts-v1/;
-
-#include "trainer-som.dtsi"
-
-/ {
-        model = "Example Trainer Carrier B";
-        compatible = "example,trainer-carrier-b";
-};
-
-&{/module-data} {
-        /delete-property/ factory-calibrated;
-        feature-level = <TRAINER_FEATURE_DIAGNOSTIC>;
-};
-```
-
-## Predict Before Building
-
-For each board, record:
-
-- final UART status
-- whether `serial0` exists
-- whether `factory-calibrated` exists
-- final numeric feature level
-- oscillator frequency
-- how the UART `clocks` value will be encoded
-
-## Preprocess
-
-Use the system C preprocessor:
+## Step 1: Map The Include Graph
 
 ```sh
-cpp -nostdinc -undef -D__DTS__ -x assembler-with-cpp \
-    -I include -I . trainer-carrier-a.dts carrier-a.pp.dts
-
-cpp -nostdinc -undef -D__DTS__ -x assembler-with-cpp \
-    -I include -I . trainer-carrier-b.dts carrier-b.pp.dts
+cd arch/arm64/boot/dts/ti
+grep -n '#include' k3-am642-hummingboard-t-usb3.dts k3-am642-hummingboard-t.dts \
+    k3-am642.dtsi k3-am64.dtsi k3-am642-sr-som.dtsi
 ```
 
-Inspect the output:
+Draw the graph. Expected shape:
+
+```text
+k3-am642-hummingboard-t-usb3.dts
+├── k3-am642-hummingboard-t.dts
+│   ├── <dt-bindings/leds/common.h>, <dt-bindings/phy/phy.h>
+│   ├── k3-am642.dtsi
+│   │   └── k3-am64.dtsi
+│   │       ├── <dt-bindings/...>, k3-pinctrl.h
+│   │       ├── k3-am64-thermal.dtsi
+│   │       ├── k3-am64-main.dtsi
+│   │       └── k3-am64-mcu.dtsi
+│   └── k3-am642-sr-som.dtsi
+│       └── k3-am64-ti-ipc-firmware.dtsi
+└── k3-serdes.h
+```
+
+Note that the variant includes a complete `.dts` file rather than a `.dtsi`. That is legal—`/dts-v1/;` appears once in the combined unit—but it means the carrier DTS is both a buildable board and a reusable layer.
+
+## Step 2: Build All Three DTBs
+
+With working Kbuild prerequisites:
 
 ```sh
-rg -n "clock-frequency|feature-level|serial@1000|factory-calibrated" \
-    carrier-a.pp.dts carrier-b.pp.dts
+make ARCH=arm64 defconfig
+make ARCH=arm64 ti/k3-am642-hummingboard-t.dtb \
+                ti/k3-am642-hummingboard-t-pcie.dtb \
+                ti/k3-am642-hummingboard-t-usb3.dtb
 ```
 
-Confirm that macros expanded and includes became one compilation unit. Preprocessor line markers may remain; `dtc` normally understands the form produced by standard workflows.
-
-## Compile And Decompile
+Otherwise reproduce the essential `cmd_dtc` rule from `scripts/Makefile.dtbs` from the top of the checkout:
 
 ```sh
-dtc -I dts -O dtb -o trainer-carrier-a.dtb carrier-a.pp.dts
-dtc -I dts -O dtb -o trainer-carrier-b.dtb carrier-b.pp.dts
-
-dtc -I dtb -O dts -o carrier-a.final.dts trainer-carrier-a.dtb
-dtc -I dtb -O dts -o carrier-b.final.dts trainer-carrier-b.dtb
+out=/tmp/hb
+mkdir -p "$out"
+for v in "" -pcie -usb3; do
+        n=k3-am642-hummingboard-t$v
+        cpp -nostdinc -I scripts/dtc/include-prefixes -undef -D__DTS__ \
+            -x assembler-with-cpp -o "$out/$n.pp.dts" arch/arm64/boot/dts/ti/$n.dts
+        dtc -I dts -O dtb -b 0 -o "$out/$n.dtb" "$out/$n.pp.dts"
+done
+sha256sum "$out"/*.dtb
 ```
 
-Capture identities:
+Record which method produced each artifact and the `dtc` version.
+
+## Step 3: Inspect Preprocessing
+
+Open `k3-am642-hummingboard-t-usb3.pp.dts` and find:
+
+- the expansion of `idle-states = <AM64_SERDES0_LANE0_USB>;` (it is `<0x1>` after `k3-serdes.h`)
+- any `pinctrl-single,pins` entry, where each `AM64X_IOPAD(...)` has become two cell expressions
+- the `#` line markers that point back to the original file and line
 
 ```sh
-sha256sum trainer-carrier-a.dtb trainer-carrier-b.dtb
+grep -n 'idle-states' /tmp/hb/k3-am642-hummingboard-t-usb3.pp.dts
+grep -n -m3 'pinctrl-single,pins' -A2 /tmp/hb/k3-am642-hummingboard-t-usb3.pp.dts
 ```
 
-Inspect the final nodes rather than assuming merge order:
+Explain why reviewers read the maintained source but debug from the preprocessed file.
+
+## Step 4: Reconstruct One Node Across Four Layers
+
+The USB controller node `usb0` is defined in the SoC file and amended three more times. Before querying the DTBs, fill in the predicted final values from the sources:
+
+| Layer | File | `dr_mode` | `maximum-speed` | other changes |
+|---|---|---|---|---|
+| SoC | `k3-am64-main.dtsi` | `otg` | `super-speed` | `reg`, interrupts |
+| SoM | `k3-am642-sr-som.dtsi` | `otg` | `high-speed` | pinctrl; `usbss0` gets `ti,usb2-only` |
+| carrier | `k3-am642-hummingboard-t.dts` | `host` | — | |
+| USB3 variant | `k3-am642-hummingboard-t-usb3.dts` | — | `super-speed` | `phys`, `phy-names`; deletes `ti,usb2-only` |
+
+Now verify:
 
 ```sh
-rg -n -A12 "serial@1000|module-data|aliases" \
-    carrier-a.final.dts carrier-b.final.dts
+U=/bus@f4000/cdns-usb@f900000/usb@f400000
+for v in "" -pcie -usb3; do
+        d=/tmp/hb/k3-am642-hummingboard-t$v.dtb
+        echo "$v: $(fdtget $d $U dr_mode) $(fdtget $d $U maximum-speed)"
+        fdtget -p $d /bus@f4000/cdns-usb@f900000 | grep usb2-only || echo "  no ti,usb2-only"
+done
 ```
 
-## Inspect Value Types
+Expected: all three are `host`; the base and PCIe variants are `high-speed` with `ti,usb2-only`; only the USB3 variant is `super-speed`, has `phys`, and lacks `ti,usb2-only`.
 
-If `fdtget` is available:
+## Step 5: Read The Lane Selection
 
 ```sh
-fdtget trainer-carrier-a.dtb / model
-fdtget -tx trainer-carrier-a.dtb /module-data serial-bytes
-fdtget -tu trainer-carrier-a.dtb /module-data feature-level
-fdtget -tu trainer-carrier-a.dtb /clock-24000000 clock-frequency
-fdtget -p trainer-carrier-b.dtb /module-data
+for v in "" -pcie -usb3; do
+        d=/tmp/hb/k3-am642-hummingboard-t$v.dtb
+        echo "$v: board mux idle-state=$(fdtget -tu $d /mux-controller idle-state)" \
+             "SoC lane mux=$(fdtget -tx $d /bus@f4000/syscon@43000000/mux-controller@4080 idle-states 2>/dev/null)" \
+             "pcie=$(fdtget $d /bus@f4000/pcie@f102000 status)"
+done
 ```
 
-Explain why the byte array query and integer-cell query need different output interpretations.
+Expected: the base board leaves the GPIO mux disabled (`2`) and PCIe disabled; the PCIe variant selects `1` and lane value `0` (`AM64_SERDES0_LANE0_PCIE0`) and enables PCIe; the USB3 variant selects `0` and lane value `1` (`AM64_SERDES0_LANE0_USB`).
 
-## Exercise 1: Add A 64-Bit Value
+## Step 6: Identify Encodings
 
-Add this to `module-data`:
+From the USB3 DTB, query and classify each value:
+
+```sh
+d=/tmp/hb/k3-am642-hummingboard-t-usb3.dtb
+fdtget $d / compatible                                    # string list
+fdtget -tx $d /bus@f4000/bus@fc00000/spi@fc40000 reg      # cells, 64-bit address and size
+fdtget -tbx $d /bus@f4000/ethernet@8000000/ethernet-ports/port@1 mac-address  # bytes
+fdtget -p $d /bus@f4000/cdns-usb@f900000                 # ti,vbus-divider is a boolean
+```
+
+Decode the OSPI `reg`: the second entry `0x5 0x0 0x1 0x0` is a 4 GiB window at `0x5_0000_0000`. Explain why `fdtget -tx` cannot show where one `reg` entry ends and the next begins.
+
+## Step 7: Replace Versus Delete
+
+In a scratch copy of `k3-am642-hummingboard-t-usb3.dts`, replace
 
 ```dts
-unique-id = <0x01234567 0x89abcdef>;
+/delete-property/ ti,usb2-only;
 ```
 
-Rebuild and query the two cells. Then add a separate explicitly sized property:
+with
 
 ```dts
-wide-samples = /bits/ 64 <0x0123456789abcdef>;
+ti,usb2-only;
 ```
 
-Compare decompiled output and raw bytes. Explain why these may contain the same eight bytes while representing different binding-level array models.
+Rebuild and prove that the property still exists. Restore the deletion and explain why a zero-length property represents presence, not false.
 
-## Exercise 2: Break Include Resolution
+## Step 8: Break Include Resolution
 
-Remove `-I include` from the preprocessing command. Identify which processor reports the missing header and why adding `dtc -i include` would not fix this `#include` failure.
+Rerun the `cpp` command from Step 2 without `-I scripts/dtc/include-prefixes`:
 
-Restore the command.
+```text
+k3-am642-hummingboard-t.dts:12:37: error: no include path in which to search for dt-bindings/leds/common.h
+```
 
-## Exercise 3: Replace Versus Delete
+Identify which processor reported the error and explain why adding `dtc -i scripts/dtc/include-prefixes` would not fix a `#include` failure.
 
-In carrier B, replace:
+## Step 9: Reveal An Ordering Hazard
+
+Append a further amendment to a scratch copy of the USB3 variant, after its existing `&usb0` block:
 
 ```dts
-/delete-property/ factory-calibrated;
+&usb0 {
+        maximum-speed = "high-speed";
+};
 ```
 
-with:
+Rebuild and observe that the later amendment wins silently. Then explain why the real sources avoid this: each layer amends only facts it owns.
 
-```dts
-factory-calibrated;
+## Step 10: Diff Variants Semantically
+
+```sh
+dtc -s -I dtb -O dts -o /tmp/hb/base.sorted.dts /tmp/hb/k3-am642-hummingboard-t.dtb
+dtc -s -I dtb -O dts -o /tmp/hb/usb3.sorted.dts /tmp/hb/k3-am642-hummingboard-t-usb3.dtb
+diff -u /tmp/hb/base.sorted.dts /tmp/hb/usb3.sorted.dts | less
 ```
 
-Rebuild and prove that the property still exists. Restore the deletion and explain why a zero-length property represents presence.
+Most of the diff is phandle renumbering: adding one `serdes0_link` node shifts every later phandle, so unrelated `pinctrl-0`, `clocks`, and `interrupt-parent` values change. Separate that noise from the real deltas: `model`, `ti,usb2-only`, `maximum-speed`, `phys`, `phy-names`, the SERDES PHY child, and the mux states.
 
-## Exercise 4: Reveal An Ordering Hazard
-
-Create a late include that sets carrier B's `feature-level` back to basic, and include it after the amendment. Build and observe the final value. Then remove the ordering dependency by assigning the property only in the physical layer that owns the distinction.
-
-## Exercise 5: Review The Architecture
+## Step 11: Review The Architecture
 
 Answer:
 
-1. Why is the oscillator in the module DTSI?
-2. Why is final UART availability in carrier A?
-3. Is deleting `factory-calibrated` truthful, or would separate module variants be clearer?
-4. Should the feature-level constants live in a public binding header or a private local header?
-5. Which files must change if the UART register window is wrong for every product?
+1. Which layer owns the DDR size, the eMMC, and the remote-core memory carveouts, and how can you tell from the include graph?
+2. `ti,usb2-only` is set in the SoM file but removed by a carrier variant. Is that a SoM fact or a carrier fact? What would a cleaner split look like?
+3. Why are PCIe and USB3 separate DTS files rather than one DTS with an overlay? What would change if the M.2 module were field-replaceable?
+4. Which files must change if the USB controller's register window were wrong for every AM64x board?
+5. Why is the root `compatible` of the base board still correct in the PCIe and USB3 variants, which change only `model`?
 
 ## Failure Investigation Checklist
 
-If the lab does not build:
+If a build fails:
 
 1. identify whether `cpp` or `dtc` failed
-2. inspect the exact preprocessed file
+2. inspect the exact preprocessed file and its line markers
 3. verify include paths and filenames
-4. check that `/dts-v1/;` appears in the final compilation unit
+4. check that `/dts-v1/;` appears exactly once in the final compilation unit
 5. locate every definition and amendment of the failing node
 6. simplify the command without changing processors
-7. compare with the authoritative build rule you intend to reproduce
+7. compare with the Kbuild rule you intend to reproduce
 
 ## Completion Checklist
 
-- [ ] I built two DTBs from shared physical layers.
+- [ ] I built three DTBs from shared physical layers.
 - [ ] I inspected macro expansion before compilation.
-- [ ] I reconstructed the final node after amendments.
-- [ ] I distinguished byte arrays, cells, and 64-bit representations.
+- [ ] I reconstructed one node across four layers and verified it in the DTBs.
+- [ ] I distinguished string lists, cells, 64-bit values, byte arrays, and booleans.
 - [ ] I demonstrated replacement and deletion behavior.
 - [ ] I explained why CPP and `dtc` include paths are different.
-- [ ] I identified and removed an ordering-dependent design.
+- [ ] I separated phandle-renumbering noise from real variant deltas.
 - [ ] I can justify which hardware layer owns each property.
 
 ## References And Next Steps

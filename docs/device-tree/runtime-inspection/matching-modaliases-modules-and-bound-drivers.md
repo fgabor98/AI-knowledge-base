@@ -13,7 +13,7 @@ Once a Linux device exists, its bus attempts to match registered drivers. For a 
 ## Inspect The Device
 
 ```bash
-dev=/sys/bus/platform/devices/48000000.device
+dev=/sys/bus/platform/devices/fa00000.mmc
 
 cat "$dev/modalias"
 cat "$dev/uevent"
@@ -44,40 +44,15 @@ Compare this runtime list with:
 
 A driver can match a later fallback string. Do not inspect only the first compatible.
 
-## Resolve Module Alias
+## Resolve Module Alias And Built-In State
 
 ```bash
 alias_value=$(cat "$dev/modalias")
 modprobe --resolve-alias "$alias_value"
-```
-
-This asks installed kmod metadata which module names satisfy the alias. Outcomes:
-
-- one or more modules: autoload metadata exists
-- none: driver may be built-in, module absent, alias metadata missing, or no supported match
-
-Check an installed module:
-
-```bash
-modinfo MODULE
 modinfo -F alias MODULE
 ```
 
-`MODULE_DEVICE_TABLE(of, ...)` commonly causes OF aliases to be exported for modular drivers. It does not control the driver's in-memory match table itself.
-
-## Built-In Versus Module
-
-`lsmod` shows loaded modules only. A built-in driver will never appear there.
-
-Evidence sources:
-
-- running kernel configuration, when reliably available
-- driver directory under `/sys/bus/BUS/drivers`
-- bound device's `driver` symlink
-- kernel symbol/build metadata in a development environment
-- boot logs
-
-Do not “fix” a built-in driver by trying to `modprobe` its source name.
+No result means the driver may be built in, the module absent, alias metadata missing, or no supported match exists; [Modaliases, Module Metadata, And Autoloading](../driver-matching/modaliases-module-metadata-and-autoloading.md) explains each case. `lsmod` never shows built-in drivers, so confirm them through `/sys/bus/BUS/drivers`, the `driver` symlink, kernel configuration, or boot logs instead of trying to `modprobe` them.
 
 ## Registered Driver
 
@@ -98,16 +73,7 @@ printf '%s\n' "$driver_path"
 basename "$driver_path"
 ```
 
-A valid `driver` symlink means the driver core completed binding after probe success. It does not prove:
-
-- every optional hardware feature works
-- interrupts fire
-- DMA is correct
-- the external device is electrically present
-- suspend/resume or recovery works
-- userspace configured the interface
-
-Continue to subsystem evidence.
+A valid `driver` symlink means the driver core completed binding after probe success; it is [not functional proof](../driver-matching/binding-driven-probe-contracts.md#successful-probe-is-not-functional-proof). Continue to subsystem evidence.
 
 ## Capture Probe Logs
 
@@ -126,7 +92,7 @@ dmesg --time-format=rel > kernel-boot.log
 Then filter the captured copy:
 
 ```bash
-rg -i '48000000|acme|probe|defer|clock|regulator|reset|irq' kernel-boot.log
+rg -i 'fa00000|sdhci|mmc1|probe|defer|clock|regulator|irq' kernel-boot.log
 ```
 
 Kernel ring buffers can wrap, rate-limit, or omit debug messages. A missing log line is not proof that probe never ran.
@@ -143,29 +109,7 @@ Use modalias, registered drivers, deferred list, and logs to split the middle ro
 
 ## Autoload Versus Manual Loading
 
-If manual `modprobe MODULE` creates a driver directory and binding occurs, but automatic loading did not:
-
-- compare device modalias with `modinfo -F alias`
-- inspect installed `modules.alias`
-- run the correct `depmod` for the installed kernel
-- confirm userspace uevent handling is running
-- confirm module file matches `uname -r`
-
-If module loads but device remains unbound, move to matching/probe—not packaging.
-
-## `driver_override`
-
-Some buses expose:
-
-```bash
-cat "$dev/driver_override"
-```
-
-Writing a driver name can restrict matching to that driver and bypass normal bus-specific matching when the bus supports it. Upstream driver-core documentation states that writing the override does not automatically unbind the current driver or load/bind the requested driver.
-
-Use only in a controlled lab. An override can force consideration of a driver that the DT compatible would not normally match; it does not make incompatible hardware safe.
-
-Record and clear any override after the experiment according to the bus ABI.
+If manual `modprobe MODULE` binds the device but automatic loading did not, the fault is in the autoload path ([Packaging And Policy Failures](../driver-matching/modaliases-module-metadata-and-autoloading.md#packaging-and-policy-failures)): compare modalias with module aliases, rerun `depmod` for the installed kernel, and confirm uevent handling. If the module loads but the device remains unbound, move to matching/probe—not packaging. Forced matching through `driver_override` is covered in [Controlled Bind/Unbind And Runtime Forensics](controlled-bind-unbind-and-runtime-forensics.md#driver_override-experiment).
 
 ## Functional Endpoint
 

@@ -31,7 +31,8 @@ After completing this module, you should be able to:
 
 ## Prerequisites
 
-Complete [Build And Diagnostic Tools](build-and-diagnostic-tools.md). You should be able to identify, hash, decode, and compare built, packaged, selected, and pre-handoff DTBs and understand how provider-consumer relationships drive probe behavior.
+Complete [Driver Matching](driver-matching.md). You should be able to decode provider-consumer relationships, explain how a DT node becomes a Linux device, and read the final DTB with `dtc` and `fdtget`. This module comes early so that the later bring-up chapters can use its evidence techniques; boot-chain checkpoints such as U-Boot pre-handoff captures are explained in detail in [U-Boot And Bootloader Device Tree](u-boot-and-bootloader-device-tree.md) and [Boot-Time Mutation And Ownership](boot-time-mutation-and-ownership.md).
+
 
 ## Learning Path
 
@@ -88,14 +89,14 @@ module metadata and loaded state
 deferred-probe and device-link evidence
 full relevant kernel log with timestamps
 subsystem-specific state
-build/package/U-Boot hashes from the previous module
+build/package/U-Boot hashes when available
 ```
 
 Runtime state is ephemeral. A successful rebind can erase the original failure sequence.
 
 ## Completion Check
 
-You are ready for [Security And Production Lifecycle](security-and-production-lifecycle.md) when you can:
+You are ready for [Pinctrl, GPIOs, And Interrupts](pinctrl-gpios-and-interrupts.md) when you can:
 
 - identify which runtime export is a raw boot blob and which is a live tree view
 - read every common property class without corrupting NULs, endianness, or cell grouping

@@ -46,7 +46,7 @@ Document the real state machine in the driver or provider. DTS property order ca
 
 ## Failure Rollback
 
-Every step can fail. Correct drivers unwind only resources acquired so far and leave hardware in a safe state. Probe deferral deserves special care: a partially enabled rail or clock must not leak on every retry.
+Every step can fail, and probe must unwind only what it acquired ([Probe Failure Must Unwind](../driver-matching/binding-driven-probe-contracts.md#probe-failure-must-unwind)); a partially enabled rail or clock must not leak on every deferral retry.
 
 Review with fault injection or targeted provider failures where possible:
 
@@ -61,16 +61,7 @@ The most useful log reports the semantic resource and operation, not only an err
 
 ## Probe Deferral Is A Graph Signal
 
-When a lookup returns `-EPROBE_DEFER`, trace the referenced supplier instead of changing initcall order. Determine:
-
-1. does the runtime consumer property exist?
-2. does its phandle resolve to the intended node?
-3. is the provider and every ancestor available?
-4. did the provider device get created and bind?
-5. did it register the exact resource ID?
-6. is a device-link cycle preventing progress?
-
-An absent optional property is not the same as a present property whose provider is late. Optional getters must suppress absence, not malformed descriptions or provider errors.
+When a lookup returns `-EPROBE_DEFER`, trace the referenced supplier instead of changing initcall order; [Probe Deferral, Supplier Links, And Resource State](../runtime-inspection/probe-deferral-supplier-links-and-resource-state.md) gives the procedure. Optional getters must suppress absence, not malformed descriptions or provider errors.
 
 ## Runtime Suspend And Resume
 

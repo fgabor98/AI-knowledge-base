@@ -22,7 +22,7 @@ Schema-valid but unsupported hardware can still fail if the driver lacks a featu
 
 ## Required Properties
 
-A schema's `required` list identifies properties every matching node must provide for that schema branch:
+A schema's `required` list identifies properties every matching node must provide for that schema branch. The AM64x SDHCI binding (`Documentation/devicetree/bindings/mmc/sdhci-am654.yaml`):
 
 ```yaml
 required:
@@ -31,22 +31,20 @@ required:
   - interrupts
   - clocks
   - clock-names
+  - ti,otap-del-sel-legacy
 ```
 
-The driver should not silently invent values for missing required hardware resources. It should use subsystem APIs, check errors, and return a meaningful failure.
+The driver should not silently invent values for missing required hardware resources. `drivers/mmc/host/sdhci_am654.c` fails probe without its functional clock:
 
 ```c
-irq = platform_get_irq(pdev, 0);
-if (irq < 0)
-        return dev_err_probe(dev, irq, "failed to get interrupt\n");
-
-clk = devm_clk_get(dev, "core");
-if (IS_ERR(clk))
-        return dev_err_probe(dev, PTR_ERR(clk),
-                             "failed to get core clock\n");
+clk_xin = devm_clk_get(dev, "clk_xin");
+if (IS_ERR(clk_xin)) {
+        dev_err(dev, "clk_xin clock not found.\n");
+        return PTR_ERR(clk_xin);
+}
 ```
 
-The API may distinguish absence, malformed data, unavailable providers, and deferred suppliers. Preserve that error instead of converting every failure to `-EINVAL`.
+It propagates the real error code, which preserves `-EPROBE_DEFER`. Using `dev_err_probe()` instead of `dev_err()` would additionally keep the log quiet during normal deferral and record the reason in `devices_deferred`. Preserve the API's error rather than converting every failure to `-EINVAL`.
 
 ## Optional Does Not Mean Ignored
 
@@ -57,55 +55,28 @@ An optional property has binding-defined semantics when absent. Typical meanings
 - firmware already configured an immutable choice
 - the driver may use a polling path instead of an interrupt
 
-Use the appropriate optional API and distinguish absence from real errors:
+Use the appropriate optional API and distinguish absence from real errors. The J721E/AM64x PCIe driver treats `reset-gpios` as optional (`drivers/pci/controller/cadence/pci-j721e.c`):
 
 ```c
-reset = devm_reset_control_get_optional_exclusive(dev, NULL);
-if (IS_ERR(reset))
-        return dev_err_probe(dev, PTR_ERR(reset),
-                             "failed to get optional reset\n");
+pcie->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
+if (IS_ERR(pcie->reset_gpio)) {
+        ret = dev_err_probe(dev, PTR_ERR(pcie->reset_gpio),
+                            "Failed to get reset GPIO\n");
+        goto err_get_sync;
+}
 ```
+
+An absent property returns `NULL` and the controller runs without board-level PERST# control; a present but broken property, or an expander that has not probed yet, still fails or defers probe.
 
 “Optional” does not mean the driver may ignore a present malformed property. Nor does a permissive driver make an actually required hardware resource optional in the binding.
 
 ## Compatible-Conditional Requirements
 
-Variants can require different resources:
-
-```yaml
-allOf:
-  - if:
-      properties:
-        compatible:
-          contains:
-            const: acme,ax200-uart
-    then:
-      required:
-        - resets
-```
-
-The corresponding AX200 match data and probe path must acquire that reset. Review the fallback chain: if AX200 also claims AX100 compatibility but cannot work without AX200-aware reset handling, the fallback may be unsafe.
+When a schema requires extra resources for one variant (see the `if`/`then` example in [Schema-Compatible Lists](compatible-evolution-and-stable-abi-decisions.md#schema-compatible-lists)), that variant's match data and probe path must acquire them. If AX200 also falls back to AX100 but cannot work without AX200-aware reset handling, the fallback is unsafe.
 
 ## Probe Deferral
 
-`-EPROBE_DEFER` means a required supplier is expected but not ready. It is not a generic “try again” response for malformed DT data or permanent hardware failure.
-
-Use `dev_err_probe()` to preserve the error and record a deferral reason. Linux can expose deferred devices and reasons through debugfs when enabled:
-
-```sh
-cat /sys/kernel/debug/devices_deferred
-```
-
-Repeated deferral is often caused by:
-
-- provider node absent or disabled
-- provider driver not enabled or not packaged
-- wrong provider compatible
-- bad phandle or specifier
-- circular dependency
-- provider probe failure hidden earlier in the log
-
-Increasing initcall priority or adding arbitrary retries usually hides the dependency defect.
+`-EPROBE_DEFER` means a required supplier is expected but not ready. It is not a generic “try again” response for malformed DT data or permanent hardware failure. Use `dev_err_probe()` to preserve the error and record a deferral reason; [Probe Deferral, Supplier Links, And Resource State](../runtime-inspection/probe-deferral-supplier-links-and-resource-state.md) shows how to trace a persistent deferral to its supplier. Increasing initcall priority or adding arbitrary retries usually hides the dependency defect.
 
 ## Probe Failure Must Unwind
 

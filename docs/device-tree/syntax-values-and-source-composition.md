@@ -37,7 +37,7 @@ Complete [Device Tree Foundations](foundations.md), especially the distinctions 
 4. [Hardware-Based Layering And Source Style](syntax-values-and-source-composition/hardware-based-layering-and-source-style.md)
 5. [Source Composition Lab](syntax-values-and-source-composition/source-composition-lab.md)
 
-The pages reuse a fictional Trainer SoC, system-on-module, and two carrier boards. The growing example shows both the final tree and which physical layer owns each fact.
+The pages use real AM64x sources: TI's SoC files and AM642 SK/EVM boards, plus the PHYTEC phyCORE-AM64x module with its phyBOARD-Electra carrier and the SolidRun HummingBoard-T variants. They show both the final tree and which physical layer owns each fact.
 
 ## Composition Mental Model
 

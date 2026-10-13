@@ -27,37 +27,42 @@ Systems can vary: modules may be preloaded, built in, omitted from an image, blo
 
 ## Device-Side Modalias
 
-A DT-backed platform device commonly exposes:
+A DT-backed platform device exposes its modalias in sysfs and in its uevent. For the AM642 SK console UART:
 
 ```sh
-cat /sys/bus/platform/devices/DEVICE/modalias
-cat /sys/bus/platform/devices/DEVICE/uevent
+cat /sys/bus/platform/devices/2800000.serial/modalias
 ```
 
-OF modalias strings encode node identity and compatible values in a kernel-defined alias format such as `of:N...T...C...`. Do not construct the value by hand; read sysfs or the uevent.
+```text
+of:NserialT(null)Cti,am64-uartCti,am654-uart
+```
+
+`drivers/of/module.c` (`of_modalias()`) builds it from the node name (`N`), the `device_type` property (`T`, `(null)` when absent), and every `compatible` string in order (`C...`). Do not construct the value by hand; read sysfs or the uevent.
 
 The modalias exists only after a Linux device is registered. A raw node in `/sys/firmware/devicetree/base` has properties but is not enough to trigger bus-device autoloading.
 
 ## Driver-Side Alias Metadata
 
-```c
-static const struct of_device_id demo_of_match[] = {
-        { .compatible = "example,match-lab" },
-        { }
-};
-MODULE_DEVICE_TABLE(of, demo_of_match);
+`8250_omap` declares its OF table with `MODULE_DEVICE_TABLE(of, omap8250_dt_ids)`. During the kernel build, `modpost` (`scripts/mod/file2alias.c`, `do_of_entry()`) emits two aliases per entry, one exact and one with a trailing wildcard:
+
+```text
+alias of:N*T*Cti,am654-uart
+alias of:N*T*Cti,am654-uartC*
 ```
 
-During the kernel build, `modpost` reads supported device tables and emits alias metadata into the module. Inspect it with:
+Shell-style matching makes the first pattern match the device modalias above: `N*` absorbs `serial`, `T*` absorbs `(null)Cti,am64-uart`, and the remaining text matches exactly. That is how the fallback compatible also drives module autoloading. In the arm64 `defconfig`, `8250_omap` is built in (`CONFIG_SERIAL_8250_OMAP=y`) while the K3 R5F remoteproc driver is a module (`CONFIG_TI_K3_R5_REMOTEPROC=m`), so inspect the modular one on a target:
 
 ```sh
-modinfo -F alias demo.ko
+modinfo -F alias ti_k3_r5_remoteproc
+cat /sys/bus/platform/devices/78000000.r5fss/modalias
 ```
+
+Expect aliases such as `of:N*T*Cti,am64-r5fss` and a device modalias of `of:Nr5fssT(null)Cti,am64-r5fss`.
 
 After module installation, `depmod` builds alias indexes under `/lib/modules/$(uname -r)/`, including `modules.alias` and binary indexes used by kmod. `modprobe` resolves aliases to module names:
 
 ```sh
-modprobe --resolve-alias "$(cat /sys/bus/platform/devices/DEVICE/modalias)"
+modprobe --resolve-alias "$(cat /sys/bus/platform/devices/2800000.serial/modalias)"
 ```
 
 Run diagnostic queries without loading anything first. Loading a module changes kernel state and should happen only on an appropriate development target.
@@ -71,7 +76,7 @@ If `.of_match_table` is correct but `MODULE_DEVICE_TABLE` is missing:
 - automatic module discovery from the OF modalias may fail
 - `modinfo -F alias` will not show the expected OF alias
 
-This is why “`modprobe demo` fixes it” strongly suggests an autoload/packaging path problem rather than a DT match failure.
+This is why “`modprobe <module>` fixes it” strongly suggests an autoload/packaging path problem rather than a DT match failure.
 
 ## Built-In Drivers
 

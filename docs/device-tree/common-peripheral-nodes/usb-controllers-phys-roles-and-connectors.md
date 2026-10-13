@@ -12,37 +12,92 @@ USB integration can include a controller core, wrapper, PHY, connector, VBUS swi
 
 ## Fixed Host Or Peripheral Role
 
+AM62x splits each USB instance into a TI wrapper and a Synopsys DWC3 core. From `k3-am62-main.dtsi` (trimmed):
+
 ```dts
-&usb0 {
-        dr_mode = "host";
-        phys = <&usb2_phy0>;
-        phy-names = "usb2-phy";
-        vbus-supply = <&reg_usb_vbus>;
-        status = "okay";
+usbss1: dwc3-usb@f910000 {
+        compatible = "ti,am62-usb";
+        clocks = <&k3_clks 162 3>;
+        clock-names = "ref";
+        ti,syscon-phy-pll-refclk = <&usb1_phy_ctrl 0x0>;
+        power-domains = <&k3_pds 179 TI_SCI_PD_EXCLUSIVE>;
+        ranges;
+        status = "disabled";
+
+        usb1: usb@31100000 {
+                compatible = "snps,dwc3";
+                reg = <0x00 0x31100000 0x00 0x50000>;
+                interrupts = <GIC_SPI 226 IRQ_TYPE_LEVEL_HIGH>, /* irq.0 */
+                             <GIC_SPI 226 IRQ_TYPE_LEVEL_HIGH>; /* irq.0 */
+                interrupt-names = "host", "peripheral";
+                maximum-speed = "high-speed";
+                dr_mode = "otg";
+        };
 };
 ```
 
-Typical `dr_mode` values are `host`, `peripheral`, and `otg`. They describe supported/fixed wiring and controller role, not an arbitrary preference. A host port sources VBUS through board power hardware; a peripheral senses/consumes VBUS. Driving VBUS from both ends is unsafe.
+The AM62x SK makes USB1 a fixed host (`k3-am62x-sk-common.dtsi`):
 
-The exact placement of `vbus-supply`, PHY handles, and role properties depends on the controller/wrapper schema. Some SoCs split USB2 and USB3 PHYs or represent the DWC core below a glue node.
+```dts
+main_usb1_pins_default: main-usb1-default-pins {
+        pinctrl-single,pins = <
+                AM62X_IOPAD(0x0258, PIN_OUTPUT, 0) /* (F18/E16) USB1_DRVVBUS */
+        >;
+};
+
+&usbss1 {
+        status = "okay";
+        ti,vbus-divider;
+};
+
+&usb1 {
+        dr_mode = "host";
+        pinctrl-names = "default";
+        pinctrl-0 = <&main_usb1_pins_default>;
+};
+```
+
+Typical `dr_mode` values are `host`, `peripheral`, and `otg`. The SoC default is `otg` because the silicon supports both roles; the board narrows it to `host` because this port is wired host-only. A host port sources VBUS; here the controller's own `USB1_DRVVBUS` pin controls it, so there is no `vbus-supply` regulator. `ti,vbus-divider` tells the wrapper that VBUS reaches the SoC's sense pin through a 1/3 divider. Driving VBUS from both ends of a cable is unsafe.
+
+There is no `phys` property. The USB2 PHY is integrated into the wrapper, and `ti,syscon-phy-pll-refclk` points at the control register that tells it the reference clock. The placement of `vbus-supply`, PHY handles, and role properties always depends on the controller and wrapper schemas.
 
 ## Dual-Role And Type-C
 
-A dual-role Type-C port may use a connector node controlled by a Type-C/PD device:
+The SK's USB0 is a Type-C port managed by a TI TPS6598x PD controller on `main_i2c0`:
 
 ```dts
-connector {
-        compatible = "usb-c-connector";
-        label = "USB-C";
-        power-role = "dual";
-        data-role = "dual";
-        try-power-role = "source";
+typec_pd0: tps6598x@3f {
+        compatible = "ti,tps6598x";
+        reg = <0x3f>;
+
+        connector {
+                compatible = "usb-c-connector";
+                label = "USB-C";
+                self-powered;
+                data-role = "dual";
+                power-role = "sink";
+                port {
+                        usb_con_hs: endpoint {
+                                remote-endpoint = <&usb0_hs_ep>;
+                        };
+                };
+        };
+};
+
+&usb0 {
+        usb-role-switch;
+
+        port {
+                usb0_hs_ep: endpoint {
+                        remote-endpoint = <&usb_con_hs>;
+                };
+        };
 };
 ```
 
-This is only a fragment; real ports may use graph endpoints to connect the connector, controller, orientation switch, and alternate-mode mux. A Type-C controller or firmware often owns role negotiation. Do not simultaneously use incompatible ID/VBUS GPIO role detection and a PD controller unless the binding defines their cooperation.
+The TPS6598x owns negotiation. It reports the data role through the role-switch framework, and the graph endpoint tells it which controller to switch. `usb-role-switch` makes DWC3 register as that switch instead of detecting the role from ID or VBUS pins. Do not also add ID/VBUS GPIO detection unless the binding defines how the two cooperate.
 
-Power role, data role, and USB controller role are related but not identical. USB-PD can swap power and data roles independently under supported policy. The role-switch framework communicates the negotiated data role to the controller.
+Power role, data role, and controller role are related but separate. This port is a power `sink` that never sources VBUS, `self-powered` says the board does not run from that VBUS, and its data role is `dual`, so it can be a USB device to a PC or a host to a flash drive. USB-PD can swap power and data roles independently under supported policy.
 
 ## PHYs And Signal Paths
 

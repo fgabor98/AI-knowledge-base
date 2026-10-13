@@ -21,10 +21,10 @@ The mechanisms can coexist. Do not duplicate the same region in both without a d
 
 ## `/memreserve/`
 
-At DTS top level:
+At DTS top level, as in Arm's FVP and Juno-era models (`arch/arm64/boot/dts/arm/fvp-base-revc.dts`):
 
 ```dts
-/memreserve/ 0x000000009f000000 0x0000000000100000;
+/memreserve/ 0x80000000 0x00010000;
 ```
 
 This encodes a 64-bit address and size in the flattened tree's reservation block. It prevents the kernel from treating that interval as ordinary memory early in boot, but supplies no name, compatible string, allocation policy, or phandle for a device.
@@ -40,37 +40,40 @@ Tool output for reservations varies, so keep the original DTB and tool version w
 
 ## Static `/reserved-memory` Regions
 
-A reserved-memory container mirrors the root address/size encoding and has an empty `ranges` property:
+A reserved-memory container mirrors the root address/size encoding and has an empty `ranges` property. The AM642 SK (`k3-am642-sk.dts`, plus the R5F consumer from `k3-am64-ti-ipc-firmware.dtsi`):
 
 ```dts
-/ {
+reserved_memory: reserved-memory {
         #address-cells = <2>;
         #size-cells = <2>;
+        ranges;
 
-        reserved-memory {
-                #address-cells = <2>;
-                #size-cells = <2>;
-                ranges;
-
-                video_pool: buffer@9e000000 {
-                        compatible = "shared-dma-pool";
-                        reg = <0x0 0x9e000000 0x0 0x02000000>;
-                        reusable;
-                };
-
-                secure_fw: firmware@9f000000 {
-                        reg = <0x0 0x9f000000 0x0 0x00100000>;
-                        no-map;
-                };
+        secure_ddr: optee@9e800000 {
+                reg = <0x00 0x9e800000 0x00 0x01800000>; /* for OP-TEE */
+                alignment = <0x1000>;
+                no-map;
         };
 
-        accelerator@40000000 {
-                memory-region = <&video_pool>;
+        main_r5fss0_core0_dma_memory_region: memory@a0000000 {
+                compatible = "shared-dma-pool";
+                reg = <0x00 0xa0000000 0x00 0x100000>;
+                no-map;
         };
+
+        main_r5fss0_core0_memory_region: memory@a0100000 {
+                compatible = "shared-dma-pool";
+                reg = <0x00 0xa0100000 0x00 0xf00000>;
+                no-map;
+        };
+};
+
+&main_r5fss0_core0 {
+        memory-region = <&main_r5fss0_core0_dma_memory_region>,
+                        <&main_r5fss0_core0_memory_region>;
 };
 ```
 
-`reg` defines a fixed physical range. `memory-region` links a consumer to the named reservation; its binding determines how many regions and names are valid.
+`reg` defines a fixed physical range. `memory-region` links a consumer to the named reservation; its binding determines how many regions and names are valid. The `ti,k3-r5f-rproc.yaml` binding requires at least two entries, in order: a region for vrings and DMA buffers, then a region for firmware sections. The 24 MiB OP-TEE carveout has no consumer phandle at all; it exists only to keep Linux away from secure-world memory.
 
 `no-map` tells the operating system not to create its normal mapping of the region and not to allow speculative access through that mapping. It does not establish hardware security. Access controls still require firewalls, an IOMMU, privilege separation, or secure-world configuration as appropriate.
 
@@ -78,18 +81,19 @@ A reserved-memory container mirrors the root address/size encoding and has an em
 
 ## Dynamically Placed Regions
 
-A child can request a size instead of declaring `reg`:
+A child can request a size instead of declaring `reg`. The AM62A SK's default CMA region (`k3-am62a7-sk.dts`):
 
 ```dts
-camera_pool: camera-pool {
+linux,cma {
         compatible = "shared-dma-pool";
-        size = <0x0 0x04000000>;
-        alignment = <0x0 0x00200000>;
-        alloc-ranges = <0x0 0x80000000 0x0 0x20000000>;
+        reusable;
+        size = <0x00 0x24000000>;
+        alloc-ranges = <0x00 0xc0000000 0x00 0x24000000>;
+        linux,cma-default;
 };
 ```
 
-Firmware or the operating system allocates a suitable range subject to `alignment` and `alloc-ranges`. If both `reg` and `size` appear, the fixed `reg` definition takes precedence. Dynamic placement reduces hard-coded maps but adds allocation-order and fragmentation considerations; validate the actual assigned address on every supported boot path.
+Firmware or the operating system allocates a suitable range subject to `alignment` and `alloc-ranges`. In this real example the `alloc-ranges` window is exactly as large as `size`, so the 576 MiB pool can only land at `0xc0000000`: dynamic in syntax, fixed in effect. If both `reg` and `size` appear, the fixed `reg` definition takes precedence. Dynamic placement reduces hard-coded maps but adds allocation-order and fragmentation considerations; validate the actual assigned address on every supported boot path.
 
 ## Reservation Is Not Ownership
 

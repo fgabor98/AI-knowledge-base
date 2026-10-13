@@ -12,73 +12,47 @@ A memory address is not an ownership policy. The `/memory` nodes tell the OS whi
 
 ## Start With A Physical Memory Map
 
-Build the map from the SoC reference manual, board population, boot firmware, linker maps, and security configuration before reading DTS labels:
+Build the map from the SoC reference manual, board population, boot firmware, linker maps, and security configuration before reading DTS labels. For the AM642 SK, `k3-am642-sk.dts` declares `memory@80000000` with 2 GiB and, together with `k3-am64-ti-ipc-firmware.dtsi`, reserves:
 
-| Physical interval | Installed | Linux-managed | Other owner | Purpose |
-|---|---:|---:|---|---|
-| DRAM bank 0 | yes | mostly | secure firmware | secure runtime |
-| DRAM bank 0 carveout | yes | no | R5 firmware | code/data |
-| DRAM bank 0 vrings | yes | no or pool | host + R5 | transport |
-| on-chip SRAM | yes | driver-specific | boot ROM/remote core | tightly coupled memory |
+| Physical interval | Size | Owner | Purpose |
+|---|---:|---|---|
+| `0x9e800000`–`0x9fffffff` | 24 MiB | OP-TEE | secure OS (`optee@9e800000`) |
+| `0xa0000000`–`0xa00fffff` | 1 MiB | Linux + R5F0_0 | vring/virtio DMA pool |
+| `0xa0100000`–`0xa0ffffff` | 15 MiB | R5F0_0 | firmware code and data |
+| `0xa1000000`–`0xa3ffffff` | 3 × 16 MiB | R5F0_1, R5F1_0, R5F1_1 | same 1 + 15 MiB split per core |
+| `0xa4000000`–`0xa4ffffff` | 16 MiB | Linux + M4F | same split for the MCU M4F |
+| `0xa5000000`–`0xa57fffff` | 8 MiB | remote cores only | RTOS-to-RTOS IPC |
+
+The 64-bit TF-A BL31 is absent from this table. TI U-Boot's `am64x_evm_a53_defconfig` sets `CONFIG_K3_ATF_LOAD_ADDR=0x701c0000`, which is on-chip SRAM, not DDR. OP-TEE's address, `CONFIG_K3_OPTEE_LOAD_ADDR`, defaults to `0x9e800000`, matching the `optee` reservation. The DT and the bootloader configuration must agree, and nothing checks that automatically.
 
 Check for overlap, alignment, address-cell width, and boot-stage changes. A 64-bit root typically requires two cells for an address and size; copying a four-cell `reg` tuple into a subtree with different cell counts changes its meaning.
 
-## `/memory` Describes Usable Hardware Capacity
+## `/memory` And `/reserved-memory` Stay Separate
 
-A normal RAM node uses `device_type = "memory"` and one or more `reg` ranges:
-
-```dts
-memory@80000000 {
-        device_type = "memory";
-        reg = <0x0 0x80000000 0x0 0x80000000>;
-};
-```
-
-Platform firmware can adjust installed size before Linux boots. Confirm the final DTB and early boot log rather than assuming the checked-in DTS is the delivered map.
-
-Do not subtract every carveout manually from the `/memory` node. The reserved-memory mechanism exists so RAM topology and exclusions remain independently auditable. Platform-specific firmware may impose additional reservations, but those should also be visible through an authoritative handoff mechanism.
-
-## `/reserved-memory` Is A Container
-
-The conventional shape is:
-
-```dts
-reserved-memory {
-        #address-cells = <2>;
-        #size-cells = <2>;
-        ranges;
-
-        r5f_fw: r5f-firmware@9d000000 {
-                reg = <0x0 0x9d000000 0x0 0x00800000>;
-                no-map;
-        };
-};
-```
-
-The empty `ranges` establishes direct translation into the parent address space. Child nodes describe either a statically placed region with `reg` or a dynamically allocated region with `size` and optional placement constraints. They do not use both.
-
-The node name should describe purpose and include the unit address when `reg` is present. Labels such as `r5f_fw` are source conveniences, not ABI or proof of ownership.
+`/memory` and the `/reserved-memory` container are described in [CPUs, Topology, And Memory](../standard-nodes-and-properties/cpus-topology-and-memory.md#the-memory-node) and [Reserved Memory](../standard-nodes-and-properties/reserved-memory.md). Do not subtract every carveout manually from `/memory`: the reserved-memory mechanism exists so RAM topology and exclusions remain independently auditable, and firmware may adjust installed size before Linux boots. Name each child by purpose with its unit address; labels such as `r5f_fw` are source conveniences, not ABI or proof of ownership.
 
 ## `memory-region` Connects A Device To A Region
 
-A device-specific binding can reference one or more reserved-memory children:
+A device-specific binding can reference one or more reserved-memory children. From `k3-am64-ti-ipc-firmware.dtsi`:
 
 ```dts
-remoteproc@5c00000 {
-        memory-region = <&r5f_fw>, <&r5f_vring>, <&r5f_buf>;
-        memory-region-names = "firmware", "vring", "buffer";
+&main_r5fss0_core0 {
+        mboxes = <&mailbox0_cluster2 &mbox_main_r5fss0_core0>;
+        memory-region = <&main_r5fss0_core0_dma_memory_region>,
+                        <&main_r5fss0_core0_memory_region>;
+        status = "okay";
 };
 ```
 
-The consumer binding defines count, order, names, and semantics. Generic reserved-memory syntax does not. Some remoteproc bindings use multiple dedicated phandles or infer purposes from order; never transplant a vendor example without reading that exact schema and driver.
+There is no `memory-region-names`; order carries the meaning. `k3_reserved_mem_init()` in `drivers/remoteproc/ti_k3_common.c` requires at least two regions, turns index 0 into the device's DMA pool for vrings, and maps every later index as a static carveout. It also uses the carveout's physical address as the remote core's device address, so the R5F must see DDR at the same address the A53 does. A firmware that expects its resource table elsewhere, or a board file that swaps the two entries, breaks this contract while still passing the schema.
+
+The consumer binding defines count, order, names, and semantics; generic reserved-memory syntax does not. Never transplant a vendor example without reading that exact schema and driver.
 
 One phandle also does not prove exclusive ownership. Audit every consumer and every firmware image. Accidental aliasing can pass schema and cause intermittent corruption.
 
 ## `no-map` Is Narrower Than “Private”
 
-`no-map` tells the OS not to create its normal linear mapping of the region and not to permit speculative access through that mapping. A driver may still deliberately map a permitted region using an appropriate API if the platform contract allows it.
-
-Use `no-map` when the binding and security or hardware contract require it, not as decoration on every carveout. It does not:
+[`no-map`](../standard-nodes-and-properties/reserved-memory.md#static-reserved-memory-regions) only removes the OS's normal linear mapping; a driver may still deliberately map a permitted region. Use it when the binding, security, or hardware contract requires it, not as decoration on every carveout. It does not:
 
 - configure a firewall or memory protection controller
 - stop another DMA master
@@ -86,11 +60,9 @@ Use `no-map` when the binding and security or hardware contract require it, not 
 - encrypt or erase contents
 - transfer ownership between boot stages
 
-Those are separate mechanisms.
-
 ## Fixed Placement Versus Allocated Placement
 
-A fixed `reg` region is appropriate when firmware link addresses, hardware windows, secure configuration, or inter-processor ABI require exact placement. A `size`-based reservation lets the early allocator choose a suitable address, optionally restricted by `alignment` and `alloc-ranges`.
+Use a fixed `reg` only when firmware link addresses, hardware windows, secure configuration, or inter-processor ABI require exact placement; otherwise a [dynamically placed region](../standard-nodes-and-properties/reserved-memory.md#dynamically-placed-regions) avoids hard-coded maps.
 
 Ask whether the address is truly ABI:
 
@@ -119,16 +91,7 @@ For each transition, define who quiesces writers, flushes or invalidates caches,
 
 ## Runtime Evidence
 
-Useful evidence includes:
-
-```sh
-cat /proc/iomem
-cat /proc/meminfo
-dmesg | grep -Ei 'reserved memory|cma|memblock|memory'
-ls -l /sys/firmware/devicetree/base/reserved-memory
-```
-
-On a development system, compare these with the decompiled live DTB and bootloader memory map. `/proc/iomem` is an OS view, not a complete security audit.
+Collect the views listed in [Reserved Memory: Runtime Diagnosis](../standard-nodes-and-properties/reserved-memory.md#runtime-diagnosis) and compare them with the decompiled live DTB and bootloader memory map. `/proc/iomem` is an OS view, not a complete security audit.
 
 ## Review Checklist
 

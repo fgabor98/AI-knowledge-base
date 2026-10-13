@@ -10,41 +10,50 @@ last_reviewed: null
 
 ## Start With One Tree
 
-The same small tree is used throughout this page:
+This page uses a trimmed, self-contained excerpt of the TI AM642 SK description from mainline Linux (`arch/arm64/boot/dts/ti/k3-am64.dtsi`, `k3-am64-main.dtsi`, and `k3-am642-sk.dts`). Macros are expanded, and unrelated nodes, interrupts, power domains, and pins are omitted so the file compiles with standalone `dtc`:
 
 ```dts
 /dts-v1/;
 
 / {
-        model = "Example Trainer Board";
-        compatible = "example,trainer-board";
-        #address-cells = <1>;
-        #size-cells = <1>;
+        model = "Texas Instruments AM642 SK";
+        compatible = "ti,am642-sk", "ti,am642";
+        #address-cells = <2>;
+        #size-cells = <2>;
 
         aliases {
-                serial0 = &uart0;
+                serial2 = &main_uart0;
         };
 
         chosen {
-                stdout-path = "serial0:115200n8";
+                stdout-path = &main_uart0;
         };
 
-        osc: clock-24000000 {
-                compatible = "fixed-clock";
-                #clock-cells = <0>;
-                clock-frequency = <24000000>;
-        };
-
-        soc {
+        cbass_main: bus@f4000 {
                 compatible = "simple-bus";
-                #address-cells = <1>;
-                #size-cells = <1>;
-                ranges;
+                #address-cells = <2>;
+                #size-cells = <2>;
+                ranges = <0x00 0x01000000 0x00 0x01000000 0x00 0x02330400>, /* First peripheral window */
+                         <0x00 0x44043000 0x00 0x44043000 0x00 0x00000fe0>; /* TI SCI DEBUG */
 
-                uart0: serial@1000 {
-                        compatible = "example,trainer-uart";
-                        reg = <0x1000 0x100>;
-                        clocks = <&osc>;
+                dmsc: system-controller@44043000 {
+                        compatible = "ti,k2g-sci";
+                        ti,host-id = <12>;
+                        reg-names = "debug_messages";
+                        reg = <0x00 0x44043000 0x00 0xfe0>;
+
+                        k3_clks: clock-controller {
+                                compatible = "ti,k2g-sci-clk";
+                                #clock-cells = <2>;
+                        };
+                };
+
+                main_uart0: serial@2800000 {
+                        compatible = "ti,am64-uart", "ti,am654-uart";
+                        reg = <0x00 0x02800000 0x00 0x100>;
+                        clock-frequency = <48000000>;
+                        clocks = <&k3_clks 146 0>;
+                        clock-names = "fclk";
                         status = "okay";
                 };
         };
@@ -61,12 +70,13 @@ The root node is written `/`. Every other node has exactly one structural parent
 /
 ├── aliases
 ├── chosen
-├── clock-24000000
-└── soc
-    └── serial@1000
+└── bus@f4000
+    ├── system-controller@44043000
+    │   └── clock-controller
+    └── serial@2800000
 ```
 
-This parent-child relationship often mirrors hardware containment or bus topology, but not every node is a physical device. `/chosen` communicates boot configuration; `/aliases` supplies shorthand paths; a sound or graph node may describe relationships among components.
+This parent-child relationship often mirrors hardware containment or bus topology, but not every node is a physical device. `/chosen` communicates boot configuration; `/aliases` supplies shorthand paths; `clock-controller` is a software interface to the TI-SCI system firmware rather than a block of registers.
 
 ## Node Names And Unit Addresses
 
@@ -76,36 +86,35 @@ A node name has the general form:
 node-name@unit-address
 ```
 
-For `serial@1000`:
+For `serial@2800000`:
 
 - `serial` is a generic device-class name
-- `1000` is the unit address
+- `2800000` is the unit address
 - the parent bus defines what that address means
-- when a node has `reg`, its unit address normally matches the first address in `reg`
+- when a node has `reg`, its unit address normally matches the first address in `reg`; here the two address cells `0x00 0x02800000` form `0x2800000`
 
-The unit address is not automatically a CPU physical address. Under an I2C controller, `sensor@48` commonly means slave address `0x48`. Under a chip-select-based SPI controller, `flash@0` may mean chip select 0. Under a translated memory bus, `serial@1000` can map to a different CPU address through `ranges`.
+The unit address is not automatically a CPU physical address. Under an I2C controller, `tmp100@48` on the same board means target address `0x48`. Under the OSPI controller, `flash@0` means chip select 0. On K3 SoCs the `bus@f4000` window happens to be an identity mapping, so `serial@2800000` is also CPU physical address `0x2800000`, but that is a property of this `ranges`, not of unit addresses in general.
 
 If a node has no address in its parent address space, omit `@unit-address`:
 
 ```dts
 chosen { };
 aliases { };
-gpio-keys { };
+clock-controller { };
 ```
 
 Use the generic node name defined by a binding when one exists. The compatible string identifies the programming model more precisely than a decorative node name would.
 
 ## Properties
 
-A property has a name and zero or more bytes of value. DTS provides notation for common encodings:
+A property has a name and zero or more bytes of value. DTS provides notation for common encodings, all taken from the AM642 sources:
 
 ```dts
-model = "Example Trainer Board";             /* string */
-compatible = "example,uart-v2",              /* string list */
-             "example,uart";
-reg = <0x1000 0x100>;                         /* cells */
-mac-address = [00 11 22 33 44 55];            /* bytes */
-wakeup-source;                                /* empty/boolean */
+model = "Texas Instruments AM642 SK";            /* string */
+compatible = "ti,am64-uart", "ti,am654-uart";    /* string list */
+reg = <0x00 0x02800000 0x00 0x100>;              /* cells */
+mac-address = [00 00 00 00 00 00];               /* bytes (CPSW port, filled by firmware) */
+non-removable;                                   /* empty/boolean (SK eMMC/SDIO slot) */
 ```
 
 At binary level, all property values are bytes. The binding tells consumers whether those bytes encode a string, integer cells, a phandle and arguments, raw data, or another defined structure.
@@ -118,16 +127,18 @@ Strings are NUL-terminated in the DTB. A string list is multiple NUL-terminated 
 tr '\0' '\n' < /sys/firmware/devicetree/base/compatible
 ```
 
+On an AM642 SK this prints `ti,am642-sk` and `ti,am642` on separate lines.
+
 ### Cells
 
 A cell is a 32-bit big-endian unit. Angle brackets express one or more cells:
 
 ```dts
-clock-frequency = <24000000>;
-reg = <0x1000 0x100>;
+clock-frequency = <48000000>;
+reg = <0x00 0x02800000 0x00 0x100>;
 ```
 
-The number of cells in a logical value is contextual. In the example, the parent bus declares one address cell and one size cell, so `reg` contains one address/size pair. On a bus with two address cells and two size cells, the same conceptual pair uses four cells.
+The number of cells in a logical value is contextual. `bus@f4000` declares two address cells and two size cells, so the four cells of `reg` form one address/size pair: address `0x0000000002800000`, size `0x100`. On a bus with one address cell and one size cell, the same pair would be written `<0x02800000 0x100>`.
 
 Do not count values by visual intuition. Read the consumer property binding and the relevant provider or parent-bus binding.
 
@@ -136,7 +147,7 @@ Do not count values by visual intuition. Read the consumer property binding and 
 Presence can represent true:
 
 ```dts
-wakeup-source;
+non-removable;
 ```
 
 Do not write an invented numeric value unless the binding requests one. Absence generally represents false, but the binding may define defaults or constraints.
@@ -147,8 +158,8 @@ A full path identifies a node by walking from the root:
 
 ```text
 /
-/soc
-/soc/serial@1000
+/bus@f4000
+/bus@f4000/serial@2800000
 ```
 
 Paths are part of the logical tree. They can change if a node moves or its unit address changes, so source references usually prefer labels when composing a tree.
@@ -158,26 +169,26 @@ Paths are part of the logical tree. They can change if a node moves or its unit 
 A label is source syntax placed before a node or property:
 
 ```dts
-uart0: serial@1000 { };
+main_uart0: serial@2800000 { };
 ```
 
-It allows another source fragment to refer to that object:
+It allows another source fragment—here `k3-am642-sk.dts`—to refer to that object:
 
 ```dts
-&uart0 {
+&main_uart0 {
         status = "okay";
 };
 ```
 
 Important distinctions:
 
-- `uart0` is not the node name
-- `uart0` is not the runtime path
-- renaming a label does not rename `serial@1000`
+- `main_uart0` is not the node name
+- `main_uart0` is not the runtime path
+- renaming a label does not rename `serial@2800000`
 - labels normally disappear as source constructs during ordinary DTB compilation
 - compiling with symbol support can preserve a label-to-path symbol table for overlay resolution
 
-Linux source style restricts labels more tightly than the broad source grammar: lowercase letters, digits, and underscores are the normal set.
+Linux source style restricts labels to lowercase letters, digits, and underscores.
 
 ## Phandles
 
@@ -186,30 +197,24 @@ A phandle is a unique 32-bit identifier for a node in the compiled tree. It allo
 Source usually uses a label reference:
 
 ```dts
-clocks = <&osc>;
+clocks = <&k3_clks 146 0>;
 ```
 
-The compiler resolves `&osc` and emits a numeric phandle. A decompiled tree might therefore contain something like:
+The compiler resolves `&k3_clks` and emits a numeric phandle. A decompiled tree might therefore contain something like:
 
 ```dts
-clock-24000000 {
+clock-controller {
         phandle = <0x01>;
 };
 
-serial@1000 {
-        clocks = <0x01>;
+serial@2800000 {
+        clocks = <0x01 0x92 0x00>;
 };
 ```
 
 The number itself has no portable meaning. Never hard-code or compare phandle numbers across independently compiled blobs.
 
-Provider bindings can require arguments after the phandle:
-
-```dts
-clocks = <&clock_controller 7>;
-```
-
-This cannot be decoded as “node 7.” It means “reference `clock_controller`, followed by a provider-defined specifier.” The provider's `#clock-cells` and binding explain the number and meaning of those argument cells.
+The two cells after the phandle are arguments required by the provider. This entry cannot be decoded as “node 146.” It means “reference `k3_clks`, followed by a provider-defined specifier.” The provider's `#clock-cells = <2>` says two argument cells follow, and the `ti,k2g-sci-clk` binding defines them as the TI-SCI device ID (146, UART0) and the clock ID within that device (0).
 
 ## Aliases
 
@@ -217,11 +222,11 @@ The `/aliases` node maps short names to paths:
 
 ```dts
 aliases {
-        serial0 = &uart0;
+        serial2 = &main_uart0;
 };
 ```
 
-The source reference is resolved so the property value represents the target path. Aliases can provide stable logical identifiers such as `serial0` when a consumer understands that alias class.
+Outside angle brackets, the label reference is resolved to the target's full path string, `/bus@f4000/serial@2800000`. The same happens for `stdout-path = &main_uart0;` in `/chosen`. Aliases provide logical identifiers such as `serial2` when a consumer understands that alias class.
 
 An alias is neither a label nor a general-purpose symbolic link:
 
@@ -234,53 +239,39 @@ An alias is neither a label nor a general-purpose symbolic link:
 
 ## Comments And Style
 
-DTS accepts C-style block comments, and current tooling commonly accepts C++-style line comments as well. Kernel DTS should follow the project's published coding style and the local architecture convention.
-
-Useful comments explain information that the binding and schematic do not make obvious:
+DTS accepts C-style block comments, and current tooling commonly accepts C++-style line comments as well. Useful comments explain information that the binding and schematic do not make obvious. The SK sources contain good examples:
 
 ```dts
-/* R42 is not fitted on board revisions A0 and A1. */
-status = "disabled";
+&main_uart1 {
+        /* main_uart1 is reserved for firmware usage */
+        status = "reserved";
+};
 ```
 
-Avoid comments that merely restate syntax:
-
-```dts
-status = "okay"; /* Enable the node. */
-```
-
-For Linux DTS, prefer:
-
-- lowercase node and property names
-- lowercase hexadecimal unit addresses without unnecessary leading zeroes
-- generic node names
-- stable node and property ordering
-- `compatible`, then `reg`, common properties, vendor properties, `status`, and child nodes
-- hardware-based DTSI/DTS layering
-
-Style is not cosmetic at product scale. Predictable ordering reduces merge conflicts and makes review omissions easier to spot.
+Avoid comments that merely restate syntax, such as `status = "okay"; /* Enable the node. */`. Linux's naming, ordering, and layering rules are covered in [Hardware-Based Layering And Source Style](../syntax-values-and-source-composition/hardware-based-layering-and-source-style.md#linux-source-style).
 
 ## Read This Node Methodically
 
 Given:
 
 ```dts
-uart0: serial@1000 {
-        compatible = "example,trainer-uart";
-        reg = <0x1000 0x100>;
-        clocks = <&osc>;
+main_uart0: serial@2800000 {
+        compatible = "ti,am64-uart", "ti,am654-uart";
+        reg = <0x00 0x02800000 0x00 0x100>;
+        clocks = <&k3_clks 146 0>;
+        clock-names = "fclk";
         status = "okay";
 };
 ```
 
 Read it in this order:
 
-1. Find the parent and identify its bus binding.
-2. Check that `serial@1000` follows the binding's generic node-name rule.
+1. Find the parent (`bus@f4000`) and identify its bus binding (`simple-bus`).
+2. Check that `serial@2800000` follows the binding's generic node-name rule.
 3. Use the parent cell counts to decode `reg`.
-4. Open the binding for `example,trainer-uart`.
+4. Open the binding for the compatible list (`Documentation/devicetree/bindings/serial/8250_omap.yaml`).
 5. Confirm required and optional properties.
-6. Resolve `&osc`, then use the provider binding to decode `clocks`.
+6. Resolve `&k3_clks`, then use the provider binding to decode `clocks`.
 7. Check availability through `status` and all required parent/provider nodes.
 8. Only then trace the compatible string into driver matching.
 
@@ -296,18 +287,19 @@ Read it in this order:
 
 ## Exercises
 
-1. Write the full path for `uart0` in the example tree.
-2. Explain why its unit address is `1000` rather than `0x1000`.
+1. Write the full path for `main_uart0` in the example tree.
+2. Explain why its unit address is `2800000` rather than `0x2800000` or `0000000002800000`.
 3. State how many address/size pairs its `reg` contains.
-4. Explain which source token causes the compiler to create a phandle.
-5. Describe the different roles of `uart0`, `serial@1000`, `/soc/serial@1000`, and `serial0`.
-6. Change the parent to `#address-cells = <2>` and `#size-cells = <1>`. Rewrite `reg` for address `0x1000`, size `0x100`.
+4. Explain which source token causes the compiler to create a phandle on `clock-controller`.
+5. Describe the different roles of `main_uart0`, `serial@2800000`, `/bus@f4000/serial@2800000`, and `serial2`.
+6. Change `bus@f4000` to `#address-cells = <1>` and `#size-cells = <1>` and rewrite `reg` and `ranges` accordingly.
 
 ## References
 
 - [Devicetree Specification: logical tree and standard properties](https://devicetree-specification.readthedocs.io/en/stable/devicetree-basics.html)
 - [Linux DTS coding style](https://docs.kernel.org/devicetree/bindings/dts-coding-style.html)
 - [Linux and the Devicetree](https://docs.kernel.org/devicetree/usage-model.html)
+- [Mainline AM64x device trees](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/arm64/boot/dts/ti)
 
 ## Next Step
 

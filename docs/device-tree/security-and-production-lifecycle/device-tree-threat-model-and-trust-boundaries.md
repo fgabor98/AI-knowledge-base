@@ -67,12 +67,7 @@ A public key inside the same untrusted container it verifies is not a trust anch
 
 ## Separate The Two Device Trees
 
-U-Boot commonly has:
-
-- a **control FDT** used by U-Boot itself
-- a **working FDT** prepared for the operating system
-
-Compromising the control FDT may alter bootloader drivers, verification policy, key nodes, update metadata, or board detection. Compromising the working FDT affects the kernel handoff. Protect both according to their role; signing only the final working DTB does not repair a mutable verifier configuration.
+U-Boot's [control and working FDTs](../u-boot-and-bootloader-device-tree.md#control-plane-versus-payload) are different assets: compromising the control FDT can alter verification keys, policy, and board detection, while compromising the working FDT affects the kernel handoff. Signing only the final working DTB does not repair a mutable verifier configuration.
 
 ## Identify Actors And Capabilities
 

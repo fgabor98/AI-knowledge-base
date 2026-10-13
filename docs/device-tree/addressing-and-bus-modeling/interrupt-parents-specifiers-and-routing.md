@@ -12,27 +12,12 @@ The interrupt tree is a routing graph overlaid on the device hierarchy. `interru
 
 ## `interrupts` Depends On A Parent
 
-```dts
-intc: interrupt-controller {
-        interrupt-controller;
-        #interrupt-cells = <2>;
-};
-
-device@1000 {
-        reg = <0x1000 0x100>;
-        interrupt-parent = <&intc>;
-        interrupts = <17 4>;
-};
-```
-
-The controller binding defines both cells. A common pattern is hardware interrupt number plus trigger flags, but no generic rule guarantees that. Other controllers use three or more cells, encode interrupt classes, or split identifiers across fields.
-
-Decode in this order:
+[GPIO And Interrupt Relationships](../provider-consumer-relationships/gpio-and-interrupt-relationships.md) introduced `interrupt-parent`, `interrupts`, and `interrupts-extended`. The decoding rule is:
 
 1. Resolve the effective `interrupt-parent`.
 2. Read that node's `#interrupt-cells`.
 3. Split the `interrupts` stream into entries of exactly that width.
-4. Apply the interrupt-controller binding to each cell.
+4. Apply the interrupt-controller binding to each cell; no generic rule says the cells are "number plus flags".
 
 ## Inheritance
 
@@ -54,16 +39,7 @@ During review, walk upward from the consumer in the **final** tree until the fir
 
 ## `interrupts-extended`
 
-`interrupts-extended` embeds a controller phandle in every entry:
-
-```dts
-interrupts-extended = <&gpio0 8 2>, <&intc 42 4>;
-interrupt-names = "fault", "complete";
-```
-
-Each provider can have a different cell count. This form is useful for mixed parents and makes the relationship explicit. If both legacy `interrupts` and `interrupts-extended` are present, the specification gives the extended form precedence, but a binding should normally require one unambiguous representation.
-
-`interrupt-names` maps positionally to completed interrupt entries, not raw cells. Linux drivers may request them by name. Names come from the consumer binding and are stable API tokens.
+`interrupts-extended` bypasses inheritance by embedding a controller phandle in every entry. If both forms are present, the specification gives the extended form precedence, but a binding should normally require one unambiguous representation. `interrupt-names` maps to completed entries, not raw cells.
 
 ## Interrupt Nexuses
 
@@ -75,23 +51,13 @@ child unit address + child interrupt specifier
 parent phandle + parent unit address + parent interrupt specifier
 ```
 
-Field widths come from the nexus and selected parent controller. See [Cross-Cutting Standard Relationships](../standard-nodes-and-properties/cross-cutting-standard-relationships.md) for row mechanics.
+Field widths come from the nexus and selected parent controller. See [Cross-Cutting Standard Relationships](../standard-nodes-and-properties/cross-cutting-standard-relationships.md#interrupt-nexus-mapping) for row mechanics.
 
 Address translation and interrupt translation are independent. The child unit-address portion used for interrupt matching follows the interrupt binding's rules; it must not be replaced casually with an already translated CPU physical address.
 
 ## Cascaded Controllers
 
-A GPIO controller can also be an interrupt controller. Its parent interrupt connects the GPIO block to an upstream controller, while consumer GPIO interrupts occupy a child domain:
-
-```text
-sensor GPIO line 5
-        ↓ GPIO irq_domain
-GPIO bank interrupt 32
-        ↓ root irq_domain
-CPU interrupt handling
-```
-
-Linux assigns virtual IRQ numbers dynamically. A number printed by `/proc/interrupts` need not match the hardware number stored in Device Tree. Always preserve the domain when comparing identifiers.
+A GPIO controller can also be an interrupt controller whose own parent interrupt connects it to an upstream controller, forming a chain of IRQ domains. Linux assigns virtual IRQ numbers dynamically, so a number in `/proc/interrupts` need not match the hardware number stored in Device Tree. [GPIO Interrupts, Cascades, And Shared Lines](../pinctrl-gpios-and-interrupts/gpio-interrupts-cascades-and-shared-lines.md) traces a full cascade.
 
 ## INTx Versus MSI
 

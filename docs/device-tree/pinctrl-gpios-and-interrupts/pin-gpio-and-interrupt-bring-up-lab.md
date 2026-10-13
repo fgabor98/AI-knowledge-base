@@ -2,7 +2,7 @@
 status: draft
 reviewed: false
 domain: device-tree
-difficulty: advanced
+difficulty: intermediate
 last_reviewed: null
 ---
 
@@ -10,246 +10,228 @@ last_reviewed: null
 
 ## Goal
 
-Trace reset and interrupt nets through pinctrl, GPIO, and IRQ domains; predict physical levels; inspect runtime ownership; and diagnose deliberate polarity, trigger, hog, and sleep-state failures.
+Trace the AM642 SK Wi-Fi module's enable and interrupt nets through pinctrl, GPIO, regulator, and IRQ domains; predict physical levels; inspect runtime ownership; and diagnose deliberate polarity, trigger, hog, and cascade failures.
 
-The controller compatibles and pin syntax are fictional. The tree teaches relationships and is not a schema-valid description of real hardware.
+## Inputs
 
-## Lab Tree
+- `k3-am642-sk.dtb` and `arch/arm64/boot/dts/ti/k3-am642-sk.dts` from mainline Linux
+- `k3-am64-main.dtsi` and `k3-pinctrl.h`
+- for Steps 5 and 11, an AM642 SK running the matching kernel
+- for Step 9, optionally an AM62x LP SK
 
-Create `pin-gpio-irq-lab.dts`:
+## The Real Description
+
+From `k3-am642-sk.dts` (trimmed):
 
 ```dts
-/dts-v1/;
+com8_ls_en: regulator-3 {
+        compatible = "regulator-fixed";
+        regulator-name = "com8_ls_en";
+        regulator-always-on;
+        regulator-boot-on;
+        pinctrl-0 = <&main_com8_ls_en_pins_default>;
+        pinctrl-names = "default";
+        gpio = <&main_gpio0 62 GPIO_ACTIVE_LOW>;
+};
 
-#include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/interrupt-controller/irq.h>
+wlan_en: regulator-4 {
+        /* output of SN74AVC4T245RSVR */
+        compatible = "regulator-fixed";
+        regulator-name = "wlan_en";
+        enable-active-high;
+        pinctrl-0 = <&main_wlan_en_pins_default>;
+        pinctrl-names = "default";
+        vin-supply = <&com8_ls_en>;
+        gpio = <&main_gpio0 48 GPIO_ACTIVE_HIGH>;
+};
 
-/ {
-        compatible = "example,pin-gpio-irq-lab";
-        #address-cells = <1>;
-        #size-cells = <1>;
-
-        root_intc: interrupt-controller@2000 {
-                compatible = "example,lab-root-intc";
-                reg = <0x2000 0x100>;
-                interrupt-controller;
-                #address-cells = <0>;
-                #interrupt-cells = <2>;
+&main_pmx0 {
+        main_wlan_en_pins_default: main-wlan-en-default-pins {
+                pinctrl-single,pins = <
+                        AM64X_IOPAD(0x00c4, PIN_OUTPUT_PULLUP, 7) /* (V8) GPIO0_48 */
+                >;
         };
 
-        pinctrl: pinctrl@1000 {
-                compatible = "example,lab-pinctrl-gpio";
-                reg = <0x1000 0x100>;
-
-                gpio-controller;
-                #gpio-cells = <2>;
-                ngpios = <16>;
-                gpio-ranges = <&pinctrl 0 0 16>;
-                gpio-line-names =
-                        "", "", "", "",
-                        "", "sensor-reset", "sensor-irq", "",
-                        "", "", "", "",
-                        "expansion-enable", "", "", "safe-mode";
-
-                interrupt-controller;
-                #interrupt-cells = <2>;
-                interrupt-parent = <&root_intc>;
-                interrupts = <42 IRQ_TYPE_LEVEL_HIGH>;
-
-                sensor_reset_default_pin: sensor-reset-default-pin {
-                        pins = "PIN5";
-                        function = "gpio";
-                        bias-pull-up;
-                };
-
-                sensor_irq_default_pin: sensor-irq-default-pin {
-                        pins = "PIN6";
-                        function = "gpio";
-                        bias-pull-up;
-                        input-enable;
-                };
-
-                sensor_reset_sleep_pin: sensor-reset-sleep-pin {
-                        pins = "PIN5";
-                        function = "gpio";
-                        bias-pull-up;
-                };
-
-                sensor_irq_sleep_pin: sensor-irq-sleep-pin {
-                        pins = "PIN6";
-                        function = "gpio";
-                        bias-pull-up;
-                        input-enable;
-                };
-
-                safe_mode_hog: safe-mode-hog {
-                        gpio-hog;
-                        gpios = <15 GPIO_ACTIVE_HIGH>;
-                        input;
-                        line-name = "safe-mode";
-                };
+        main_com8_ls_en_pins_default: main-com8-ls-en-default-pins {
+                pinctrl-single,pins = <
+                        AM64X_IOPAD(0x00fc, PIN_OUTPUT, 7) /* (U7) PRG1_PRU0_GPO17.GPIO0_62 */
+                >;
         };
 
-        sensor@3000 {
-                compatible = "example,lab-sensor";
-                reg = <0x3000 0x100>;
+        main_wlan_pins_default: main-wlan-default-pins {
+                pinctrl-single,pins = <
+                        AM64X_IOPAD(0x00bc, PIN_INPUT, 7) /* (U8) GPIO0_46 */
+                >;
+        };
+};
 
-                pinctrl-names = "default", "sleep";
-                pinctrl-0 = <&sensor_reset_default_pin
-                             &sensor_irq_default_pin>;
-                pinctrl-1 = <&sensor_reset_sleep_pin
-                             &sensor_irq_sleep_pin>;
-
-                reset-gpios = <&pinctrl 5 GPIO_ACTIVE_LOW>;
-                interrupt-parent = <&pinctrl>;
-                interrupts = <6 IRQ_TYPE_EDGE_FALLING>;
-                wakeup-source;
+&sdhci0 {
+        vmmc-supply = <&wlan_en>;
+        /* ... */
+        wlcore: wlcore@2 {
+                compatible = "ti,wl1837";
+                reg = <2>;
+                pinctrl-0 = <&main_wlan_pins_default>;
+                pinctrl-names = "default";
+                interrupt-parent = <&main_gpio0>;
+                interrupts = <46 IRQ_TYPE_EDGE_FALLING>;
         };
 };
 ```
 
-Because C-preprocessor includes are used, build through the kernel DT build or preprocess using the same include paths and flags as the target kernel. A direct `dtc` command without preprocessing will not resolve the headers.
+`com8_ls_en` enables an on-board level shifter; `wlan_en` drives the WL1837's enable through that shifter and is the SDIO slot's `vmmc` supply.
 
 ## Step 1: Capture The Artifact
 
-Record:
-
-- kernel tree/revision providing the binding headers
-- preprocessor and `dtc` versions
-- complete build command and warnings
-- DTB hash
-- decompiled final DTS
-
-Compilation checks syntax and structural rules, not the fictional hardware contract or schematic correctness.
+Record the kernel revision, preprocessor and `dtc` versions, the build command and warnings, the DTB hash, and a decompiled copy. Compilation checks syntax and structure, not the schematic.
 
 ## Step 2: Build A Signal Ownership Table
 
-Fill this table before booting:
+Decode the pad cells from the DTB before booting:
 
-| Net | Package pin | Pinctrl state | GPIO provider/offset | Logical polarity | IRQ provider/line | Trigger |
-|---|---|---|---|---|---|---|
-| sensor reset | | | | | n/a | n/a |
-| sensor interrupt | | | | n/a | | |
-| safe mode | | hog/default | | | n/a | n/a |
+```sh
+D=k3-am642-sk.dtb
+P=/bus@f4000/pinctrl@f4000
+for n in main-wlan-default-pins main-wlan-en-default-pins main-com8-ls-en-default-pins; do
+        echo "$n: $(fdtget -tx $D $P/$n pinctrl-single,pins)"
+done
+```
 
-Explain why GPIO offset 6 and interrupt line 6 refer to the same controller-local hardware line in this fictional binding but use different flag namespaces.
+Expected: `bc 54007`, `c4 20007`, `fc 10007`. The low three bits are mux mode 7 (GPIO); `0x54000` is `PIN_INPUT` (input enable, Schmitt trigger, no pull), `0x20000` is `PIN_OUTPUT_PULLUP`, and `0x10000` is `PIN_OUTPUT` (pull disabled).
 
-## Step 3: Predict Reset Levels
+| Net | Ball | Pad offset | Pad config | GPIO provider/line | Logical polarity | IRQ provider/line | Trigger |
+|---|---|---|---|---|---|---|---|
+| WLAN IRQ | U8 | | | | n/a | | |
+| WLAN_EN | V8 | | | | | n/a | n/a |
+| COM8 level-shifter enable | U7 | | | | | n/a | n/a |
 
-For `reset-gpios = <&pinctrl 5 GPIO_ACTIVE_LOW>`, fill:
+Explain why GPIO line 46 and interrupt line 46 refer to the same controller-local line of `main_gpio0` but use different flag namespaces.
 
-| Driver logical request | Physical level | Sensor state |
-|---:|---|---|
-| 1 active | | |
-| 0 inactive | | |
+## Step 3: Predict Enable Levels
 
-Expected: logical 1 drives low and asserts reset; logical 0 drives high and deasserts it. Then identify what the external pull-up does before the GPIO controller and consumer driver take ownership.
+Fill the truth table:
+
+| Regulator | Logical state | Physical level on the GPIO |
+|---|---|---|
+| `wlan_en` | enabled | |
+| `wlan_en` | disabled | |
+| `com8_ls_en` | enabled | |
+| `com8_ls_en` | disabled | |
+
+For `regulator-fixed`, polarity comes **only** from `enable-active-high`. `drivers/gpio/gpiolib-of.c` has a quirk table that ignores the GPIO specifier's flag for this compatible. So `wlan_en` drives high when enabled, and `com8_ls_en`, which lacks `enable-active-high`, drives low when enabled; its `GPIO_ACTIVE_LOW` flag merely agrees.
 
 ## Step 4: Trace The Interrupt Cascade
 
 Write the complete route:
 
 ```text
-sensor IRQ pin
-→ PIN6 input
-→ GPIO local interrupt 6, falling-edge
-→ GPIO block parent output
-→ root controller hardware interrupt 42, level-high
+WL1837 IRQ output
+→ pad U8 (offset 0x0bc, GPIO mux, input enabled)
+→ main_gpio0 line 46, falling edge
+→ main_gpio0 bank interrupt (16 lines per bank: line 46 is in bank 2 → router input 192)
+→ main_gpio_intr (TI-SCI interrupt router)
+→ one of 16 router outputs mapped by ti,interrupt-ranges = <0 32 16> onto GIC inputs
 → Linux virtual IRQ
-→ sensor handler
+→ wlcore handler
 ```
 
-There are two trigger descriptions because there are two different controller inputs. Explain why the GPIO child can be falling-edge while the GPIO block's parent output is level-high.
+TI-SCI firmware programs which router output a bank uses at runtime. Note the two independent trigger descriptions: the WLAN child is falling-edge at the GPIO line, while `main_gpio_intr` declares `ti,intr-trigger-type = <1>` (edge, per `ti,sci-intr.yaml`) for every GIC input it drives. Explain why each controller input needs its own trigger type.
 
 ## Step 5: Inspect Runtime State
 
-On analogous real hardware, collect read-only evidence:
+On the AM642 SK, collect read-only evidence:
 
 ```sh
-gpioinfo
-cat /proc/interrupts
-cat /sys/kernel/debug/pinctrl/*/pinmux-pins
-cat /sys/kernel/debug/pinctrl/*/pinconf-pins
-cat /sys/kernel/debug/pinctrl/*/gpio-ranges
+gpioinfo | grep -E 'line +(46|48|62):'
+grep -i -E 'wl|gpio' /proc/interrupts
+cat /sys/kernel/debug/pinctrl/f4000.pinctrl-pinctrl-single/pinmux-pins | grep -E 'pin (47|49|63) '
+cat /sys/kernel/debug/regulator/regulator_summary | grep -E 'wlan_en|com8'
+dmesg | grep -i -E 'wlcore|wl18|enforce active low'
 ```
 
-Also resolve the consumer's `of_node`, inspect its runtime properties, and capture probe/IRQ logs. Map line names, consumer labels, GPIO offsets, hardware IRQs, and Linux IRQs into separate columns.
+Pad names and debugfs paths vary by kernel; locate them with `ls /sys/kernel/debug/pinctrl/`. Map line names, consumer labels, GPIO offsets, hardware IRQs, and Linux IRQs into separate columns. Expect the boot log to contain `/regulator-3 enforce active low on GPIO handle`, because `com8_ls_en` has no `enable-active-high`.
 
-Do not use `gpioset` on kernel-owned reset or interrupt lines.
+Do not use `gpioset` on kernel-owned lines.
 
-## Step 6: Break Reset Polarity
+## Step 6: Break Polarity Two Ways
 
-Change:
+On copies of the DTB:
 
-```dts
-reset-gpios = <&pinctrl 5 GPIO_ACTIVE_HIGH>;
+```sh
+cp $D p1.dtb
+fdtput -t x p1.dtb /regulator-4 gpio 16 30 1      # GPIO_ACTIVE_LOW on wlan_en
+cp $D p2.dtb
+fdtput -d p2.dtb /regulator-4 enable-active-high  # remove the polarity property
 ```
 
-Predict the physical level for each logical driver request and likely symptom. A normal probe sequence may now release reset when it intends to assert it and assert reset before register access. Restore active-low.
+`16` is the observed phandle of `main_gpio0`; confirm yours first. Predict the result of booting each:
 
-Prove the error with a scope or controller readback where safe; a successful GPIO request alone cannot establish physical polarity.
+- `p1.dtb`: no behavioral change; the kernel logs `... GPIO handle specifies active low - ignored`.
+- `p2.dtb`: the enable really inverts. The regulator now drives low to “enable,” the WL1837 stays powered down, and SDIO enumeration of `wlcore@2` fails.
+
+Explain why reading the GPIO flag alone is not enough to know the electrical polarity for this compatible.
 
 ## Step 7: Substitute The Wrong Flag Namespace
 
-Change:
+In a scratch copy of `k3-am642-sk.dts`, change:
 
 ```dts
-interrupts = <6 GPIO_ACTIVE_LOW>;
+interrupts = <46 GPIO_ACTIVE_LOW>;
 ```
 
-The numeric value compiles after preprocessing, but in the common IRQ namespace value `1` means rising edge, not “active low.” Predict the resulting missed or inverted event behavior. Restore `IRQ_TYPE_EDGE_FALLING`.
-
-This demonstrates why symbolic constants must come from the property's provider binding, not merely have a plausible name.
+After preprocessing this is `<46 1>`, and in the IRQ namespace `1` is `IRQ_TYPE_EDGE_RISING`, not “active low.” Predict the missed or late interrupts. Restore `IRQ_TYPE_EDGE_FALLING`.
 
 ## Step 8: Create A Hog Conflict
 
-Change the hog to claim GPIO offset 5:
+In a scratch copy, add a hog on the enable line:
 
 ```dts
-gpios = <5 GPIO_ACTIVE_HIGH>;
-output-low;
+&main_gpio0 {
+        wlan-en-hog {
+                gpio-hog;
+                gpios = <48 GPIO_ACTIVE_HIGH>;
+                output-low;
+                line-name = "WLAN_EN_HOG";
+        };
+};
 ```
 
-The hog and sensor reset consumer now compete for one line. Record compile/schema diagnostics, then predict runtime ownership and the consumer's GPIO acquisition error. Explain why a static compiler cannot generally prove all runtime line conflicts. Restore offset 15 and `input`.
+The hog and `wlan_en` now compete for one line. Record compile/schema diagnostics, then predict that the regulator's GPIO request fails with `-EBUSY` and its probe fails. Explain why no compiler can generally prove such runtime conflicts.
 
-## Step 9: Break The Sleep Wake Path
+## Step 9: Break A Wake Path
 
-Change `sensor_irq_sleep_pin` to disable its input and bias. Suspend is now permitted to remove the path or let it float even though `wakeup-source` remains present.
+AM64x SK does not use pad wake-up, so use the AM62x LP SK's MCU CAN wake state (`k3-am62-lp-sk.dts`):
 
-For an analogous real platform, test:
+```dts
+mcu_mcan0_rx_pins_wakeup: mcu-mcan0-rx-wakeup-pins {
+        pinctrl-single,pins = <
+                AM62X_IOPAD(0x038, PIN_INPUT | PIN_WKUP_EN, 0) /* (B3) MCU_MCAN0_RX */
+        >;
+};
+```
 
-- interrupt immediately before suspend
-- interrupt during the transition
-- interrupt after deep sleep entry
-- line already asserted at suspend
-
-Capture the physical waveform, wake reason, GPIO state, and IRQ counters. Restore input and the valid inactive bias.
+Remove `| PIN_WKUP_EN` in a scratch copy. The `wakeup-source` property and the `wakeup` pinctrl state still exist, so everything looks configured, but the pad no longer arms its wake detector. On the hardware, test CAN traffic before, during, and after suspend entry, and record wake reason and IRQ counters.
 
 ## Step 10: Break The Cascade Parent
 
-Remove the GPIO controller's parent `interrupts` property while keeping it as a child interrupt provider. The sensor's local specifier is still structurally understandable, but the GPIO block has no described route upstream.
+```sh
+cp $D c.dtb
+fdtput -d c.dtb /bus@f4000/gpio@600000 interrupts
+dtc -I dtb -O dts c.dtb >/dev/null
+```
 
-Predict which stages can still succeed:
+`dtc` reports nothing. Predict which stages still succeed: pinctrl selection, GPIO controller registration, the `wlan_en` GPIO request, child IRQ-domain creation, parent IRQ acquisition, and WLAN IRQ delivery.
 
-- pinctrl selection
-- GPIO controller registration
-- reset GPIO request
-- child IRQ-domain creation
-- parent IRQ acquisition
-- sensor IRQ delivery
+## Step 11: Test Trigger And Acknowledge Behavior
 
-Restore the parent relationship.
+With the WL1837 active (for example during a Wi-Fi scan), record:
 
-## Step 11: Test Trigger/Acknowledge Behavior
-
-On real hardware, run repeated events and record:
-
-1. inactive voltage
-2. assertion edge/level
-3. GPIO pending bit
-4. root parent count
-5. child Linux IRQ count
-6. device status before and after handler
+1. inactive voltage on the IRQ pad
+2. assertion edge
+3. GPIO bank pending state, if exposed
+4. GPIO bank parent count in `/proc/interrupts`
+5. `wlcore` Linux IRQ count
+6. device status before and after the handler
 7. deassertion timing
 
 Classify no-event, one-shot, duplicate, and storm failures without changing flags by trial and error.
@@ -259,13 +241,12 @@ Classify no-event, one-shot, duplicate, and storm failures without changing flag
 The lab is complete when you can provide:
 
 - reproducible DTB identity and final source
-- a complete signal ownership table
-- logical-to-physical reset truth table
-- two-domain interrupt route and trigger explanation
-- runtime pinctrl/GPIO/IRQ evidence
+- a complete signal ownership table with decoded pad values
+- a logical-to-physical truth table that accounts for the `regulator-fixed` quirk
+- the GPIO → router → GIC interrupt route with trigger explanation
+- runtime pinctrl, GPIO, regulator, and IRQ evidence
 - predicted and observed outcomes for each deliberate failure
-- suspend/wake boundary tests
-- proof of safe restoration and cleanup
+- proof of safe restoration
 
 ## Authoritative References
 

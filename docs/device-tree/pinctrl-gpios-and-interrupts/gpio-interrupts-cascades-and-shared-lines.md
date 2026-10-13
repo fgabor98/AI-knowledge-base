@@ -12,49 +12,66 @@ A GPIO controller can be both an interrupt consumer and an interrupt provider. A
 
 ## Two Roles In One Node
 
-```dts
-gpio0: gpio-controller@1000 {
-        compatible = "example,trainer-gpio";
-        reg = <0x1000 0x100>;
+The AM625 SK HDMI bridge interrupt passes through two GPIO controllers before reaching the GIC (`k3-am625-sk-common.dtsi`, `k3-am62x-sk-common.dtsi`, `k3-am62-main.dtsi`, trimmed):
 
+```dts
+/* SoC GPIO bank: consumer of the interrupt router, provider of GPIO IRQs */
+main_gpio1: gpio@601000 {
         gpio-controller;
         #gpio-cells = <2>;
-
+        interrupt-parent = <&main_gpio_intr>;
+        interrupts = <180>, <181>, <182>, <183>, <184>, <185>;
         interrupt-controller;
         #interrupt-cells = <2>;
-        interrupt-parent = <&gic>;
-        interrupts = <42 IRQ_TYPE_LEVEL_HIGH>;
 };
 
-sensor@48 {
-        interrupt-parent = <&gpio0>;
-        interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
+/* I2C expander: consumer of main_gpio1 line 23, provider of 24 IRQ lines */
+exp1: gpio@22 {
+        compatible = "ti,tca6424";
+        reg = <0x22>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&main_gpio1_ioexp_intr_pins_default>;
+        interrupt-parent = <&main_gpio1>;
+        interrupts = <23 IRQ_TYPE_EDGE_FALLING>;
+        interrupt-controller;
+        #interrupt-cells = <2>;
+        gpio-controller;
+        #gpio-cells = <2>;
+};
+
+/* HDMI bridge: consumer of expander line 16 */
+sii9022: bridge-hdmi@3b {
+        compatible = "sil,sii9022";
+        reg = <0x3b>;
+        interrupt-parent = <&exp1>;
+        interrupts = <16 IRQ_TYPE_EDGE_FALLING>;
 };
 ```
 
 Read the directions carefully:
 
-- GPIO offset 7 is the sensor's interrupt input to `gpio0`.
-- Hardware interrupt 42 is `gpio0`'s output toward `gic`.
-- `gpio0` consumes its parent interrupt while providing child interrupt 7.
+- Expander line 16 is the bridge's interrupt input to `exp1`.
+- Main GPIO1 line 23 is `exp1`'s interrupt output toward `main_gpio1`, which also needs a pinctrl state selecting GPIO input on that pad.
+- `main_gpio1` banks reach the GIC through the TI-SCI interrupt router `main_gpio_intr` (router inputs 180–185).
+- Each controller consumes its parent interrupt while providing child interrupts.
 
 Some GPIO controllers have one parent per bank, one per line, or a hierarchical mapping. Follow that controller binding instead of assuming one shared parent.
 
 ## Cascaded IRQ-Domain Flow
 
 ```text
-sensor condition
-  ↓ board trace and pad input configuration
-GPIO line 7 pending bit
-  ↓ GPIO irqchip masks/acks/dispatches
-GPIO parent output 42
-  ↓ root interrupt controller domain
-Linux virtual IRQ
-  ↓ sensor handler
-sensor status clear
+SiI9022 hot-plug/status event
+  ↓ HDMI_INTn falls
+TCA6424 input 16 latches; expander INT output falls
+  ↓ main_gpio1 line 23 falling-edge detect (pad muxed as GPIO input)
+main_gpio1 bank interrupt -> main_gpio_intr router -> GIC SPI
+  ↓ gpio-davinci irqchip dispatches line 23
+threaded pca953x handler reads expander status over I2C
+  ↓ dispatches child line 16
+sii902x handler clears the bridge status
 ```
 
-A failure at the GPIO provider can affect every child. If the parent counter never increases, inspect GPIO bank masks, parent wiring, power, and the parent specifier. If the parent increments but no child dispatch occurs, inspect line-to-bank mapping and GPIO irqchip status.
+A failure at either GPIO provider affects every child: an expander that loses I2C access silences all 24 of its interrupt lines. If the parent counter never increases, inspect GPIO bank masks, parent wiring, power, and the parent specifier. If the parent increments but no child dispatch occurs, inspect line-to-bank mapping and GPIO irqchip status.
 
 ## Pinctrl Still Matters
 

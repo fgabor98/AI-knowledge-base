@@ -21,31 +21,24 @@ owns(A, R)       A has exclusive authority over resource/property R
 
 Examples:
 
+Mainline TI sources contain all four:
+
 ```text
-sensor overlay requires regulator overlay
-board-revision overlay before expansion overlay
-display overlay conflicts with SPI overlay on shared pins
-console policy owns /chosen/stdout-path
+k3-am62x-sk-csi2-ov5640 conflicts with k3-am62x-sk-csi2-imx219     (same csi2rx0 endpoint)
+k3-am62x-sk-hdmi-audio owns mcasp1, and disables codec_audio       (one McASP, one card)
+k3-am654-icssg2 before k3-am654-idk                                 (alias numbering, below)
+a sensor overlay requires a module-regulator overlay                (pattern; no mainline TI case)
 ```
 
 Do not infer these relations solely from filenames or directory order.
 
 ## Structural Stack Dependency
 
-Overlay A can introduce and export:
+Overlay A can introduce and export a label, and overlay B can consume it. The HDMI audio overlay exports `hdmi_audio` and `hdmi_dailink_master`; a hypothetical follow-on overlay could then write:
 
 ```dts
-module_reg: regulator-module {
-        compatible = "regulator-fixed";
-        ...
-};
-```
-
-Overlay B can consume:
-
-```dts
-&sensor0 {
-        vdd-supply = <&module_reg>;
+&hdmi_audio {
+        simple-audio-card,name = "Product-HDMI";
 };
 ```
 
@@ -60,7 +53,16 @@ Linux overlay removal will not permit removing an overlay that is stacked beneat
 
 ## Semantic Dependency Without A Symbol
 
-Some requirements are invisible to the resolver:
+Some requirements are invisible to the resolver. The AM654 IDK DTB is built in Kbuild as a stack:
+
+```make
+k3-am654-evm-dtbs := k3-am654-base-board.dtb k3-am654-icssg2.dtbo
+k3-am654-idk-dtbs := k3-am654-evm.dtb k3-am654-idk.dtbo k3-am654-pcie-usb2.dtbo
+```
+
+Compiling the three overlays and checking their `__fixups__` against the base board's `__symbols__` shows no overlay uses a symbol from another, so the resolver sees no ordering. Their `aliases` still form a contract: the base owns `ethernet0`, `k3-am654-icssg2.dtso` sets `ethernet1` and `ethernet2`, and `k3-am654-idk.dtso` sets `ethernet3` through `ethernet6`. Give both overlays the same alias number and every layer still applies, but the later one silently wins. U-Boot's `fdt_fixup_ethernet()` then writes `eth1addr` and friends to different ports than intended, because it maps `ethernetN` aliases to `ethNaddr` variables.
+
+Other common invisible requirements:
 
 - a pinmux overlay must apply before a device is enabled
 - a power overlay raises a voltage required by a module
@@ -184,19 +186,7 @@ Linux kernel cookies are runtime handles, not persistent product IDs. Map both i
 
 ## Test The Negative Graph
 
-Test:
-
-- missing prerequisite
-- dependency cycle
-- both directions of each conflict
-- duplicate overlay
-- wrong order
-- removal of a lower stacked overlay
-- failure in the middle of apply sequence
-- failure during device probe and during teardown
-- unknown overlay ID/version
-
-The safe rejection path is part of the product behavior.
+Missing prerequisites, cycles, conflicts in both directions, duplicates, wrong order, removal of a lower stacked overlay, and mid-sequence failures must all be rejected safely; see [Validate Rejections](validation-security-and-product-architecture.md#validate-rejections). The safe rejection path is part of the product behavior.
 
 ## Authoritative References
 

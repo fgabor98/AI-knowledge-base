@@ -37,17 +37,19 @@ export LC_ALL=C
 export TZ=UTC
 export SOURCE_DATE_EPOCH=1767225600
 
-make -C linux-src O="$PWD/out-a" ARCH=arm64 axc200-revb.dtb
-make -C linux-src-copy O="$PWD/out-b" ARCH=arm64 axc200-revb.dtb
+make -C linux-src O="$PWD/out-a" ARCH=arm64 ti/k3-am62-lp-sk.dtb
+make -C linux-src-copy O="$PWD/out-b" ARCH=arm64 ti/k3-am62-lp-sk.dtb
 
 sha256sum \
-  out-a/arch/arm64/boot/dts/vendor/axc200-revb.dtb \
-  out-b/arch/arm64/boot/dts/vendor/axc200-revb.dtb
+  out-a/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb \
+  out-b/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
 
 cmp -s \
-  out-a/arch/arm64/boot/dts/vendor/axc200-revb.dtb \
-  out-b/arch/arm64/boot/dts/vendor/axc200-revb.dtb
+  out-a/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb \
+  out-b/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
 ```
+
+As a reference point, building `k3-am62-lp-sk.dtb` from mainline v6.19-rc1 with the same `cpp` and `dtc` (v1.7.0) from two separate copies of the source produced byte-identical DTBs. The intermediate preprocessed files contain `#` line markers with source paths, so they differ when paths differ; the DTB does not carry them. A DTB difference between your two roots is therefore a real input difference, not path noise.
 
 True independent reproduction should vary build path, worker, and preferably environment image while holding declared inputs constant. A second build in the same contaminated workspace has weaker diagnostic value.
 
@@ -103,7 +105,7 @@ The schema is product-specific, but it should be canonical and unambiguous. Exam
 
 ```yaml
 manifest_version: 1
-release_set: axc200-prod-42
+release_set: prod-42
 security_version: 9
 source:
   linux_commit: 0123456789abcdef0123456789abcdef01234567
@@ -114,19 +116,19 @@ build:
   source_date_epoch: 1767225600
 artifacts:
   - role: base-dtb
-    name: axc200-revb.dtb
-    sha256: 3333...
-    size: 49152
+    name: ti/k3-am62-lp-sk.dtb
+    sha256: 9281ae1233e4bc9d11136e626cedd26e764c2174dc50a7f3fcd8092d1dc9d65a
+    size: 63257
   - role: overlay
-    name: front-panel-v2.dtbo
+    name: ti/k3-am62x-sk-hdmi-audio.dtbo
     sha256: 4444...
-    size: 2048
+    size: 1345
 composition:
-  fit_configuration: conf-axc200-revb-r42
-  overlay_order: [front-panel-v2.dtbo]
+  fit_configuration: conf-lp-r42
+  overlay_order: [ti/k3-am62x-sk-hdmi-audio.dtbo]
 compatibility:
-  boards: [axc200-revB, axc200-revC, axc200-revD]
-  kernel_release: 6.12.18-axc2
+  boards: [AM62-LP-SKEVM]
+  kernel_release: 6.19.0
 ```
 
 Use a deterministic serialization or define which exact manifest bytes are signed. A signature over an ambiguous data model is dangerous.

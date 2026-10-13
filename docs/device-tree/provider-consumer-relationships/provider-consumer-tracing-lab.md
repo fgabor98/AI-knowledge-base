@@ -10,221 +10,161 @@ last_reviewed: null
 
 ## Goal
 
-Decode one consumer with mixed provider types, prove the effective entries in a DTB, and diagnose deliberate count, name, and supplier failures.
+Decode real consumers in the TI AM642 SK DTB, prove the effective entries from raw cells, trace them to the Linux lookups that consume them, and diagnose deliberate count, name, and supplier faults injected into a copy of the blob.
 
-## Lab Tree
+## Inputs
 
-Create `trainer-dependencies.dts`:
+- `k3-am642-sk.dtb` built from mainline Linux as in the [First Device Tree Lab](../foundations/first-device-tree-lab.md#step-10-build-the-real-board-dtb)
+- the sources `arch/arm64/boot/dts/ti/k3-am64-main.dtsi` and `k3-am642-sk.dts`
+- `dtc`, `fdtget`, and `fdtput`
 
-```dts
-/dts-v1/;
+Phandle numbers below were observed with a v6.19-rc1 build. Yours may differ; the method does not.
 
-/ {
-        compatible = "example,trainer-dependency-lab";
-        #address-cells = <1>;
-        #size-cells = <1>;
-
-        osc: clock-24000000 {
-                compatible = "fixed-clock";
-                #clock-cells = <0>;
-                clock-frequency = <24000000>;
-        };
-
-        reg_3v3: regulator-3v3 {
-                compatible = "regulator-fixed";
-                regulator-name = "lab-3v3";
-                regulator-min-microvolt = <3300000>;
-                regulator-max-microvolt = <3300000>;
-        };
-
-        providers {
-                clock_controller: clock-controller {
-                        compatible = "example,lab-clock-controller";
-                        #clock-cells = <2>;
-                };
-
-                reset_controller: reset-controller {
-                        compatible = "example,lab-reset-controller";
-                        #reset-cells = <1>;
-                };
-
-                gpio0: gpio-controller {
-                        compatible = "example,lab-gpio-controller";
-                        gpio-controller;
-                        #gpio-cells = <2>;
-                        interrupt-controller;
-                        #interrupt-cells = <2>;
-                };
-
-                dma0: dma-controller {
-                        compatible = "example,lab-dma-controller";
-                        #dma-cells = <1>;
-                };
-
-                phy0: phy-provider {
-                        compatible = "example,lab-phy";
-                        #phy-cells = <1>;
-                };
-
-                power0: power-controller {
-                        compatible = "example,lab-power-controller";
-                        #power-domain-cells = <1>;
-                };
-        };
-
-        test_device: test-device@1000 {
-                compatible = "example,lab-consumer";
-                reg = <0x1000 0x100>;
-
-                clocks = <&osc>, <&clock_controller 4 1>;
-                clock-names = "reference", "bus";
-                dmas = <&dma0 6>, <&dma0 7>;
-                dma-names = "rx", "tx";
-                interrupts-extended = <&gpio0 9 2>;
-                phys = <&phy0 0>;
-                phy-names = "link";
-                power-domains = <&power0 3>;
-                reset-gpios = <&gpio0 12 1>;
-                resets = <&reset_controller 5>;
-                reset-names = "core";
-                vdd-supply = <&reg_3v3>;
-        };
-};
-```
-
-The compatible strings and numeric arguments are fictional. This lab teaches mechanics, not real binding validation.
-
-## Step 1: Build And Capture Identity
+## Step 1: Capture Identity And A Phandle Index
 
 ```sh
-dtc -@ -I dts -O dtb -o trainer-dependencies.dtb trainer-dependencies.dts
-sha256sum trainer-dependencies.dtb
-dtc -I dtb -O dts -o trainer-dependencies.final.dts trainer-dependencies.dtb
+D=k3-am642-sk.dtb
+sha256sum "$D"
+dtc -I dtb -O dts -o sk.dts "$D"
+grep -n 'phandle = ' sk.dts | wc -l
 ```
 
-Record the tool version and output hash. Inspect generated phandles and `__symbols__`.
+To resolve a numeric phandle, search the decompiled tree:
+
+```sh
+grep -n -B20 'phandle = <0x02>;' sk.dts | grep -E '^[0-9]+-\s+[a-z].*\{' | tail -1
+```
+
+With the observed build, phandle `0x2` is `k3_clks` (`clock-controller` under `system-controller@44043000`), `0x3` is `k3_pds`, `0x31` is `serdes_refclk`, and `0x16` is `main_gpio0`.
 
 ## Step 2: Complete A Decoding Table
 
-Without looking at the decompiled output first, fill this table:
+Without looking at the reference answers, fill this table from raw cells:
 
-| Property/index | Provider | Cell-count property | Arguments | Consumer name |
-|---|---|---|---|---|
-| `clocks[0]` | | | | |
-| `clocks[1]` | | | | |
-| `dmas[0]` | | | | |
-| `dmas[1]` | | | | |
-| `interrupts-extended[0]` | | | | n/a |
-| `phys[0]` | | | | |
-| `power-domains[0]` | | | | n/a |
-| `resets[0]` | | | | |
-| `reset-gpios[0]` | | | | `reset` |
-| `vdd-supply` | | no generic count | none | `vdd` |
+| Consumer node | Property | Raw cells (`fdtget -tx`) | Provider | `#*-cells` | Decoded arguments | Name |
+|---|---|---|---|---|---|---|
+| `wiz@f000000` | `clocks` | | | | | |
+| `spi@20100000` | `dmas` | | | | | |
+| `ethernet@8000000/ethernet-ports/port@1` | `phys` | | | | | n/a |
+| `cdns-usb@f900000/usb@f400000` | `phys` | | | | | |
+| `serial@2800000` | `power-domains` | | | | | n/a |
+| `mmc@fa10000/wlcore@2` | `interrupts` | | via `interrupt-parent` | | | n/a |
+| `/regulator-4` (`wlan_en`) | `gpio` | | | | | n/a |
+| `mmc@fa00000` | `vmmc-supply` | | | none | none | `vmmc` |
 
-Then compare your result with provider nodes in the decompiled tree.
-
-## Step 3: Inspect Raw Cells
-
-If `fdtget` is installed:
+Useful commands:
 
 ```sh
-fdtget -tx trainer-dependencies.dtb /test-device@1000 clocks
-fdtget -tx trainer-dependencies.dtb /test-device@1000 dmas
-fdtget -tx trainer-dependencies.dtb /test-device@1000 interrupts-extended
-fdtget -tx trainer-dependencies.dtb /test-device@1000 reset-gpios
-fdtget trainer-dependencies.dtb /test-device@1000 clock-names
+fdtget -tx $D /bus@f4000/wiz@f000000 clocks
+fdtget     $D /bus@f4000/wiz@f000000 clock-names
+fdtget -tx $D /bus@f4000/spi@20100000 dmas
+fdtget -tx $D /bus@f4000/ethernet@8000000/ethernet-ports/port@1 phys
+fdtget -tx $D /bus@f4000/cdns-usb@f900000/usb@f400000 phys
+fdtget -tx $D /bus@f4000/serial@2800000 power-domains
+fdtget -tx $D /bus@f4000/mmc@fa10000/wlcore@2 interrupt-parent
+fdtget -tx $D /bus@f4000/mmc@fa10000/wlcore@2 interrupts
+fdtget -tx $D /regulator-4 gpio
+fdtget -tx $D /bus@f4000/mmc@fa00000 vmmc-supply
 ```
 
-Raw numeric output does not preserve tuple boundaries. Resolve each numeric phandle to its provider before counting arguments.
+Raw numeric output does not preserve tuple boundaries. Resolve each phandle and read its `#*-cells` before counting arguments.
 
-## Step 4: Trace Consumer Names To APIs
+## Step 3: Trace Consumer Names To Driver Lookups
 
-Map the DTS to conceptual driver requests:
+Find the call that consumes each named entry in the kernel source:
 
-```c
-devm_clk_get(dev, "reference");
-devm_clk_get(dev, "bus");
-dma_request_chan(dev, "rx");
-dma_request_chan(dev, "tx");
-devm_phy_get(dev, "link");
-devm_reset_control_get_exclusive(dev, "core");
-devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
-devm_regulator_get(dev, "vdd");
+```sh
+grep -n '"clk_xin"' drivers/mmc/host/sdhci_am654.c
+grep -n 'dma_request_chan\|"rx%d"\|"tx%d"' drivers/spi/spi-omap2-mcspi.c
+grep -n '"vmmc"' drivers/mmc/core/regulator.c
+grep -n 'devm_phy_optional_get' drivers/usb/cdns3/cdns3-plat.c
 ```
 
-For each call, identify the property, names list if any, selected index, provider, and arguments.
+For each, record the property, names list if any, selected index, provider, and arguments.
 
-## Step 5: Break A Zero-Cell Entry
+## Step 4: Inject A Stray Cell After A Zero-Cell Provider
 
-Change:
+Work only on a copy:
 
-```dts
-clocks = <&osc>, <&clock_controller 4 1>;
+```sh
+cp $D z.dtb
+fdtput -t x z.dtb /bus@f4000/wiz@f000000 clocks 2 a2 0 2 a2 1 31 0
+dtc -I dtb -O dts z.dtb >/dev/null
 ```
 
-to:
+`dtc` reports nothing: a zero phandle is a legal empty entry in a phandle array, so the stray `0` parses as a fourth, empty clock. The WIZ binding (`ti,phy-j721e-wiz.yaml`) even permits a fourth clock, `core_ref1_clk`, so four entries are not obviously invalid; the mismatch with the three-entry `clock-names` list is visible only to a careful reviewer, a stricter schema, or the driver. Explain why this is worse than a loud error.
 
-```dts
-clocks = <&osc 0>, <&clock_controller 4 1>;
+## Step 5: Break A Names List
+
+```sh
+cp $D n.dtb
+fdtput -t s n.dtb /bus@f4000/mmc@fa10000 clock-names clk_xin clk_ahb
+fdtget n.dtb /bus@f4000/mmc@fa10000 clock-names
 ```
 
-Compile and record warnings. Even if a blob is produced, explain how the extra cell destroys correct entry parsing. Restore the source.
+The cells and phandles are structurally valid, but `devm_clk_get(dev, "clk_xin")` now returns TI-SCI clock 0 of device 57 instead of clock 1. Explain why only binding schemas with ordered `clock-names` items, or hardware behavior, reveal this.
 
-## Step 6: Break A Names List
+## Step 6: Break A Provider Count
 
-Reverse only `clock-names`:
-
-```dts
-clock-names = "bus", "reference";
+```sh
+cp $D c.dtb
+fdtput -t u c.dtb /bus@f4000/system-controller@44043000/clock-controller '#clock-cells' 1
+dtc -I dtb -O dts c.dtb 2>&1 >/dev/null | head
 ```
 
-The cells and phandles remain structurally valid, but named lookup now returns the wrong resource. Restore it, then remove one DMA name and explain why schema cardinality checks are essential.
+`dtc`'s `clocks_property` check now splits every `<&k3_clks dev clk>` entry after one argument and reads the leftover clock ID as the next phandle. Clock ID `1` is the phandle of `gic500`, so the warnings claim that timers reference `interrupt-controller@1800000` without `#clock-cells`. Explain why a provider-side change breaks dozens of consumers at once, and why the warning text names the wrong node.
 
-## Step 7: Break A Provider Count
+## Step 7: Model Supplier Unavailability
 
-Change the clock controller to `#clock-cells = <1>` without changing its consumer. Rebuild and inspect how the remaining cell can be interpreted as the beginning of another entry. This demonstrates why provider bindings and consumers must evolve together.
-
-Restore the count and source.
-
-## Step 8: Model Supplier Unavailability
-
-Add:
-
-```dts
-status = "disabled";
+```sh
+cp $D s.dtb
+fdtput -t s s.dtb /bus@f4000/i2c@20010000/gpio@70 status disabled
 ```
 
-to `dma0`. The consumer's phandle still resolves and compilation can succeed. Explain the runtime difference among:
+The SD-card switch `vdd_mmc1` still resolves its `gpio = <&exp1 3 ...>` phandle and the blob is valid, but at runtime the PCA9538 expander is never created. Explain the runtime difference among:
 
 - phandle cannot resolve
-- provider node is disabled
+- provider node is disabled (this case)
 - provider driver is not configured
 - provider driver defers
-- provider registers but rejects specifier 6
+- provider registers but rejects the specifier
 
 These cases need different fixes despite similar consumer symptoms.
 
-## Step 9: Draw The Dependency Graph
+## Step 8: Draw The Dependency Graph
 
-Draw the consumer and all direct suppliers. Then add plausible second-level dependencies: the PHY consumes a clock and regulator; DMA belongs to a power domain; the GPIO controller needs a bus clock. Mark the earliest supplier that could cause several downstream deferrals.
+Draw `sdhci1` and all its suppliers down to the root: the `vmmc-supply` regulator chain, the expander and its I2C controller, and every clock and power domain on the way. Mark the earliest supplier whose failure would cause several downstream deferrals.
+
+## Reference Answers
+
+| Consumer | Raw cells | Decoded |
+|---|---|---|
+| `wiz@f000000` `clocks` | `2 a2 0 2 a2 1 31` | `k3_clks` dev 162 clk 0 (`fck`); `k3_clks` dev 162 clk 1 (`core_ref_clk`); `serdes_refclk`, zero cells (`ext_ref_clk`) |
+| `spi@20100000` `dmas` | `c c300 0 c 4300 0` | `main_pktdma` PSI-L thread `0xc300` ASEL 0 (`tx0`); thread `0x4300` ASEL 0 (`rx0`) |
+| CPSW `port@1` `phys` | `1b 1` | `phy_gmii_sel`, CPSW port 1 |
+| `usb@f400000` `phys` | `21` | `serdes0_usb_link`, zero cells (`cdns3,usb3-phy`) |
+| `serial@2800000` `power-domains` | `3 92 1` | `k3_pds` dev 146, `TI_SCI_PD_EXCLUSIVE` |
+| `wlcore@2` `interrupts` | `2e 2` | parent `main_gpio0`: line 46, `IRQ_TYPE_EDGE_FALLING` |
+| `wlan_en` `gpio` | `16 30 0` | `main_gpio0` line 48, `GPIO_ACTIVE_HIGH` |
+| `mmc@fa00000` `vmmc-supply` | `17` | `vdd_mmc1` regulator |
 
 ## Review Questions
 
 1. Which properties embed a provider phandle in every entry?
 2. Why does `interrupts` require a different first decoding step from `interrupts-extended`?
-3. Which lab relationship has no `#*-cells` property?
-4. Why can the same GPIO provider use two different cell-count properties?
-5. What evidence distinguishes wrong consumer name from missing provider?
+3. Which relationship in the table has no `#*-cells` property?
+4. Why can `main_gpio0` use two different cell-count properties?
+5. What evidence distinguishes a wrong consumer name from a missing provider?
 6. Why is property order not a resource sequencing language?
 
 ## Completion Checklist
 
-- [ ] I decoded a mixed-width provider list.
+- [ ] I decoded a mixed-width provider list from raw cells.
 - [ ] I handled a zero-cell provider correctly.
-- [ ] I mapped `*-names` to driver lookup names.
-- [ ] I distinguished GPIO and interrupt domains on one provider.
-- [ ] I traced DMA, PHY, power-domain, reset, and regulator suppliers.
-- [ ] I demonstrated failures that `dtc` alone may not reject.
+- [ ] I mapped `*-names` entries to real driver lookups.
+- [ ] I distinguished GPIO and interrupt roles on one provider.
+- [ ] I traced DMA, PHY, power-domain, GPIO, and regulator suppliers.
+- [ ] I demonstrated faults that `dtc` misreports or does not report.
 - [ ] I can distinguish malformed, disabled, unconfigured, deferred, and rejected suppliers.
 - [ ] I can draw a multi-level dependency graph and choose the earliest useful debugging point.
 

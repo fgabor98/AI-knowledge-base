@@ -10,216 +10,143 @@ last_reviewed: null
 
 ## Goal
 
-Build and audit a small platform tree containing machine identity, aliases, CPUs, memory, boot handoff, both reservation mechanisms, and cross-cutting provider relationships. Then introduce failures that require reasoning from the final DTB.
+Audit the standard nodes of the real TI AM642 SK DTB—machine identity, aliases, `/chosen`, CPUs, memory, reserved memory, and cross-cutting relationships—then inject failures into copies of the blob and reason from the final DTB.
 
-The compatible strings and provider arguments are fictional. The exercise teaches encoding mechanics and is not a schema-valid description of real hardware.
+## Inputs
 
-## Lab Tree
+- `k3-am642-sk.dtb` built from mainline Linux as in the [First Device Tree Lab](../foundations/first-device-tree-lab.md#step-10-build-the-real-board-dtb)
+- `arch/arm64/boot/dts/ti/k3-am642-sk.dts`, `k3-am642.dtsi`, `k3-am64.dtsi`, `k3-am64-ti-ipc-firmware.dtsi`
+- `dtc`, `fdtget`, `fdtput`, `fdtdump`
 
-Create `standard-platform.dts`:
-
-```dts
-/dts-v1/;
-
-/memreserve/ 0x000000003e000000 0x0000000000100000;
-
-/ {
-        model = "Example Standard Platform Trainer";
-        compatible = "example,standard-platform-v2",
-                     "example,standard-platform";
-        #address-cells = <2>;
-        #size-cells = <2>;
-
-        aliases {
-                serial0 = &uart0;
-        };
-
-        chosen {
-                stdout-path = "serial0:115200n8";
-                bootargs = "console=ttyS0,115200 rootwait ro";
-        };
-
-        cpus {
-                #address-cells = <1>;
-                #size-cells = <0>;
-
-                cpu0: cpu@0 {
-                        device_type = "cpu";
-                        compatible = "example,trainer-cpu";
-                        reg = <0>;
-                };
-
-                cpu1: cpu@1 {
-                        device_type = "cpu";
-                        compatible = "example,trainer-cpu";
-                        reg = <1>;
-                        status = "disabled";
-                        enable-method = "example,trainer-release";
-                };
-        };
-
-        memory@0 {
-                device_type = "memory";
-                reg = <0x0 0x00000000 0x0 0x40000000>;
-        };
-
-        reserved-memory {
-                #address-cells = <2>;
-                #size-cells = <2>;
-                ranges;
-
-                dma_pool: buffer@3f000000 {
-                        compatible = "shared-dma-pool";
-                        reg = <0x0 0x3f000000 0x0 0x01000000>;
-                        reusable;
-                };
-        };
-
-        intc: interrupt-controller {
-                compatible = "example,trainer-intc";
-                interrupt-controller;
-                #address-cells = <0>;
-                #interrupt-cells = <2>;
-        };
-
-        iommu0: iommu {
-                compatible = "example,trainer-iommu";
-                #iommu-cells = <1>;
-        };
-
-        phy0: phy-provider {
-                compatible = "example,trainer-phy";
-                #phy-cells = <1>;
-        };
-
-        soc {
-                compatible = "simple-bus";
-                #address-cells = <1>;
-                #size-cells = <1>;
-                ranges = <0x0 0x0 0x10000000 0x00100000>;
-
-                uart0: serial@1000 {
-                        compatible = "example,trainer-uart";
-                        reg = <0x1000 0x100>;
-                        interrupts-extended = <&intc 17 4>;
-                };
-
-                accelerator@2000 {
-                        compatible = "example,trainer-accelerator";
-                        reg = <0x2000 0x100>;
-                        interrupts-extended = <&intc 18 4>;
-                        iommus = <&iommu0 0x42>;
-                        phys = <&phy0 0>;
-                        phy-names = "link";
-                        memory-region = <&dma_pool>;
-                        dma-coherent;
-                };
-        };
-};
-```
-
-## Step 1: Build A Reproducible Artifact
+## Step 1: Capture Identity
 
 ```sh
-dtc -@ -I dts -O dtb -o standard-platform.dtb standard-platform.dts
-sha256sum standard-platform.dtb
-dtc -I dtb -O dts -o standard-platform.final.dts standard-platform.dtb
+D=k3-am642-sk.dtb
+dtc --version
+sha256sum "$D"
+dtc -I dtb -O dts -o sk.final.dts "$D"
 ```
 
-Record the `dtc --version`, command, warnings, and hash. A DTB may compile while violating a real device binding, so successful compilation is only the first gate.
+Record any warnings. A mainline DTB compiling cleanly still says nothing about whether this board's firmware will later modify it.
 
-## Step 2: Audit Root And Alias Data
+## Step 2: Audit Root, Aliases, And Chosen
 
 ```sh
-fdtget standard-platform.dtb / compatible
-fdtget standard-platform.dtb / model
-fdtget standard-platform.dtb /aliases serial0
-fdtget standard-platform.dtb /chosen stdout-path
+fdtget $D / compatible
+fdtget $D / model
+fdtget -p $D /aliases
+fdtget $D /aliases serial2
+fdtget $D /chosen stdout-path
+fdtget -p $D /chosen
 ```
 
 Answer:
 
-1. Which compatible is most specific?
-2. What absolute path is stored in `serial0`?
-3. Does the path portion of `stdout-path` resolve?
+1. Which compatible is most specific, and which is the SoC fallback?
+2. Which SoC UART is `serial0`, and which is the console? Why are they different?
+3. Why does the built `/chosen` contain only `stdout-path` and no `bootargs`?
 4. Would changing only `model` affect compatible matching?
 
-## Step 3: Decode CPU And Memory Cells
+## Step 3: Decode CPU, Memory, And Device Cells
 
-Complete the table without converting the source values by intuition:
-
-| Property | Governing node | Address cells | Size cells | Meaning |
-|---|---|---:|---:|---|
-| `/cpus/cpu@0/reg` | | | | |
-| `/memory@0/reg` | | | | |
-| `/reserved-memory/buffer@3f000000/reg` | | | | |
-| `/soc/serial@1000/reg` | | | | |
-
-Expected reasoning: CPU `reg` has one identifier and no size; root children use two-plus-two cells; SoC children use one-plus-one cell before `ranges` translates the address.
-
-Calculate all RAM and reservation intervals using `[base, base + size)`. Confirm that the 16 MiB DMA pool occupies the top of the 1 GiB bank and that the 1 MiB memory-reservation-block entry does not overlap it.
-
-## Step 4: Decode Relationships
-
-For each property below, resolve the phandle, find the provider's `#*-cells`, and interpret the remaining arguments only through that provider's fictional contract:
+| Property | Governing node | Address cells | Size cells | Raw cells | Meaning |
+|---|---|---:|---:|---|---|
+| `/cpus/cpu@0/reg` | | | | | |
+| `/memory@80000000/reg` | | | | | |
+| `/reserved-memory/optee@9e800000/reg` | | | | | |
+| `/bus@f4000/serial@2800000/reg` | | | | | |
 
 ```sh
-fdtget -tx standard-platform.dtb /soc/serial@1000 interrupts-extended
-fdtget -tx standard-platform.dtb /soc/accelerator@2000 iommus
-fdtget -tx standard-platform.dtb /soc/accelerator@2000 phys
-fdtget -tx standard-platform.dtb /soc/accelerator@2000 memory-region
+fdtget -tx $D /cpus/cpu@0 reg
+fdtget -tx $D /memory@80000000 reg
+fdtget -tx $D /reserved-memory/optee@9e800000 reg
+fdtget -tx $D /bus@f4000/serial@2800000 reg
 ```
 
-Explain separately what `dma-coherent` asserts and what it does **not** guarantee. Then explain why `memory-region` provides information that the top-level `/memreserve/` entry cannot.
+Expected reasoning: CPU `reg` has one identifier and no size; root children and `/reserved-memory` children use two-plus-two cells; `bus@f4000` children also use two-plus-two cells before its identity `ranges` window.
 
-## Step 5: Break Ancestor Availability
+## Step 4: Build The Reservation Map
 
-Add this to `soc`:
-
-```dts
-status = "disabled";
+```sh
+for n in $(fdtget -l $D /reserved-memory); do
+        printf '%-20s %s\n' "$n" "$(fdtget -tx $D /reserved-memory/$n reg)"
+done
+fdtdump $D 2>/dev/null | grep -i memreserve
 ```
 
-Leave `uart0` without `status`, rebuild, and answer:
+Convert each entry into a half-open interval `[base, base + size)` and check it against RAM `[0x80000000, 0x100000000)`. Confirm:
 
-- Is the UART locally available?
-- Is it effectively available through its ancestors?
-- Why can a valid `stdout-path` still lead to silence?
+- the 24 MiB OP-TEE carveout ends exactly where the first R5F region begins (`0xa0000000`): adjacent, not overlapping
+- the ten remote-core regions from `k3-am64-ti-ipc-firmware.dtsi` and the board file tile `0xa0000000`–`0xa5000000` in 1 MiB DMA + 15 MiB firmware pairs, followed by an 8 MiB `rtos_ipc_memory_region`
+- the DTB header reservation block is empty; this board uses only `/reserved-memory`
 
-Restore the source afterward.
+## Step 5: Decode Relationships
 
-## Step 6: Break A Cell Contract
+Resolve each phandle and decode the arguments through the provider:
 
-Change the memory property to:
-
-```dts
-reg = <0x00000000 0x40000000>;
+```sh
+fdtget -tx $D /bus@f4000/serial@2800000 interrupts
+fdtget -tx $D /bus@f4000/serial@2800000 power-domains
+fdtget -tx $D /bus@f4000/r5fss@78000000/r5f@78000000 memory-region
+fdtget -tx $D /bus@f4000/r5fss@78000000/r5f@78000000 mboxes
+fdtget -tx $D /bus@f4000/cdns-usb@f900000/usb@f400000 phys
 ```
 
-Build and capture diagnostics. Regardless of whether a DTB is emitted, split the cells according to the root two-address/two-size contract and prove why the entry is incomplete. Restore it.
+Explain separately what `memory-region` tells the R5F remoteproc driver and what the OP-TEE carveout, which has no consumer phandle, accomplishes. Then explain why AM64x SDHCI nodes have no `dma-coherent` while the same IP on AM65x does.
 
-## Step 7: Create A Reservation Overlap
+## Step 6: Break Ancestor Availability
 
-Move the `/memreserve/` entry to `0x3f800000` with size `0x01000000`. Calculate its half-open interval and show its overlap with `dma_pool`. Identify which evidence would reveal the conflict:
+```sh
+cp $D a.dtb
+fdtput -t s a.dtb /bus@f4000/r5fss@78000000 status disabled
+fdtget a.dtb /bus@f4000/r5fss@78000000/r5f@78000000 status
+```
 
-- `fdtdump` for the memory reservation block
+The core still says `okay`. Answer:
+
+- Is the core locally available?
+- Is it effectively available, given that the cluster driver populates its cores?
+- Which runtime symptom would you expect, and where would you look first?
+
+## Step 7: Break A Cell Contract
+
+```sh
+cp $D m.dtb
+fdtput -t x m.dtb /memory@80000000 reg 80000000 80000000
+dtc -I dtb -O dts m.dtb >/dev/null
+```
+
+`dtc` reports `reg_format: ... property has invalid length (8 bytes) (#address-cells == 2, #size-cells == 2)`. Split the two cells according to the root two-address/two-size contract and prove why the entry is incomplete. Explain why early boot code that reads `/memory` might fail long before any driver prints an error.
+
+## Step 8: Create A Reservation Overlap
+
+```sh
+cp $D o.dtb
+fdtput -t x o.dtb /reserved-memory/optee@9e800000 reg 0 9f000000 0 1800000
+```
+
+Calculate the new OP-TEE interval and show its overlap with `memory@a0000000`. `dtc` does not check reserved-memory overlaps; identify which evidence would reveal the conflict:
+
 - the logical `/reserved-memory` tree
-- early kernel memory logs
+- early kernel memory logs (`OF: reserved mem: ...`)
 - `/proc/iomem`
+- OP-TEE's own memory configuration
 
-Restore the non-overlapping address.
+## Step 9: Simulate Firmware Mutation
 
-## Step 8: Simulate Firmware Mutation
-
-Copy the DTB and use `fdtput` if available:
+U-Boot writes `/chosen/bootargs` (and often memory, MAC addresses, and initrd bounds) into the working FDT before booting Linux. Reproduce one such change on a copy:
 
 ```sh
-cp standard-platform.dtb standard-platform.firmware.dtb
-fdtput -t s standard-platform.firmware.dtb /chosen bootargs \
-        "console=ttyS0,115200 rootwait ro debug"
+cp $D firmware.dtb
+fdtput -t s firmware.dtb /chosen bootargs \
+        "console=ttyS2,115200n8 root=/dev/mmcblk1p2 rw rootwait"
+sha256sum $D firmware.dtb
+dtc -s -I dtb -O dts -o before.dts $D
+dtc -s -I dtb -O dts -o after.dts firmware.dtb
+diff -u before.dts after.dts
 ```
 
-Hash and decompile both blobs. Produce a focused diff and state which artifact is analogous to the bootloader handoff. This demonstrates why reviewing the original DTS cannot prove the runtime command line.
+State which artifact is analogous to the bootloader handoff. This is why reviewing the DTS cannot prove the runtime command line.
 
 ## Completion Criteria
 

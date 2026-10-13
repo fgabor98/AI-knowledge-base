@@ -75,22 +75,7 @@ An overlay can be impossible to validate fully in isolation because its target s
 
 ## Product Conflict Checks
 
-Schema cannot express every cross-tree constraint. Add checks for:
-
-```text
-pin/GPIO exclusive ownership
-bus address and chip-select uniqueness
-regulator electrical compatibility
-clock exclusivity and supported rates
-MMIO/reserved-memory overlap
-DMA/IOMMU identifier ownership
-connector/lane routing
-aliases and boot console uniqueness
-secure/normal-world access boundaries
-wakeup and suspend-state compatibility
-```
-
-Derive these from schematics and product manifests, not only DT property names.
+Schema cannot express every cross-tree constraint. Run the [hardware conflict inventory](stacking-dependencies-conflicts-and-removal-order.md#hardware-conflict-inventory) against every merged tree, deriving expectations from schematics and product manifests rather than only DT property names.
 
 ## Validate Rejections
 
