@@ -26,11 +26,11 @@ Do not change DTS to fix a meta-schema error, and do not weaken a schema to hide
 
 ## Read Both Paths
 
-A diagnostic conceptually says:
+A real diagnostic from the VPFE schema, after setting `bus-width = <20>` in a copy of `am437x-sk-evm.dtb`:
 
 ```text
-/soc/capture@48000000: interrupt-names: ['completion'] is too short
-from schema: .../media/acme,ax-capture.yaml
+f1.dtb: vpfe@0 (ti,am437x-vpfe): port:endpoint:bus-width: 20 is greater than the maximum of 16
+	from schema $id: http://devicetree.org/schemas/media/ti,am437x-vpfe.yaml
 ```
 
 Extract:
@@ -98,14 +98,16 @@ Reduce the instance to the discriminator and add fields back. Consider replacing
 These errors mean different things:
 
 ```text
-'resets' is a required property
+vpfe@0 (ti,am437x-vpfe): port:endpoint: 'bus-width' is a required property
 ```
 
 The schema selected and the applicable branch requires a missing hardware relationship. Check DTS completeness or whether the compatible/condition is wrong.
 
 ```text
-'acme,foo' does not match any of the regexes / additional property not allowed
+vpfe@0 (ti,am437x-vpfe): 'ti,am437x-vpfe-interface' does not match any of the regexes: '^pinctrl-[0-9]+$'
 ```
+
+This one appears when the property is placed on the VPFE node, as the old `.txt` binding said, instead of on the endpoint, where the driver reads it.
 
 The node contains data no active schema owns. It could be:
 

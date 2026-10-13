@@ -22,10 +22,10 @@ New Linux bindings normally use the dual-license SPDX expression and YAML 1.2 ma
 
 YAML indentation uses spaces, conventionally two per schema level. Tabs are invalid indentation, including inside DTS examples where YAML still owns the outer block.
 
-The filename normally follows a compatible-style name such as:
+The filename normally follows a compatible-style name. The running example in this module converts the AM437x VPFE camera binding, still a plain-text `ti-am437x-vpfe.txt` in Linux v6.19, to:
 
 ```text
-Documentation/devicetree/bindings/media/acme,ax-capture.yaml
+Documentation/devicetree/bindings/media/ti,am437x-vpfe.yaml
 ```
 
 If one file covers several compatibles, choose a representative compatible or established generic name consistent with neighboring bindings.
@@ -33,7 +33,7 @@ If one file covers several compatibles, choose a representative compatible or es
 ## `$id`: Global Schema Identity
 
 ```yaml
-$id: http://devicetree.org/schemas/media/acme,ax-capture.yaml#
+$id: http://devicetree.org/schemas/media/ti,am437x-vpfe.yaml#
 ```
 
 The ID:
@@ -57,14 +57,14 @@ This declares the DT binding meta-schema. It constrains the permitted JSON Schem
 ## Human Ownership And Description
 
 ```yaml
-title: Acme AX100 and AX200 capture engines
+title: Texas Instruments AM437x Video Processing Front End (VPFE)
 
 maintainers:
-  - Ada Maintainer <ada@example.com>
+  - Jane Doe <jane.doe@example.com>
 
-description: |
-  AX capture engines receive parallel sensor samples and transfer them to memory.
-  AX200 adds a dedicated DMA-fault interrupt and reset recovery input.
+description:
+  The VPFE captures from raw image sensors and video decoders over a
+  parallel bus.
 ```
 
 Use `title` for one concise device-class description. Use `description` for hardware purpose, standards, important topology, and public data-sheet links. Do not describe Linux driver behavior or restate every property.
@@ -78,9 +78,7 @@ Most device bindings do not need an explicit `select`. Tooling derives selection
 ```yaml
 properties:
   compatible:
-    enum:
-      - acme,axc100
-      - acme,axc200
+    const: ti,am437x-vpfe
 ```
 
 This is preferable to duplicating the same compatible logic under `select`. Duplicate selectors can drift from the property contract.
@@ -89,12 +87,21 @@ This is preferable to duplicating the same compatible logic under `select`. Dupl
 
 Use `select` only when normal compatible or node-name extraction cannot express which nodes the binding owns. It is itself a schema applied to candidate nodes.
 
+`mfd/syscon.yaml` is a real case. Many nodes end their compatible list with the generic `syscon`, for example AM62x's `"ti,am62-opp-efuse-table", "syscon"`. Default selection on `syscon` would apply this schema to every such node, including ones owned by other bindings. So it selects only the specific strings it lists:
+
 ```yaml
+# Need a select with all compatibles listed for compatibility with older
+# dtschema (<2024.02), so this will not be selected for other schemas having
+# syscon fallback.
 select:
   properties:
     compatible:
       contains:
-        const: acme,legacy-capture
+        enum:
+          - airoha,en7581-pbus-csr
+          # ...
+          - ti,am62-opp-efuse-table
+          # ...
   required:
     - compatible
 ```
@@ -118,12 +125,12 @@ Bad strategy:
 select:
   properties:
     compatible:
-      const: acme,axc200
-    resets: true
-  required: [compatible, resets]
+      const: ti,am437x-vpfe
+    port: true
+  required: [compatible, port]
 ```
 
-An AXC200 node missing `resets` would simply fail selection. The schema should select AXC200 by identity and require `resets` in its validation body.
+A VPFE node missing its `port` would simply fail selection and be reported, at most, as unmatched. The schema should select by identity and require `port` in its validation body, where removing it yields `'port' is a required property`.
 
 ## Top-Level Structure
 
@@ -156,7 +163,7 @@ Order is for readability, not mapping semantics. Follow the current style of nea
 ```yaml
 properties:
   compatible:
-    const: acme,axc100
+    const: ti,am437x-vpfe
   reg:
     maxItems: 1
 

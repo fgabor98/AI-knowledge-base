@@ -12,128 +12,109 @@ Child nodes are object-valued properties in the schema data model. Their names, 
 
 ## Fixed-Name Child Nodes
 
-Use `properties` when a child has one exact semantic name:
+Use `properties` when a child has one exact semantic name. From `display/ti/ti,am65x-dss.yaml`:
 
 ```yaml
 properties:
-  control:
+  oldi-transmitters:
+    description:
+      Child node under the DSS, to describe all the OLDI transmitters connected
+      to the DSS videoports.
     type: object
     additionalProperties: false
 
     properties:
-      acme,timeout-us:
-        minimum: 1
-        maximum: 1000
+      "#address-cells":
+        const: 1
 
-    required:
-      - acme,timeout-us
+      "#size-cells":
+        const: 0
+
+    patternProperties:
+      '^oldi@[0-1]$':
+        $ref: ti,am625-oldi.yaml#
+        description: OLDI transmitters connected to the DSS VPs
 ```
 
-This is appropriate only when `control` is a binding-defined child node representing a real substructure. Do not create configuration containers merely to group unrelated driver parameters.
+`oldi-transmitters` is a binding-defined container for real hardware, and it is closed with its own `additionalProperties: false`. Do not create configuration containers merely to group unrelated driver parameters.
 
 ## Unit-Addressed Or Repeated Children
 
-Use `patternProperties` for names that follow a defined regex:
+Use `patternProperties` for names that follow a defined regex. The pattern above, `'^oldi@[0-1]$'`, allows exactly two children because the SoC has two OLDI transmitters. `remoteproc/ti,k3-r5f-rproc.yaml` uses `"^r5f@[a-f0-9]+$"` for the cores of an R5F cluster, and `mailbox/ti,omap-mailbox.yaml` uses `"^mbox-[a-z0-9-]+$"` for sub-mailboxes.
 
-```yaml
-patternProperties:
-  "^channel@[0-3]$":
-    type: object
-    additionalProperties: false
-
-    properties:
-      reg:
-        maximum: 3
-
-      acme,input:
-        $ref: /schemas/types.yaml#/definitions/uint32
-        maximum: 7
-
-    required:
-      - reg
-      - acme,input
-```
-
-Anchor patterns with `^` and `$` unless substring matching is intentional. JSON Schema regex matching is not implicitly anchored. A pattern such as `channel@` can match `not-a-channel@garbage`.
+Anchor patterns with `^` and `$` unless substring matching is intentional, because JSON Schema regex matching is not implicitly anchored. `media/ti,j721e-csi2rx-shim.yaml` deliberately uses `"^csi-bridge@"` with no end anchor, so any unit address matches; the price is that `csi-bridge@zzz-anything` matches too.
 
 ## Pattern The Name, Constrain The Address
 
-A regex constrains spelling; the child's `reg` constrains its encoded address/identifier. Both matter.
+A regex constrains spelling; the child's `reg` constrains its encoded address or identifier. Both matter. `ti,am625-oldi.yaml` limits `reg` only to `maxItems: 1`, so the name pattern `'^oldi@[0-1]$'` is the only bound. Changing `oldi@1`'s `reg` to `<5>` in the AM625 SK DTB passes both `dt-validate` and `dtc`. A value constraint closes that gap:
 
 ```yaml
-"^channel@[0-9a-f]+$":
-  type: object
-  properties:
-    reg:
-      minimum: 0
-      maximum: 3
-  required:
-    - reg
-  additionalProperties: false
+patternProperties:
+  '^oldi@[0-1]$':
+    $ref: ti,am625-oldi.yaml#
+    properties:
+      reg:
+        maximum: 1
 ```
 
-Do not try to prove with regex alone that the unit address equals `reg`; generic DT checks and bus schemas participate in unit-address consistency. Keep the regex broad enough for canonical hexadecimal spelling and the property constraint exact.
+With this added to a scratch copy of the schema, the modified DTB reports `oldi-transmitters:oldi@1:reg:0:0: 5 is greater than the maximum of 1`, and the unmodified SK DTB still passes.
+
+Do not try to prove with regex alone that the unit address equals `reg`. Keep the regex broad enough for canonical hexadecimal spelling and make the property constraint exact.
 
 ## Bound Child Count
 
-When hardware has a maximum number of children, constrain it. Depending on schema shape, use `minProperties`/`maxProperties` carefully because standard properties such as `#address-cells` also count as object properties. Often a dedicated container makes counting clearer:
+When hardware has a maximum number of children, constrain it. A name pattern over a small fixed set, such as `oldi@[0-1]`, bounds the count by construction. For open-ended unit addresses, `minProperties`/`maxProperties` on a dedicated container can count children, but standard properties such as `#address-cells` also count as object properties. Account for them rather than treating `maxProperties` as the number of children.
 
-```yaml
-properties:
-  channels:
-    type: object
-    additionalProperties: false
-    minProperties: 1
-    maxProperties: 4
-
-    patternProperties:
-      "^channel@[0-3]$":
-        $ref: "#/$defs/channel"
-```
-
-If the container has its own fixed properties, account for them rather than treating `maxProperties` as synonymous with number of children.
+The R5F cluster binding states its count in prose (“should define two R5F child nodes … For AM62x … only one”) rather than in schema keywords. Prose is not enforced. Decide whether a count belongs in the schema, and if it varies by SoC, express it in an `if`/`then` on the compatible.
 
 ## Local Definitions
 
-Use `$defs` for a repeated structure within one binding:
+Use `$defs` for a repeated structure within one binding. `ti,omap-mailbox.yaml` defines the three-cell descriptor once and the sub-mailbox node once (trimmed):
 
 ```yaml
 $defs:
-  channel:
+  omap-mbox-descriptor:
+    $ref: /schemas/types.yaml#/definitions/uint32-array
+    items:
+      - description: mailbox fifo id (fifo_id)
+      - description: irq identifier index (irq_id)
+      - description: mailbox user id (usr_id)
+
+  omap-sub-mailbox:
     type: object
-    additionalProperties: false
     properties:
-      reg:
-        maximum: 3
-      label:
-        $ref: /schemas/types.yaml#/definitions/string
+      ti,mbox-tx:
+        $ref: "#/$defs/omap-mbox-descriptor"
+      ti,mbox-rx:
+        $ref: "#/$defs/omap-mbox-descriptor"
+      ti,mbox-send-noirq:
+        type: boolean
     required:
-      - reg
+      - ti,mbox-tx
+      - ti,mbox-rx
 
 patternProperties:
-  "^channel@[0-3]$":
-    $ref: "#/$defs/channel"
+  "^mbox-[a-z0-9-]+$":
+    $ref: "#/$defs/omap-sub-mailbox"
 ```
+
+The sub-mailbox definition has no `additionalProperties: false`, so it is open. Adding a misspelled boolean such as `ti,mbox-send-noirqq;` to the AM642 SK's `mbox-main-r5fss0-core0` passes `dt-validate` silently. A misspelled valued property such as `ti,mbox-rxx = <0 0 2>;` is reported only indirectly, as `is not of type 'object', 'integer', 'array', 'boolean', 'null'`, because no schema gives it a type. Close every `$defs` object you write.
 
 Use an external common schema when multiple bindings share a genuine hardware-class contract. Do not extract a helper merely to reduce a few lines if its semantics have no independent meaning.
 
 ## Child With Its Own Compatible
 
-Sometimes a child is an independently bound device. The parent may constrain only its identity while its own selected schema validates the rest:
+Sometimes a child is an independently bound device whose own schema validates it. `ti,j721e-csi2rx-shim.yaml` hands its child entirely to the Cadence binding:
 
 ```yaml
-properties:
-  codec:
+patternProperties:
+  "^csi-bridge@":
     type: object
-    additionalProperties: true
-    properties:
-      compatible:
-        const: acme,ax-codec
-    required:
-      - compatible
+    description: CSI2 bridge node.
+    $ref: cdns,csi2rx.yaml#
 ```
 
-`additionalProperties: true` is intentional here because another schema selected by `acme,ax-codec` owns the child's complete property set. Verify that the child schema really is selected; otherwise this becomes an unvalidated hole.
+The `$ref` makes the parent apply the child schema directly, so the child is validated even if its own `select` would not have matched. The weaker alternative, constraining only `compatible` with `additionalProperties: true` and trusting the child schema to be selected, leaves an unvalidated hole whenever that selection fails.
 
 If the parent also owns integration-specific child properties, decide whether they belong in the child binding, a referenced common schema, or the parent. Two schemas must not silently give conflicting meanings to the same field.
 
