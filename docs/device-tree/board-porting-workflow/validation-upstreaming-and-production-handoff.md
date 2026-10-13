@@ -72,9 +72,9 @@ No `COPIED`, `INFERRED`, or `CONFLICT` item should silently ship.
 Illustrative kernel-tree commands:
 
 ```bash
-make dt_binding_check DT_SCHEMA_FILES=/acme/
-make ARCH=arm64 dtbs_check DT_SCHEMA_FILES=/acme/
-make ARCH=arm64 W=1 acme/axc300-revb.dtb
+make dt_binding_check DT_SCHEMA_FILES=/arm/ti/k3.yaml
+make ARCH=arm64 CHECK_DTBS=y ti/k3-am625-beagleplay.dtb
+make ARCH=arm64 W=1 ti/k3-am625-beagleplay.dtb
 scripts/checkpatch.pl --strict 000*.patch
 scripts/get_maintainer.pl 0001-*.patch
 ```

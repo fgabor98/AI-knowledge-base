@@ -100,13 +100,13 @@ An overlay selector needs a base/overlay contract, authenticated digests, allowe
 
 ```bash
 fdtoverlay \
-  -i acme/axc300-revb.dtb \
-  -o composed/axc300-revb-radio.dtb \
-  acme/axc300-radio-v1.dtbo
+  -i ti/k3-am625-beagleplay.dtb \
+  -o composed/k3-am625-beagleplay-csi2-ov5640.dtb \
+  ti/k3-am625-beagleplay-csi2-ov5640.dtbo
 
 dtc -I dtb -O dts \
-  -o composed/axc300-revb-radio.dts \
-  composed/axc300-revb-radio.dtb
+  -o composed/k3-am625-beagleplay-csi2-ov5640.dts \
+  composed/k3-am625-beagleplay-csi2-ov5640.dtb
 ```
 
 Test negative pairs too. Successful resolver application proves structural references, not electrical or driver compatibility.

@@ -157,8 +157,8 @@ discard copy
 
 Examples:
 
-- delete AXC200 `reset-names`
-- reverse `clock-names`
+- delete `power-domain-names` from the AM625 SK's `gpu@fd00000` (expect `'power-domain-names' is a required property`)
+- reverse `clock-names` on `sdhci1` (`clk_ahb`, `clk_xin`)
 - change provider `#gpio-cells`
 - add an undocumented property
 - change root compatible to an unsupported base

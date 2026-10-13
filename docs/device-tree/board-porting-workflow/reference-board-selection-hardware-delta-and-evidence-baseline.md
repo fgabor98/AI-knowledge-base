@@ -76,15 +76,15 @@ Use primary sources:
 Example:
 
 ```yaml
-delta_id: DELTA-ETH-03
-area: ethernet0
-reference: EVM-A
-custom_fact: "PHY changed X1000 -> Y2000; RGMII RX delay strapped on PHY"
-sources: [SCH-AXC300-revB-p42, BOM-AXC300-revB]
+delta_id: DELTA-ETH-02
+area: ethernet1 (cpsw_port2)
+reference: AM625 SK (k3-am625-sk.dts)
+custom_fact: "second port uses a single-pair PHY over RMII instead of RGMII"
+sources: [BeaglePlay schematic, k3-am625-beagleplay.dts]
 dt_impact:
-  - phy compatible
-  - reset GPIO/polarity/timing
-  - phy-mode and delay properties
+  - phy-mode: rgmii-id -> rmii
+  - reset GPIO: main_gpio1 5, active low, 25 us assert, 35 us deassert
+  - pinctrl: RMII pins and reference clock instead of RGMII2 pins
 firmware_impact: none
 test:
   - MDIO ID
