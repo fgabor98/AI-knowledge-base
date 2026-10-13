@@ -27,16 +27,17 @@ Search by meaning, not just the proposed spelling. `clock-frequency`, `max-frequ
 Do not replace a resource relationship with a scalar or boolean:
 
 ```dts
-/* Weak: loses provider, identity, and topology. */
-vendor,clock-rate = <24000000>;
-vendor,has-reset;
+/* Weak (hypothetical): loses provider, identity, and topology. */
+ti,xclk-rate = <12000000>;
+ti,has-reset;
 
-/* Strong: names actual hardware relationships. */
-clocks = <&osc24m>, <&ccu 7>;
-clock-names = "ref", "bus";
-resets = <&resetc 12>;
-reset-names = "core";
+/* Strong: the AM62x SK OV5640 overlay and the AM64x R5F node. */
+clocks = <&clk_ov5640_fixed>;
+clock-names = "xclk";
+resets = <&k3_reset 121 1>;
 ```
+
+The OV5640's 12 MHz lives in its `fixed-clock` provider, not in the consumer, so a module with a different oscillator changes only the provider node.
 
 A consumer may constrain or request a clock rate, but the clock specifier still identifies the provider and line. Use the subsystem's established semantics.
 

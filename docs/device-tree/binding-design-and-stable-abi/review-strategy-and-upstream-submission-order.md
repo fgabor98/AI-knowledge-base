@@ -96,15 +96,25 @@ For revisions, include a concise change log that explains design changes, not on
 
 ## Commit Structure
 
-A reviewable series might be:
+The PowerVR compatible rework that reached Linux v6.16 shows the usual order. Imagination's series went through the DRM tree:
 
 ```text
-1/5 dt-bindings: vendor: add AX200 capture engine
-2/5 media: ax-capture: add AX200 compatible and resources
-3/5 arm64: dts: acme: add AX200 capture node
-4/5 arm64: dts: acme: enable capture on Falcon Rev B
-5/5 MAINTAINERS: add binding and driver entries
+dt-bindings: gpu: img: Future-proofing enhancements
+dt-bindings: gpu: img: Add BXS-4-64 devicetree bindings
+drm/imagination: Use new generic compatible string
+drm/imagination: Add power domain control
+drm/imagination: Add support for TI AM68 GPU
+...
 ```
+
+The board changes went separately through the TI SoC tree, picked up by its maintainer (Nishanth Menon) from their own series:
+
+```text
+arm64: dts: ti: k3-am62: New GPU binding details
+arm64: dts: ti: k3-j721s2: Add GPU node
+```
+
+Bindings come first, so every later patch can be validated against them. The driver learns the new generic string before any DTS uses it, and it keeps matching the deprecated `img,img-axe`. The binding commit message records why the change is needed (“`img,img-axe` … is primarily a marketing term”) and how it avoids breaking ABI (“the new required properties for power domains are conditional on the new base compatible string”).
 
 Avoid combining binding, driver, and multiple board changes into one large patch. Each commit should build and validate at its intended dependency point when practical.
 

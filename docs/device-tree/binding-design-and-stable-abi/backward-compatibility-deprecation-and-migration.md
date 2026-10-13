@@ -57,6 +57,8 @@ Do not change an existing property's:
 
 Changing a description and driver together conceals the ABI break. Introduce a new property or compatible and retain legacy parsing as required by the support policy.
 
+The TI J721E/AM64x PCIe driver shows the cost of getting this wrong once. `pci-j721e` drives `reset-gpios` to logical 1 to *release* PERST#, so every board describes the active-low signal as `GPIO_ACTIVE_HIGH`. Kontron's SA67 board file says so in a comment: “This is low active, but the driver itself is broken and already inverts the logic.” Fixing the driver alone would invert reset on every deployed DTB; fixing the DTS alone would break every deployed kernel. The quirk stays until both can change behind a new identity or an explicit compatibility rule ([PCIe page](../common-peripheral-nodes/pcie-host-bridges-windows-and-enumeration.md#root-complex-resources)).
+
 ## Migration Patterns
 
 ### Misspelled Or Poorly Named Property
@@ -78,9 +80,11 @@ Do not emit both indefinitely unless a specific older consumer requires it.
 4. test independent update directions
 5. document whether old strings are accepted forever or only under a bounded product policy
 
+The AM62x GPU followed this path in Linux v6.16. The original node said `"ti,am62-gpu", "img,img-axe"`, where `img,img-axe` named a marketing family rather than a programming model. The binding added `img,img-axe-1-16m` (the exact core) and `img,img-rogue` (the architecture). It kept the old two-string list as a `deprecated: true` alternative and kept `img,img-axe` inside the new four-string list, with the comment “This deprecated element must be kept around to allow old kernels to work with newer dts.” `pvr_drv.c` matches `img,img-rogue` and still matches `img,img-axe`. All four combinations of old or new DTB and old or new kernel bind.
+
 ### Property Becomes Mandatory On New Hardware
 
-Use a new compatible whose schema requires it. Permit old DTBs under old compatibles with the original absence behavior. Do not silently require the property for already deployed identities.
+Use a new compatible whose schema requires it. Permit old DTBs under old compatibles with the original absence behavior. Do not silently require the property for already deployed identities. The same GPU rework made `power-domains` and `power-domain-names` required only `if` the compatible contains `img,img-axe-1-16m`; the binding commit notes this is “to avoid an ABI break” for DTBs that carry only the old strings.
 
 ### Unsafe Legacy Description
 
@@ -102,7 +106,7 @@ The binding should discourage ambiguous double encoding, and tooling should catc
 
 ## Deprecation Is Not Removal
 
-Schema deprecation tells new producers to stop using an interface. It does not prove deployed DTBs disappeared. Consumer removal needs evidence that no supported field population can supply the old data.
+Schema deprecation tells new producers to stop using an interface. It does not prove deployed DTBs disappeared. TI's `ti,hwmods` property, from the era when OMAP power and clock data lived in kernel hwmod tables, is marked `deprecated: true` in bindings such as `ti,omap4-i2c.yaml` and `ti,davinci-mdio.yaml`. Newer SoC files describe the same blocks through `ti,sysc` target-module nodes, yet `omap2.dtsi`, `dm814x.dtsi`, and `am3517.dtsi` still carry `ti,hwmods` for I²C and MDIO, so consumers must keep parsing it. Consumer removal needs evidence that no supported field population can supply the old data.
 
 Track separately:
 
