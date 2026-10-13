@@ -12,14 +12,17 @@ DT, a firmware image, and its resource table describe different parts of one sys
 
 ## Firmware Naming And Delivery
 
-A platform binding may define `firmware-name` or the driver may select a default from the compatible and core identity:
+A platform binding may define `firmware-name`, or the driver may select a default. The AM64x SoC file names one per core (`k3-am64-main.dtsi`):
 
 ```dts
-r5f@5d00000 {
-        compatible = "vendor,soc-r5f";
-        firmware-name = "product/r5f-control.elf";
+main_r5fss0_core0: r5f@78000000 {
+        compatible = "ti,am64-r5f";
+        firmware-name = "am64-main-r5f0_0-fw";
+        /* ... */
 };
 ```
+
+`ti_k3_r5_remoteproc` reads it with `rproc_of_parse_firmware()` and fails the cluster probe if it is missing (`failed to parse firmware-name property`). The name is a stable alias, not a build artifact: a distribution installs it under `/lib/firmware`, typically as a link to the actual ELF. User space can also change it before start through `/sys/class/remoteproc/remoteprocN/firmware`.
 
 The generic firmware loader searches configured firmware paths and may support platform-specific fallback or built-in firmware. The exact DT property is binding-specific; adding `firmware-name` to an arbitrary node does nothing.
 

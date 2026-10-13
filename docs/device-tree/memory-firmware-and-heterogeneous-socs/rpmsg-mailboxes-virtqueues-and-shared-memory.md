@@ -56,16 +56,25 @@ A mismatch can allow the first few messages and fail only after ring wrap or con
 
 ## Mailboxes And Interrupts
 
-A remoteproc binding may use `mboxes` and `mbox-names` for transmit, receive, kick, or control channels:
+A remoteproc binding may use `mboxes` for its doorbell. On AM64x, each mailbox cluster is a provider with `#mbox-cells = <1>`, and the cell is a phandle to a sub-mailbox child node. From `k3-am64-ti-ipc-firmware.dtsi`:
 
 ```dts
-remoteproc@5d00000 {
-        mboxes = <&mailbox0 4>, <&mailbox0 5>;
-        mbox-names = "tx", "rx";
+&mailbox0_cluster2 {
+        status = "okay";
+
+        mbox_main_r5fss0_core0: mbox-main-r5fss0-core0 {
+                ti,mbox-rx = <0 0 2>;
+                ti,mbox-tx = <1 0 2>;
+        };
+};
+
+&main_r5fss0_core0 {
+        mboxes = <&mailbox0_cluster2 &mbox_main_r5fss0_core0>;
+        /* ... */
 };
 ```
 
-This is illustrative. The remoteproc and mailbox-provider schemas define the count, names, and specifier. Some SoCs use dedicated interrupts, system-controller calls, or interrupt-router events instead.
+Each descriptor is `<fifo_id irq_id usr_id>` (`ti,omap-mailbox.yaml`): Linux receives on hardware FIFO 0 and transmits on FIFO 1, using interrupt index 0 of the cluster and mailbox user 2. The R5F firmware must use the opposite pair. There is one `mboxes` entry and no `mbox-names`; `ti_k3_common.c` requests channel 0 and uses it in both directions. Other SoCs use separate tx/rx channels, dedicated interrupts, or system-controller calls, so read the schemas for count, names, and specifier.
 
 Trace both directions:
 

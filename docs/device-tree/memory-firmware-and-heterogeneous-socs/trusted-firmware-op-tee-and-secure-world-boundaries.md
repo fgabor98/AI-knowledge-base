@@ -14,7 +14,7 @@ Normal-world DT can describe how Linux invokes trusted firmware and which memory
 
 The `/firmware` node commonly contains interfaces rather than addressable devices. Examples include PSCI, SCMI, and OP-TEE. Each binding defines its compatible, invocation method, channels, and optional resources.
 
-Conceptually:
+Every K3 SoC file declares two. From `k3-am64.dtsi`:
 
 ```dts
 firmware {
@@ -22,8 +22,15 @@ firmware {
                 compatible = "linaro,optee-tz";
                 method = "smc";
         };
+
+        psci: psci {
+                compatible = "arm,psci-1.0";
+                method = "smc";
+        };
 };
 ```
+
+Both nodes say only how to call into the secure world: an `smc` instruction handled by TF-A, which forwards OP-TEE calls. Neither carries an address. Where OP-TEE lives is described separately by the board's `optee@9e800000` reservation.
 
 Use the exact binding and platform integration. An `smc` or `hvc` method selects a calling conduit; it does not describe the complete secure-world memory layout or confer trust on the caller.
 
@@ -65,6 +72,8 @@ For every secure-world region, document:
 - behavior across suspend, warm reset, kexec, and crash dump
 
 The DT view can intentionally omit details that would be unsafe or irrelevant to normal world, but Linux still needs an authoritative exclusion so it never allocates protected RAM.
+
+TI U-Boot does not trust the static DTS to have the right addresses. `fdt_fixup_reserved()` in `arch/arm/mach-k3/common_fdt.c` finds the `reserved-memory` child whose name starts with `tfa` or `optee`, deletes it, and adds a `no-map` carveout at `CONFIG_K3_ATF_LOAD_ADDR` or `CONFIG_K3_OPTEE_LOAD_ADDR`. It keeps the old node's size; if no node existed, it uses 512 KiB for TF-A or 24 MiB for OP-TEE. The `tfa` fixup is skipped when TF-A runs below the start of DDR, as on AM64x, where it is loaded into on-chip SRAM at `0x701c0000`. The bootloader that loaded the secure images is the authority on where they are, so the delivered DT reflects the build that actually booted.
 
 `reserved-memory` prevents ordinary Linux allocation; a TrustZone address-space controller, firewall, or equivalent enforces the security boundary. Both layers must cover the same physical extent without off-by-one or granularity errors.
 

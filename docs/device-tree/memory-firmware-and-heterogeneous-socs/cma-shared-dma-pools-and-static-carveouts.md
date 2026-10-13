@@ -24,47 +24,39 @@ Use the least restrictive mechanism that satisfies hardware and ABI constraints.
 
 ## Shared DMA Pool
 
-The generic compatible is `shared-dma-pool`:
+The generic compatible is `shared-dma-pool`. The kernel picks one of two setups from the node's flags. `rmem_dma_setup()` in `kernel/dma/coherent.c` handles a non-`reusable` region as a per-device coherent pool. `rmem_cma_setup()` in `kernel/dma/contiguous.c` handles a `reusable` region without `no-map` as CMA.
+
+The AM64x R5F vring pools are the first kind. From `k3-am642-sk.dts`:
 
 ```dts
-reserved-memory {
-        #address-cells = <2>;
-        #size-cells = <2>;
-        ranges;
-
-        video_pool: dma-pool@98000000 {
-                compatible = "shared-dma-pool";
-                reg = <0x0 0x98000000 0x0 0x04000000>;
-                reusable;
-        };
-};
-
-video@50000000 {
-        memory-region = <&video_pool>;
+main_r5fss0_core0_dma_memory_region: memory@a0000000 {
+        compatible = "shared-dma-pool";
+        reg = <0x00 0xa0000000 0x00 0x100000>;
+        no-map;
 };
 ```
 
-The consumer binding and driver determine how the region is attached and allocated. “Shared” means a pool can serve compatible consumers; it does not automatically define concurrency, cache maintenance, buffer ownership, or a wire protocol.
+The R5F remoteproc driver attaches it as index 0 of `memory-region`, and vring and RPMsg buffer allocations for that device come from this 1 MiB. “Shared” means the pool can serve DMA allocations for its consumers; it does not define concurrency, cache maintenance, buffer ownership, or a wire protocol.
 
-`reusable` means the OS may use the region for other purposes while being able to reclaim it for the owning driver. It is incompatible with a contract where firmware can write at arbitrary times. A CPU page loaned elsewhere cannot safely remain remotely accessible.
+`reusable` means the OS may use the region for other purposes and reclaim it for the owning driver. It is incompatible with firmware that can write at arbitrary times: a CPU page loaned elsewhere cannot safely remain remotely accessible. That is why the R5F pool is `no-map` and not `reusable`.
 
 ## CMA
 
-A `shared-dma-pool` node marked `linux,cma-default` can select the default CMA area:
+BeaglePlay and the AM62x SK both declare a dynamically placed default CMA area:
 
 ```dts
-linux_cma: linux,cma {
+/* global cma region */
+linux,cma {
         compatible = "shared-dma-pool";
         reusable;
-        size = <0x0 0x10000000>;
-        alignment = <0x0 0x00200000>;
+        size = <0x00 0x8000000>;
         linux,cma-default;
 };
 ```
 
-CMA reserves a physical range early and normally permits movable pages to occupy it until contiguous allocation requires migration. Allocation can still fail because of unmovable pages, pinning, sizing, alignment, or pressure. “Reserved at boot” therefore does not mean “always immediately available as one contiguous block.”
+There is no `reg`, so the kernel places the 128 MiB itself. CMA reserves a physical range early and lets movable pages occupy it until a contiguous allocation needs them migrated away. Allocation can still fail because of unmovable pages, pinning, sizing, alignment, or pressure. “Reserved at boot” does not mean “always available as one contiguous block.”
 
-Treat command-line CMA settings, DT default CMA, and architecture defaults as competing configuration sources. Confirm the chosen area in the boot log.
+Configuration sources compete. If the kernel command line sets `cma=`, `rmem_cma_setup()` logs `Reserved memory: bypass linux,cma node, using cmdline CMA params instead` and ignores this node. A CMA region whose base or size is not aligned to the CMA minimum is rejected with `incorrect alignment of CMA region`. Confirm the chosen area in the boot log: `Reserved memory: created CMA memory pool at ...`.
 
 ## `linux,dma-default`
 
@@ -72,19 +64,23 @@ The shared DMA pool binding also defines `linux,dma-default` for the default coh
 
 ## Static Firmware Carveouts
 
-Remote firmware frequently has fixed load addresses:
+Remote firmware frequently has fixed load addresses. Each AM64x remote core gets a 15 MiB carveout right after its 1 MiB DMA pool (`k3-am64-ti-ipc-firmware.dtsi`):
 
 ```dts
-r5f_code: r5f-code@9d000000 {
-        reg = <0x0 0x9d000000 0x0 0x00600000>;
+main_r5fss0_core1_dma_memory_region: memory@a1000000 {
+        compatible = "shared-dma-pool";
+        reg = <0x00 0xa1000000 0x00 0x100000>;
         no-map;
 };
 
-r5f_vring: r5f-vring@9d600000 {
-        reg = <0x0 0x9d600000 0x0 0x00010000>;
+main_r5fss0_core1_memory_region: memory@a1100000 {
+        compatible = "shared-dma-pool";
+        reg = <0x00 0xa1100000 0x00 0xf00000>;
         no-map;
 };
 ```
+
+The carveout also carries `compatible = "shared-dma-pool"`, but the R5F driver never uses it as a pool: it maps every region after index 0 with `devm_ioremap_resource_wc()` as a static carveout. The compatible string does not decide the role; the consumer does. The TI SDK firmware is linked to these addresses, and the resource table must sit at the carveout's base.
 
 Do not derive sizes only from the current binary. Include alignment, vrings, trace, heaps, guard space, future growth, and any platform granularity. Conversely, an oversized carveout can conceal a firmware overrun until a later product variant places something adjacent.
 
