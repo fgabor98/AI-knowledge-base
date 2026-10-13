@@ -62,7 +62,7 @@ C5 final FDT passed to Linux
 C6 Linux live tree
 ```
 
-Real platforms may order steps differently. Record the actual sequence because two correct transformations can produce different results when reversed.
+Real platforms may order steps differently. Record the actual sequence because two correct transformations can produce different results when reversed. On a TI AM62x SK, for example, U-Boot applies overlays before it rewrites the trusted-firmware reservations, so C3 precedes C2 ([lab](boot-time-mutation-and-ownership/boot-time-mutation-provenance-lab.md#checkpoints-on-this-platform)).
 
 ## Mutation Record
 

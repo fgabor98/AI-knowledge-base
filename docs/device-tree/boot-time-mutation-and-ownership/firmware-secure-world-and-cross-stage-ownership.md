@@ -53,6 +53,8 @@ Normal-world validation should confirm:
 
 It must not shrink or drop an authenticated secure reservation merely to recover RAM.
 
+On TI K3, U-Boot is the writer that reconciles these reservations: `fdt_fixup_reserved()` replaces the `tfa` and `optee` children of `/reserved-memory` with carveouts at the addresses the SPL actually loaded TF-A and OP-TEE to ([Secure Reserved Memory](../memory-firmware-and-heterogeneous-socs/trusted-firmware-op-tee-and-secure-world-boundaries.md#secure-reserved-memory)). The DTS values are therefore defaults, and the build configuration is the authority.
+
 ## Handoff Contracts
 
 For each boundary—ROM→SPL, SPL→U-Boot, trusted firmware→normal world, U-Boot→Linux—define:

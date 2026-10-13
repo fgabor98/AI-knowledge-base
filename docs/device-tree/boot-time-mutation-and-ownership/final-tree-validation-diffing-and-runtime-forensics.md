@@ -61,12 +61,16 @@ Decompiled textual diff contains noise:
 
 Build a semantic path/property diff:
 
+For an AM62x SK booted by TI U-Boot with the HDMI audio overlay, the attributed diff from host-built base to `/sys/firmware/fdt` looks like this (see the [lab](boot-time-mutation-provenance-lab.md)):
+
 ```text
-added /reserved-memory/secure@...
-changed /memory@.../reg old -> new
-added /chosen/linux,initrd-start
-changed /soc/ethernet@.../local-mac-address [redacted]
-added /soc/spi@.../module@0 from overlay module-x
+added    /sound-sii9022                                   overlay k3-am62x-sk-hdmi-audio
+changed  /sound/status okay -> disabled                   overlay k3-am62x-sk-hdmi-audio
+added    /chosen/bootargs, /chosen/u-boot,version         fdt_chosen()
+changed  .../ethernet-ports/port@1/mac-address [redacted] fdt_fixup_ethernet()
+added    .../ethernet-ports/port@1/local-mac-address      fdt_fixup_ethernet()
+changed  /thermal-zones/*/trips/*-crit/temperature        fdt_fixup_thermal_critical_trips_k3()
+replaced /reserved-memory/tfa@..., optee@...              fdt_fixup_reserved()
 ```
 
 Maintain an allowlist by mutation ID, not a broad ignore list. Unexpected changes outside the owner's path set fail CI.
