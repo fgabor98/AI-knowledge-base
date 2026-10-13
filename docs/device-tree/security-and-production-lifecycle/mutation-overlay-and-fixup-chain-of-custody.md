@@ -45,12 +45,13 @@ An overlay can rewrite security-relevant properties as effectively as a replacem
 For optional hardware, a policy engine can parse an authenticated manifest such as:
 
 ```text
-product=axc200
-board_revision=B
+product=am62x-lp
+board_name=AM62-LP-SKEVM
 release_set=42
-base=axc200-revb.dtb
-overlays=pcie-radio.dtbo,front-panel.dtbo
-overlay_order=pcie-radio,front-panel
+base=ti/k3-am62-lp-sk.dtb
+overlays=ti/k3-am62x-sk-hdmi-audio.dtbo
+overlay_order=k3-am62x-sk-hdmi-audio
+conflicts=k3-am62x-sk-csi2-imx219,k3-am62x-sk-csi2-tevi-ov5640
 security_version=9
 ```
 

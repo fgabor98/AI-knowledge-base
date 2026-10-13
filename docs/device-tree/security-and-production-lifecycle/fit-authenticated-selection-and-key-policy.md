@@ -28,7 +28,7 @@ This schematic ITS binds a kernel, DTB, and ramdisk through one signed configura
 /dts-v1/;
 
 / {
-    description = "AXC200 release 42";
+    description = "AM62x LP product, release 42";
 
     images {
         kernel-1 {
@@ -41,7 +41,7 @@ This schematic ITS binds a kernel, DTB, and ramdisk through one signed configura
         };
 
         fdt-1 {
-            data = /incbin/("axc200-revb.dtb");
+            data = /incbin/("k3-am62-lp-sk.dtb");
             type = "flat_dt";
             arch = "arm64";
             compression = "none";
@@ -59,9 +59,9 @@ This schematic ITS binds a kernel, DTB, and ramdisk through one signed configura
     };
 
     configurations {
-        default = "conf-axc200-revb-r42";
+        default = "conf-lp-r42";
 
-        conf-axc200-revb-r42 {
+        conf-lp-r42 {
             kernel = "kernel-1";
             fdt = "fdt-1";
             ramdisk = "ramdisk-1";
