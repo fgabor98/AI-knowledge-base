@@ -12,22 +12,30 @@ I²C does not enumerate ordinary targets. DT must identify every fixed device, i
 
 ## Controller And Child Addressing
 
-```dts
-&i2c1 {
-        clock-frequency = <400000>;
-        pinctrl-names = "default";
-        pinctrl-0 = <&i2c1_default>;
-        status = "okay";
+From `k3-am62-lp-sk.dts` (trimmed); `k3-am62x-sk-common.dtsi` enables `main_i2c1` at 100 kHz:
 
-        temperature-sensor@48 {
-                compatible = "vendor,temp-sensor";
-                reg = <0x48>;
-                interrupt-parent = <&gpio3>;
-                interrupts = <5 IRQ_TYPE_LEVEL_LOW>;
-                vdd-supply = <&reg_3v3>;
+```dts
+&main_i2c1 {
+        exp1: gpio@22 {
+                compatible = "ti,tca6424";
+                reg = <0x22>;
+                gpio-controller;
+                #gpio-cells = <2>;
+                gpio-line-names = "GPIO_CPSW2_RST", "GPIO_CPSW1_RST",
+                                  "PRU_DETECT", "MMC1_SD_EN", /* ... */;
+
+                interrupt-parent = <&main_gpio1>;
+                interrupts = <23 IRQ_TYPE_EDGE_FALLING>;
+                interrupt-controller;
+                #interrupt-cells = <2>;
+
+                pinctrl-names = "default";
+                pinctrl-0 = <&main_gpio1_ioexp_intr_pins_default>;
         };
 };
 ```
+
+The TCA6424 is an I²C target, an interrupt consumer (its `INT` output on `main_gpio1` line 23), and a GPIO and interrupt provider for other nodes, such as the SD card supply on line 3.
 
 For a normal 7-bit target, `reg` is the unshifted address without the R/W bit; ten-bit addresses need the generic binding's flag encoding ([I2C Children](../addressing-and-bus-modeling/bus-specific-child-addressing.md#i2c-children)).
 
@@ -41,29 +49,52 @@ An ACK proves that something responded at an address. It does not prove compatib
 
 ## Muxes And Switches Create New Segments
 
-An I²C mux has a parent-side address and child bus nodes:
+An I²C mux has a parent-side address and child bus nodes. The J721E SK places a PCA9543 on `main_i2c3` to separate its two camera connectors. From `k3-j721e-sk.dts`:
 
 ```dts
 i2c-mux@70 {
-        compatible = "nxp,pca9544";
-        reg = <0x70>;
+        compatible = "nxp,pca9543";
         #address-cells = <1>;
         #size-cells = <0>;
+        reg = <0x70>;
 
-        i2c@0 {
-                reg = <0>;
+        /* CSI0 I2C */
+        cam0_i2c: i2c@0 {
                 #address-cells = <1>;
                 #size-cells = <0>;
+                reg = <0>;
+        };
 
-                eeprom@50 {
-                        compatible = "atmel,24c64";
-                        reg = <0x50>;
-                };
+        /* CSI1 I2C */
+        cam1_i2c: i2c@1 {
+                #address-cells = <1>;
+                #size-cells = <0>;
+                reg = <1>;
         };
 };
 ```
 
-Here `i2c-mux@70/reg` is an I²C address, `i2c@0/reg` is a mux channel, and `eeprom@50/reg` is an address on that downstream segment. Identical target addresses are legal on isolated channels. Placing both devices under the parent bus creates a false collision.
+The overlay `k3-j721e-sk-csi2-dual-imx219.dtso` adds one Sony IMX219 to each channel, both at address `0x10`:
+
+```dts
+&cam0_i2c {
+        imx219_0: imx219-0@10 {
+                compatible = "sony,imx219";
+                reg = <0x10>;
+                /* clocks, supplies, port */
+        };
+};
+
+&cam1_i2c {
+        imx219_1: imx219-1@10 {
+                compatible = "sony,imx219";
+                reg = <0x10>;
+                /* ... */
+        };
+};
+```
+
+Here `i2c-mux@70/reg` is an I²C address, `i2c@0/reg` is a mux channel, and each `imx219-*@10/reg` is an address on its own downstream segment. Identical addresses are legal on isolated channels; placing both sensors directly under `main_i2c3` would create a real collision. The base DTS leaves the channels empty, so the mux and its adapters exist even without cameras.
 
 Mux bindings vary in whether an `i2c-mux` container is present. Follow the device schema exactly. Consider idle channel, disconnect, power, and concurrent access behavior.
 

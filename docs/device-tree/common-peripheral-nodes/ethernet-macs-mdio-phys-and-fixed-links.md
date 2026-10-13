@@ -12,53 +12,72 @@ An Ethernet interface crosses several contracts: the MAC moves frames, a PCS may
 
 ## External MDIO PHY
 
+The AM642 SK connects both CPSW3G ports to TI DP83867 PHYs. From `k3-am642-sk.dts` (trimmed):
+
 ```dts
-&ethernet0 {
+#include <dt-bindings/net/ti-dp83867.h>
+
+&cpsw_port1 {
         phy-mode = "rgmii-id";
-        phy-handle = <&phy0>;
-        nvmem-cells = <&mac_address>;
-        nvmem-cell-names = "mac-address";
+        phy-handle = <&cpsw3g_phy0>;
         status = "okay";
+};
 
-        mdio {
-                #address-cells = <1>;
-                #size-cells = <0>;
+&cpsw3g_mdio {
+        status = "okay";
+        pinctrl-names = "default";
+        pinctrl-0 = <&mdio1_pins_default>;
 
-                phy0: ethernet-phy@1 {
-                        compatible = "ethernet-phy-ieee802.3-c22";
-                        reg = <1>;
-                        reset-gpios = <&gpio1 10 GPIO_ACTIVE_LOW>;
-                        reset-assert-us = <10000>;
-                        reset-deassert-us = <30000>;
-                };
+        cpsw3g_phy0: ethernet-phy@0 {
+                reg = <0>;
+                ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+                ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
         };
+        /* ethernet-phy@1 is identical */
 };
 ```
 
-The PHY `reg` is its MDIO address, often selected by strap pins sampled during reset. Verify strap pulls, reset timing, and whether shared pins change function after sampling. An address that differs between cold and warm boot strongly suggests strap/reset/power behavior.
+The PHY `reg` is its MDIO address, usually set by strap pins sampled during reset. There is no `compatible`: the generic `ethernet-phy-ieee802.3-c22` is the default, and the PHY driver is chosen from the ID registers read over MDIO. The `ti,*` properties are still valid because the DP83867 driver reads them from the node once it binds.
 
-The generic PHY compatible permits PHY-ID discovery where appropriate. Use a device-specific compatible when its binding requires board properties or discovery is unreliable.
+Where the board controls PHY reset, the PHY node owns the line. From `k3-am625-beagleplay.dts`:
 
-## `phy-mode` Is An Electrical Contract
+```dts
+cpsw3g_phy0: ethernet-phy@0 {
+        reg = <0>;
+        reset-gpios = <&main_gpio0 15 GPIO_ACTIVE_LOW>;
+        reset-assert-us = <10000>;
+        reset-deassert-us = <50000>;
+};
+```
 
-`phy-mode`/`phy-connection-type` describes the MAC-to-PHY interface: MII, RMII, RGMII variants, SGMII, 1000BASE-X, and others. RGMII requires clock/data skew. Suffixes communicate where internal delays are enabled:
+Verify strap pulls, reset timing, and whether strap pins change function after sampling. An address that differs between cold and warm boot strongly suggests a strap, reset, or power problem.
 
-- `rgmii` — the PHY adds neither internal delay; the PCB/MAC side must supply the required skew
-- `rgmii-id` — PHY adds both RX and TX internal delay
-- `rgmii-rxid` — PHY adds RX delay
-- `rgmii-txid` — PHY adds TX delay
+## `phy-mode` Is A PCB Contract
 
-Board traces and MAC capabilities must supply whatever the selected mode does not. Do not cycle through values until packets pass; double delay can work at one temperature and fail later.
+`phy-mode` (or `phy-connection-type`) names the MAC-to-PHY interface. For RGMII, `ethernet-controller.yaml` defines the suffix in terms of the PCB: RGMII needs about 2 ns of clock-to-data skew in each direction, and the mode says which delays the board traces provide.
+
+- `rgmii` — the PCB provides both delays
+- `rgmii-id` — the PCB provides neither; the MAC and PHY together must add both. The binding calls this the most frequent case.
+- `rgmii-rxid` — the PCB provides the TX delay; MAC or PHY adds RX
+- `rgmii-txid` — the PCB provides the RX delay; MAC or PHY adds TX
+
+The MAC and PHY drivers split the internal work between themselves. On the AM642 SK, `am65-cpsw-nuss` knows the CPSW always adds the TX delay. It turns `rgmii-id` into `rgmii-rxid` before connecting the PHY, so the DP83867 adds only the RX delay (2.00 ns via `ti,rx-internal-delay`). A DT that says `rgmii` or `rgmii-rxid` triggers `RGMII mode without internal TX delay unsupported; please fix your Device Tree`. Do not cycle through values until packets pass: a doubled delay can work at one temperature and fail at another.
 
 ## Fixed Links And In-Band Status
 
-A MAC connected directly to a switch/FPGA port can use a fixed link:
+A MAC connected to something without a manageable PHY can use a fixed link. From the J784S4 EVM overlay `k3-j784s4-evm-usxgmii-exp1-exp2.dtso` (trimmed):
 
 ```dts
-fixed-link {
-        speed = <1000>;
-        full-duplex;
-        pause;
+&main_cpsw0_port1 {
+        phy-mode = "usxgmii";
+        phys = <&cpsw0_phy_gmii_sel 1>, <&serdes2_usxgmii_link>;
+        phy-names = "mac", "serdes";
+        status = "okay";
+
+        fixed-link {
+                speed = <5000>;
+                full-duplex;
+        };
 };
 ```
 
@@ -66,9 +85,23 @@ Use a fixed link only when link parameters really are fixed and no MDIO-managed 
 
 ## MAC Addresses
 
-A production MAC address may come from an NVMEM cell, dedicated EEPROM, OTP, firmware, or a standard address property; [MAC Addresses, Serial Numbers, And Board Identity](../boot-time-mutation-and-ownership/mac-addresses-serial-numbers-and-board-identity.md) covers precedence and validation. Do not commit one globally administered address into a shared board DTS.
+The AM64x SoC file gives each CPSW port two address sources:
 
-The NVMEM cell's byte order and post-processing must match its layout binding. A six-byte value existing in sysfs does not prove the network stack interpreted it correctly.
+```dts
+cpsw_port1: port@1 {
+        reg = <1>;
+        ti,mac-only;
+        label = "port1";
+        phys = <&phy_gmii_sel 1>;
+        mac-address = [00 00 00 00 00 00];
+        ti,syscon-efuse = <&main_conf 0x200>;
+        status = "disabled";
+};
+```
+
+The all-zero `mac-address` is a placeholder for the bootloader to fill. `am65-cpsw-nuss` first calls `of_get_mac_address()`, which rejects an invalid (all-zero) address and then tries NVMEM. Next it reads the factory MAC from the eFuse block at `main_conf` offset `0x200`. Only if that is also invalid does it log `Use random MAC address`. [MAC Addresses, Serial Numbers, And Board Identity](../boot-time-mutation-and-ownership/mac-addresses-serial-numbers-and-board-identity.md) covers precedence and validation. Do not commit one globally administered address into a shared board DTS.
+
+When the address comes from an NVMEM cell, its byte order and post-processing must match the layout binding. A six-byte value existing in sysfs does not prove the network stack interpreted it correctly.
 
 ## Runtime Diagnosis
 

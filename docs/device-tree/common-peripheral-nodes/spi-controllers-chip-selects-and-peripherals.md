@@ -12,27 +12,34 @@ SPI shares clock and data wires while selecting targets individually. It provide
 
 ## Target Nodes
 
-```dts
-&spi2 {
-        pinctrl-names = "default";
-        pinctrl-0 = <&spi2_default>;
-        status = "okay";
+The AM642 EVM puts a Microwire EEPROM on McSPI `main_spi0`. From `k3-am642-evm.dts`:
 
-        adc@0 {
-                compatible = "vendor,precision-adc";
+```dts
+&main_spi0 {
+        status = "okay";
+        pinctrl-names = "default";
+        pinctrl-0 = <&main_spi0_pins_default>;
+        ti,pindir-d0-out-d1-in;
+        eeprom@0 {
+                compatible = "microchip,93lc46b";
                 reg = <0>;
-                spi-max-frequency = <12000000>;
-                spi-cpol;
-                spi-cpha;
-                vref-supply = <&reg_2v5>;
-                interrupts-extended = <&gpio2 11 IRQ_TYPE_EDGE_FALLING>;
+                spi-max-frequency = <1000000>;
+                spi-cs-high;
+                data-size = <16>;
         };
 };
 ```
 
-For an ordinary SPI target, `reg` is the controller-local chip-select index. It is not a memory address. `spi-max-frequency` is the maximum safe bus clock for this target on this board; the driver may use a lower rate.
+For an ordinary SPI target, `reg` is the controller-local chip-select index, not a memory address. `spi-max-frequency` is the maximum safe bus clock for this target on this board; the driver may use a lower rate.
 
-`spi-cpol` and `spi-cpha` select the clock mode. Absence means both false for mode 0. These are protocol facts, not tuning knobs. A wrong mode can return data that looks structured but is bit-shifted or sampled on unstable edges.
+Every other property here records a hardware fact:
+
+- `ti,pindir-d0-out-d1-in` is a controller property. McSPI data pins have no fixed MOSI/MISO role; the default is D0 input and D1 output, and this board wires them the other way.
+- `spi-cs-high` says the chip select is active high, as the 93xx46 Microwire protocol requires. Without it, the EEPROM is selected exactly when it should be idle.
+- `data-size = <16>` is required by `microchip,93lc46b.yaml`. The 93LC46B is the 16-bit-word variant (the 93LC46A uses 8-bit words), so the value must match the part actually fitted.
+- no `spi-cpol` or `spi-cpha` means SPI mode 0
+
+`spi-cpol` and `spi-cpha` are protocol facts, not tuning knobs. A wrong mode can return data that looks structured but is bit-shifted or sampled on unstable edges.
 
 ## Native And GPIO Chip Selects
 
@@ -42,14 +49,7 @@ No two enabled targets may respond to the same physical select unless a binding 
 
 ## Transfer Width And Lanes
 
-Standard properties can describe dual, quad, or octal data connectivity:
-
-```dts
-spi-rx-bus-width = <4>;
-spi-tx-bus-width = <1>;
-```
-
-They describe wired lanes and supported protocol use, not a request to force every transfer into that width. Controller, target, and protocol driver must all support the selected operation. Validate pinctrl for every data lane.
+Standard properties can describe dual, quad, or octal data connectivity. The AM642 EVM's OSPI flash sets `spi-tx-bus-width = <8>` and `spi-rx-bus-width = <8>` ([MTD, SPI NOR, And Fixed Partitions](mtd-spi-nor-and-fixed-partitions.md#spi-nor-device)). These properties describe wired lanes and supported protocol use, not a request to force every transfer into that width. Controller, target, and protocol driver must all support the selected operation. Validate pinctrl for every data lane.
 
 Bits per word, maximum transfer size, DMA alignment, and chip-select timing are usually driver/controller capabilities rather than generic DT properties. Add vendor properties only when a reviewed binding defines real hardware constraints.
 

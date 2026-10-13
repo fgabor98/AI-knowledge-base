@@ -10,38 +10,83 @@ last_reviewed: null
 
 A PCIe host-bridge node describes the root complex's CPU-facing resources and the translation into PCI address spaces. Downstream functions generally enumerate through PCI configuration space; DT is not a static inventory of every plug-in endpoint.
 
-## Host Bridge Skeleton
+## A Real Host Bridge
+
+The AM64x root complex, from `k3-am64-main.dtsi`:
 
 ```dts
-pcie@80000000 {
-        compatible = "vendor,soc-pcie";
+pcie0_rc: pcie@f102000 {
+        compatible = "ti,am64-pcie-host", "ti,j721e-pcie-host";
+        reg = <0x00 0x0f102000 0x00 0x1000>,
+              <0x00 0x0f100000 0x00 0x400>,
+              <0x00 0x0d000000 0x00 0x00800000>,
+              <0x06 0x00000000 0x00 0x00001000>; /* ECAM (4 KB) */
+        reg-names = "intd_cfg", "user_cfg", "reg", "cfg";
+        interrupt-names = "link_state";
+        interrupts = <GIC_SPI 203 IRQ_TYPE_EDGE_RISING>;
         device_type = "pci";
-        reg = <0x0 0x80000000 0x0 0x100000>;
-        bus-range = <0x00 0xff>;
+        ti,syscon-pcie-ctrl = <&pcie0_ctrl 0x0>;
+        max-link-speed = <2>;
+        num-lanes = <1>;
+        power-domains = <&k3_pds 114 TI_SCI_PD_EXCLUSIVE>;
+        clocks = <&k3_clks 114 0>, <&serdes0 CDNS_TORRENT_REFCLK_DRIVER>;
+        clock-names = "fck", "pcie_refclk";
         #address-cells = <3>;
         #size-cells = <2>;
-        ranges = < /* PCI space -> CPU space windows */ >;
-        dma-ranges = < /* PCI DMA -> system memory */ >;
-        msi-parent = <&its>;
-        status = "okay";
+        bus-range = <0x0 0xff>;
+        cdns,no-bar-match-nbits = <64>;
+        vendor-id = <0x104c>;
+        device-id = <0xb010>;
+        msi-map = <0x0 &gic_its 0x0 0x10000>;
+        ranges = <0x01000000 0x00 0x00001000 0x06 0x00001000 0x00 0x00100000>, /* IO (1 MB) */
+                 <0x02000000 0x00 0x00101000 0x06 0x00101000 0x00 0xffeff000>; /* 32-bit Non-Prefetchable MEM (4 GB - 1 MB - 4 KB) */
+        dma-ranges = <0x02000000 0x0 0x0 0x0 0x0 0x00000010 0x0>;
+        status = "disabled";
 };
 ```
 
-The three-cell child address, `ranges`, `dma-ranges`, INTx, and MSI encodings are explained in [PCI Host Bridges, Address Windows, And Interrupts](../addressing-and-bus-modeling/pci-host-bridges-address-windows-and-interrupts.md). This page focuses on the controller integration around them.
+The three-cell child address, `ranges`, `dma-ranges`, and the 4 KiB configuration window are decoded in [PCI Host Bridges, Address Windows, And Interrupts](../addressing-and-bus-modeling/pci-host-bridges-address-windows-and-interrupts.md). This page focuses on the controller integration around them.
 
 ## Root-Complex Resources
 
-Real controllers commonly add:
+The SoC node above already shows most categories a real controller needs:
 
-- DBI, configuration, application, and ATU register regions
-- core/auxiliary/reference clocks and resets
-- PHYs and lane counts
-- regulator supplies
-- PERST#, CLKREQ#, WAKE#, and presence signals
-- legacy INTx mapping and MSI/MSI-X controller relationships
-- IOMMU stream/requester-ID maps
+- four register regions, named because the driver looks them up by name
+- a functional clock and the reference clock, which here comes from the SERDES (`CDNS_TORRENT_REFCLK_DRIVER`)
+- a TI-SCI power domain and a syscon handle into the PCIe control MMR
+- link limits: Gen2 and one lane
+- an MSI relationship: `msi-map` sends requester IDs `0x0`–`0xffff` to the GIC ITS unchanged
+- the link-state interrupt; there is no `interrupt-map` here, so legacy INTx is not described
 
-Property names and reset polarity come from the controller binding. PERST# may be owned by the host driver, a slot controller, firmware, or a GPIO-backed reset property. Duplicate control produces timing races.
+The AM642 EVM adds the board half (`k3-am642-evm.dts`):
+
+```dts
+&serdes_ln_ctrl {
+        idle-states = <AM64_SERDES0_LANE0_PCIE0>;
+};
+
+&serdes0 {
+        serdes0_pcie_link: phy@0 {
+                reg = <0>;
+                cdns,num-lanes = <1>;
+                #phy-cells = <0>;
+                cdns,phy-type = <PHY_TYPE_PCIE>;
+                resets = <&serdes_wiz0 1>;
+        };
+};
+
+&pcie0_rc {
+        status = "okay";
+        reset-gpios = <&exp1 5 GPIO_ACTIVE_HIGH>;
+        phys = <&serdes0_pcie_link>;
+        phy-names = "pcie-phy";
+        num-lanes = <1>;
+};
+```
+
+The single SERDES lane is muxed to PCIe0; the AM642 SK muxes it to USB instead, which is why its PCIe stays disabled. PERST# comes through the I²C expander `exp1`, so the root complex also depends on `main_i2c1`.
+
+The reset polarity needs care. PERST# is active low on the wire, yet the board says `GPIO_ACTIVE_HIGH`. `pci-j721e` requests the line `GPIOD_OUT_LOW`, waits the 100 ms `PCIE_T_PVPERL_MS`, and then sets it to logical 1 to *release* reset, the reverse of the usual reset-GPIO convention. The Kontron SA67 board file says so explicitly: “This is low active, but the driver itself is broken and already inverts the logic.” Writing `GPIO_ACTIVE_LOW` here would hold the endpoint in reset whenever the driver thinks it released it. Always check the driver as well as the binding, and never “fix” such a flag in one board without fixing the driver and every board together.
 
 ## Link Training Before Enumeration
 
