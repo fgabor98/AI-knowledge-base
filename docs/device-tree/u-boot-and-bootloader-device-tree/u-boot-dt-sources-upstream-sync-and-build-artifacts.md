@@ -27,7 +27,7 @@ Keep those deltas explicit and small. A `*-u-boot.dtsi` should explain bootloade
 
 ## U-Boot's Devicetree Source Flow
 
-The U-Boot documentation describes supported source locations and automatic inclusion of a U-Boot-specific `.dtsi` chosen from board, SoC, CPU, vendor, or generic names. Exact precedence evolves; inspect the documentation and build output for the release in use.
+The U-Boot documentation describes supported source locations and automatic inclusion of a U-Boot-specific `.dtsi`. In TI U-Boot (v2026.01-rc3), `scripts/Makefile.lib` tries, in order, `arch/arm/dts/<dts-name>-u-boot.dtsi`, then `<CONFIG_SYS_SOC>-u-boot.dtsi`, `<CONFIG_SYS_CPU>-u-boot.dtsi`, `<CONFIG_SYS_VENDOR>-u-boot.dtsi`, and `u-boot.dtsi`, and includes only the first that exists. Build with `DEVICE_TREE_DEBUG=1` to print the candidates and the choice. Exact precedence evolves between releases.
 
 Conceptually:
 
@@ -42,6 +42,23 @@ selected base DTS
   -> phase filtering
   -> spl/u-boot-spl.dtb or tpl/u-boot-tpl.dtb
 ```
+
+For the AM642 SK, the two builds compose differently:
+
+```text
+A53: dts/upstream/src/arm64/ti/k3-am642-sk.dts    (Linux source, CONFIG_OF_UPSTREAM=y)
+       + arch/arm/dts/k3-am642-sk-u-boot.dtsi       (found by <dts-name>-u-boot.dtsi)
+       -> dts/upstream/src/arm64/ti/k3-am642-sk.dtb
+
+R5:  arch/arm/dts/k3-am642-r5-sk.dts              (U-Boot only)
+       #include "k3-am642-sk.dts"                   (the same Linux source)
+       #include "k3-am64-sk-lp4-1600MTs.dtsi"       (DDR timing)
+       #include "k3-am64-ddr.dtsi"
+       #include "k3-am642-sk-u-boot.dtsi"
+       + a53_0 (ti,am654-rproc) and sysctrler (ti,am654-tisci-rproc-r5) nodes
+```
+
+The R5 tree adds hardware the Linux tree never describes: DDR controller timing, and the A53 cluster as a remote processor that the R5 SPL starts. The `-u-boot.dtsi` adds U-Boot-only choices such as `chosen { tick-timer = &main_timer0; }` and disables `sdhci0`, which on the SK carries the SDIO Wi-Fi module.
 
 External includes can carry product keys or deployment-specific data that must not be committed upstream. Their presence makes the build environment part of DT provenance; record and authenticate them.
 
@@ -63,7 +80,7 @@ A clean textual merge does not prove driver compatibility. U-Boot and Linux can 
 
 ## Configuration Selects The Default Tree
 
-Board configuration commonly selects a default Devicetree name. Multi-platform builds can compile several DTBs and choose later. Distinguish:
+Board configuration commonly selects a default Devicetree name. Multi-platform builds can compile several DTBs and choose later. `am64x_evm_a53_defconfig` has `CONFIG_DEFAULT_DEVICE_TREE="ti/k3-am642-evm"` and `CONFIG_OF_LIST="ti/k3-am642-evm ti/k3-am642-sk"`; the R5 defconfig uses `k3-am642-r5-evm` and `CONFIG_SPL_OF_LIST="k3-am642-r5-evm k3-am642-r5-sk"`. Distinguish:
 
 - build-time default
 - list of DTBs built or packaged

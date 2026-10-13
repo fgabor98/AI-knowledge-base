@@ -12,21 +12,7 @@ U-Boot can apply DT overlays before booting Linux. Correct application requires 
 
 ## Base And Overlay Build Requirements
 
-An overlay normally uses fragment targets and fixups resolved against symbols in the base:
-
-```dts
-/dts-v1/;
-/plugin/;
-
-&spi2 {
-        status = "okay";
-
-        sensor@0 {
-                compatible = "vendor,product-sensor";
-                reg = <0>;
-        };
-};
-```
+An overlay normally uses fragment targets and fixups resolved against symbols in the base. The AM62x SK's `k3-am62x-sk-hdmi-audio.dtso` targets `&mcasp1`, `&sii9022`, and `&codec_audio` (see [A Real Label-Targeted Overlay](../overlays-in-depth/overlay-source-fragments-and-target-selection.md#a-real-label-targeted-overlay)).
 
 Compile the base with symbol information when label-based targets require it, and compile the overlay as a plugin. The resulting DTB/DTBO metadata can include `__symbols__`, `__fixups__`, and local-fixup data.
 
@@ -34,7 +20,22 @@ Labels are source/build interfaces used to produce fixups; Linux ultimately cons
 
 ## Work On The Working FDT
 
-Set and inspect the OS-bound working tree:
+TI's default environment applies overlays from SD/eMMC with this script (`include/env/ti/mmc.env`):
+
+```text
+get_overlay_mmc=
+        fdt address ${fdtaddr};
+        fdt resize 0x100000;
+        for overlay in $name_overlays;
+        do;
+        load mmc ${bootpart} ${dtboaddr} ${bootdir}/dtb/${overlay} &&
+        fdt apply ${dtboaddr};
+        done;
+```
+
+With `ti_common.env`'s `fdtaddr=0x88000000` and `dtboaddr=0x89000000`, the base DTB may grow to 16 MiB before it reaches the overlay buffer, and the script adds 1 MiB of free space. Note what the script does *not* do. A missing file skips only that overlay, because of `&&`. A failed `fdt apply` does not stop the loop or the boot. Neither result is all-or-nothing, so a product built on this environment must add its own failure policy.
+
+To inspect the working tree by hand:
 
 ```text
 => fdt addr ${fdt_addr_r}
@@ -51,8 +52,8 @@ Keep the base DTB, overlay blobs, kernel, initrd, U-Boot runtime, and decompress
 Applying an overlay grows the base blob. Use the supported resizing operation with a capacity derived from actual artifacts plus margin:
 
 ```text
-=> fdt resize 0x10000
-=> fdt apply ${overlay_addr_r}
+=> fdt resize 0x100000
+=> fdt apply ${dtboaddr}
 ```
 
 The command syntax and semantics depend on U-Boot version; the documented `fdt` command is authoritative.
@@ -97,14 +98,17 @@ Before boot:
 ```text
 => fdt print /model
 => fdt print /chosen
-=> fdt print /soc/spi@...
-=> fdt get value status /soc/spi@... status
+=> fdt print /sound-sii9022
+=> fdt get value st /sound status
+=> echo ${st}
 ```
+
+After the HDMI audio overlay, `/sound-sii9022` exists and `st` is `disabled`.
 
 Host-side CI:
 
 ```sh
-fdtoverlay -i base.dtb -o merged.dtb revision.dtbo module.dtbo
+fdtoverlay -i k3-am625-sk.dtb -o merged.dtb k3-am62x-sk-hdmi-audio.dtbo
 dtc -I dtb -O dts -o merged.dts merged.dtb
 ```
 

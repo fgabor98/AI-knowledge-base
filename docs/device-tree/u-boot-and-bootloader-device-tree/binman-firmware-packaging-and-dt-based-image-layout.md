@@ -25,39 +25,55 @@ A common design uses binman to place an SPL and a signed FIT into a boot-media i
 
 ## Image Description
 
-A simplified description might be:
+TI's AM64x boot chain is three binman images, described in `arch/arm/dts/k3-am64x-binman.dtsi` and the shared `k3-binman.dtsi`:
+
+| Image | Built by | Contents | First consumer |
+|---|---|---|---|
+| `tiboot3.bin` | R5 build | R5 SPL, TIFS system firmware, its board configuration, wrapped in an X.509 certificate | boot ROM |
+| `tispl.bin` | A53 build | FIT: TF-A, OP-TEE, A53 SPL, one SPL DTB per board | R5 SPL |
+| `u-boot.img` | A53 build | FIT: U-Boot proper, one DTB per board | A53 SPL |
+
+The first, for HS silicon (trimmed):
 
 ```dts
-binman {
-        image {
-                pad-byte = <0xff>;
-
-                spl {
-                        type = "u-boot-spl";
+&binman {
+        tiboot3-am64x_sr2-hs-evm.bin {
+                filename = "tiboot3-am64x_sr2-hs-evm.bin";
+                ti-secure-rom {
+                        content = <&u_boot_spl>, <&ti_sci_enc>,
+                                <&combined_sysfw_cfg>, <&sysfw_inner_cert>;
+                        combined;
+                        keyfile = "custMpk.pem";
+                        load = <0x70000000>;
+                        load-sysfw = <0x44000>;
+                        load-sysfw-data = <0x7b000>;
                 };
-
-                fit {
-                        description = "Signed firmware FIT";
+                u_boot_spl: u-boot-spl {
+                        no-expanded;
                 };
+                ti_sci_enc: ti-fs-enc.bin {
+                        filename = "ti-sysfw/ti-sci-firmware-am64x_sr2-hs-enc.bin";
+                        type = "blob-ext";
+                };
+                /* combined-sysfw-cfg.bin, sysfw inner certificate */
         };
 };
 ```
 
-Real entry syntax is defined by current binman documentation and platform includes. Entry types can expand into nested sections and add headers, padding, hashes, compression, or vendor formats.
+`ti-secure-rom` is a TI-specific entry type that builds the certificate the ROM checks; `load` places the R5 SPL in on-chip SRAM at `0x70000000`. The `tispl.bin` FIT, from the shared template, gives each payload its load address from Kconfig (TF-A at `CONFIG_K3_ATF_LOAD_ADDR`, OP-TEE at `CONFIG_K3_OPTEE_LOAD_ADDR`). It also has a `dm` image whose `blob-ext` is `/dev/null` on AM64x, because this SoC has no separate device-manager firmware.
 
 Keep layout policy in a reusable SoC U-Boot fragment when it is common, then narrow board/product differences deliberately. Do not hide product offsets in an unrelated hardware node.
 
 ## Account For Every Byte
 
-For each final image, generate an interval map:
+For each final image and the medium it lives on, generate an interval map. For the AM642 EVM's OSPI flash, the Linux DTS partitions and TI U-Boot's defconfigs agree on:
 
-| Offset range | Entry | Alignment | Consumer |
-|---|---|---|---|
-| ROM header | platform wrapper | SoC requirement | boot ROM |
-| SPL/TPL | early loader | load/execute constraint | ROM/CPU |
-| padding | erased/pad value | next component | none |
-| FIT | U-Boot + firmware payloads | storage/read constraint | SPL/U-Boot |
-| environment | mutable region | erase block | U-Boot |
+| Offset range | Entry | Consumer |
+|---|---|---|
+| `0x000000`–`0x0fffff` | `tiboot3.bin` | boot ROM |
+| `0x100000`–`0x2fffff` | `tispl.bin` (`CONFIG_SYS_SPI_U_BOOT_OFFS=0x100000` in the R5 defconfig) | R5 SPL |
+| `0x300000`–`0x6fffff` | `u-boot.img` (`CONFIG_SYS_SPI_U_BOOT_OFFS=0x300000` in the A53 defconfig) | A53 SPL |
+| `0x700000`–`0x77ffff` | environment and its backup | U-Boot |
 
 Check:
 

@@ -28,6 +28,8 @@ next-stage image buffer
 hardware-reserved SRAM
 ```
 
+For the AM64x R5 SPL, `am64x_evm_r5_defconfig` gives the static part. The SPL links at `CONFIG_SPL_TEXT_BASE=0x70000000` in on-chip MSRAM. `CONFIG_SPL_MAX_SIZE=0x180000` caps the image at 1.5 MiB, and `CONFIG_SPL_SIZE_LIMIT=0x190000` caps image plus BSS, minus a 16 KiB stack (`CONFIG_SPL_SIZE_LIMIT_PROVIDE_STACK=0x4000`). BSS starts at `0x7019b800` and holds up to 16 KiB. The A53 build later loads TF-A into the same SRAM at `0x701c0000` (`CONFIG_K3_ATF_LOAD_ADDR` in `am64x_evm_a53_defconfig`), so the R5 SPL's footprint must stay below it.
+
 Use linker-map symbols and binman output rather than estimating from file size. A binary may omit BSS bytes that occupy runtime memory. Appending a DTB immediately after a binary without accounting for BSS can let zero-initialization overwrite it; binman's phase-specific entries include mechanisms for this layout.
 
 ## Code Size And Runtime Size Are Different
@@ -90,7 +92,13 @@ need selected DTB to configure I2C
   -> need board ID to select DTB
 ```
 
-Break it with a compatible generic early configuration, immutable identity, or a prior trusted stage.
+Break it with a compatible generic early configuration, immutable identity, or a prior trusted stage. TI's AM64x R5 SPL uses the first approach. `am64x_evm_r5_defconfig` sets `CONFIG_SPL_MULTI_DTB_FIT=y` and `CONFIG_SPL_OF_LIST="k3-am642-r5-evm k3-am642-r5-sk"`, so SPL starts on the EVM tree. `do_dt_magic()` in `arch/arm/mach-k3/am64x/am642_init.c` then:
+
+1. calls `do_board_detect()`, which reads the EEPROM on I2C bus 0 at `0x50` and, on failure, at `0x51`. The EVM's EEPROM is at `0x50` and the SK's at `0x51`, so an SK logs `EEPROM not available at 0x50, trying to read at 0x51`.
+2. calls `fdtdec_resetup()`, which asks `board_fit_config_name_match()` whether another packaged DTB is a better match
+3. if the tree changed, runs `dm_uninit()` and `dm_init_and_scan()` to rebuild driver model on the SK tree
+
+This works only because `main_i2c0` and its pins are identical in both early trees.
 
 ## Selection Is A Trust Decision
 

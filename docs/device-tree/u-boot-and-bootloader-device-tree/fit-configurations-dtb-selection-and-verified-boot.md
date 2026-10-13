@@ -12,55 +12,60 @@ The Flat Image Tree format packages kernels, DTBs, ramdisks, firmware, and other
 
 ## FIT Is A Container Description
 
-An Image Tree Source might contain:
+TI's `tispl.bin` for AM64x is a FIT built by binman. Its images and configurations, from `k3-binman.dtsi` and `k3-am64x-binman.dtsi` (trimmed):
 
 ```dts
-/dts-v1/;
-
-/ {
-        description = "Product boot bundle";
+fit {
+        description = "Configuration to load ATF and SPL";
         #address-cells = <1>;
 
         images {
-                kernel {
-                        description = "Linux kernel";
-                        data = /incbin/("Image");
-                        type = "kernel";
+                atf {
+                        description = "ARM Trusted Firmware";
+                        type = "firmware";
                         arch = "arm64";
-                        os = "linux";
-                        compression = "none";
+                        os = "arm-trusted-firmware";
+                        load = <CONFIG_K3_ATF_LOAD_ADDR>;
+                        entry = <CONFIG_K3_ATF_LOAD_ADDR>;
+                };
+                tee { /* OP-TEE at CONFIG_K3_OPTEE_LOAD_ADDR */ };
+                dm { /* empty on AM64x */ };
+                spl { /* A53 SPL at CONFIG_SPL_TEXT_BASE */ };
 
-                        hash {
-                                algo = "sha256";
-                        };
+                fdt-0 {
+                        description = "k3-am642-evm";
+                        type = "flat_dt";
+                        /* spl/dts/ti/k3-am642-evm.dtb */
                 };
 
-                fdt-a {
-                        description = "Board A DTB";
-                        data = /incbin/("board-a.dtb");
+                fdt-1 {
+                        description = "k3-am642-sk";
                         type = "flat_dt";
-                        arch = "arm64";
-                        compression = "none";
-
-                        hash {
-                                algo = "sha256";
-                        };
+                        /* spl/dts/ti/k3-am642-sk.dtb */
                 };
         };
 
         configurations {
-                default = "conf-a";
+                default = "conf-0";
 
-                conf-a {
-                        description = "Board A";
-                        kernel = "kernel";
-                        fdt = "fdt-a";
+                conf-0 {
+                        description = "k3-am642-evm";
+                        firmware = "atf";
+                        loadables = "tee", "dm", "spl";
+                        fdt = "fdt-0";
+                };
+
+                conf-1 {
+                        description = "k3-am642-sk";
+                        firmware = "atf";
+                        loadables = "tee", "dm", "spl";
+                        fdt = "fdt-1";
                 };
         };
 };
 ```
 
-This tree describes payload relationships. `fdt-a` contains the hardware tree that becomes the working FDT; the FIT's own root is not passed to Linux as its board description.
+This tree describes payload relationships. `fdt-1` contains a hardware tree; the FIT's own root is not passed to anything as a board description. On HS devices, each image is wrapped by a `ti-secure` entry so the R5 SPL can authenticate it through system firmware.
 
 ## Configuration Selection
 
@@ -68,7 +73,7 @@ A FIT can contain several DTBs and configurations. Selection can be:
 
 - explicit in a `bootm` image/configuration expression
 - the FIT's declared default
-- chosen by board/platform matching logic
+- chosen by board/platform matching logic, as on AM64x, where the R5 SPL calls `board_fit_config_name_match()` for each configuration description and accepts `k3-am642-sk` only when the EEPROM says `AM64-SKEVM` or `AM64B-SKEVM`. `fit_find_config_node()` in `boot/common_fit.c` matches on each configuration's `description`, not its node name, and falls back to `default` (here the EVM) when nothing matches
 - selected by SPL while loading U-Boot and other firmware
 - integrated with bootstd or a product-specific policy
 
@@ -81,6 +86,15 @@ identity source
   -> unknown/revision fallback
   -> selected kernel, DTB, ramdisk, and loadables
 ```
+
+TI's kernel-FIT path names configurations after the DTB file. `ti_common.env` builds the configuration from `fdtfile` and any overlays:
+
+```text
+get_fit_config=setexpr name_fit_config gsub / _ conf-${fdtfile}
+run_fit=run get_fit_config; bootm ${addr_fit}#${name_fit_config}${overlaystring}
+```
+
+So `fdtfile=ti/k3-am642-sk.dtb` selects `conf-ti_k3-am642-sk.dtb`, and each entry in `name_overlays` appends `#conf-<overlay>`. The configuration name is now an interface between the board code, the environment, and the FIT build.
 
 Matching only a broad compatible can choose a tree that boots but drives the wrong regulator, GPIO, or memory topology. Use the strongest stable identity available and define forward-compatible revision policy.
 

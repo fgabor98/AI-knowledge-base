@@ -78,12 +78,14 @@ Command support and flags depend on version/configuration. Capture the selected 
 An extlinux stanza can specify a Devicetree path, use a directory, or rely on platform behavior depending on parser support and configuration:
 
 ```text
-label product-a
-    linux /Image
-    initrd /initramfs.img
-    fdt /dtbs/vendor/product-a.dtb
+label linux
+    kernel /boot/Image
+    fdtdir /boot/dtb
+    fdtoverlays ti/k3-am62x-sk-hdmi-audio.dtbo
     append root=PARTUUID=... ro
 ```
+
+With `fdtdir`, U-Boot's `boot/pxe_utils.c` appends `${fdtfile}` to the directory. On the AM64x and AM62x boards, TI board code sets `fdtfile` from the EEPROM, for example `ti/k3-am642-sk.dtb`. If `fdtfile` is unset, the code falls back to `${soc}-${board}.dtb`. `fdtoverlays` paths are resolved against the same directory. A stanza with `fdt` instead names one file and ignores `fdtfile` entirely.
 
 Audit:
 
@@ -98,14 +100,18 @@ An extlinux file is policy input. Authenticate it or ensure that every selected 
 
 ## Scripted Loading
 
-A classic script might do:
+TI's AM64x environment boots from SD or eMMC with these pieces (`include/env/ti/mmc.env`, `board/ti/am64x/am64x.env`):
 
 ```text
-load mmc 0:2 ${kernel_addr_r} /boot/Image
-load mmc 0:2 ${fdt_addr_r} /boot/dtbs/${fdtfile}
-fdt addr ${fdt_addr_r}
-booti ${kernel_addr_r} - ${fdt_addr_r}
+name_kern=Image
+bootdir=/boot
+get_kern_mmc=load mmc ${bootpart} ${loadaddr}
+        ${bootdir}/${name_kern}
+get_fdt_mmc=load mmc ${bootpart} ${fdtaddr} ${bootdir}/dtb/${fdtfile}
+run_kern=booti ${loadaddr} ${rd_spec} ${fdtaddr}
 ```
+
+`bootcmd_ti_mmc` runs `get_kern_mmc`, `get_fdt_mmc`, `get_overlay_mmc`, and `run_kern` in sequence, separated by `;`, so a failed load does not stop the next step.
 
 Review every command result. U-Boot scripts that ignore a failed `load` can boot with stale memory from a prior attempt. Before boot:
 
@@ -136,14 +142,17 @@ Never let normal boot silently fall into an unauthenticated recovery path.
 
 ## Board Identity To Filename
 
-Keep mapping deterministic:
+Keep mapping deterministic. TI's AM64x board file does it in one table (`board/ti/am64x/evm.c`):
 
-```text
-trusted board ID + revision
-  -> supported product identity
-  -> DTB/FIT configuration
-  -> compatible kernel and overlays
+```c
+static struct ti_fdt_map ti_am64_evm_fdt_map[] = {
+        {"am64x_gpevm", "ti/k3-am642-evm.dtb"},
+        {"am64x_skevm", "ti/k3-am642-sk.dtb"},
+        { /* Sentinel. */ }
+};
 ```
+
+`setup_board_eeprom_env()` starts from `am64x_gpevm`, reads the EEPROM, and switches to `am64x_skevm` only if the board name is `AM64-SKEVM` or `AM64B-SKEVM`. An unreadable EEPROM jumps straight to the default, and an unknown name prints `Unidentified board claims ... in eeprom header` and also keeps the EVM. `ti_set_fdt_env()` then sets `fdtfile`, falling back to `CONFIG_DEFAULT_FDT_FILE` or `CONFIG_DEFAULT_DEVICE_TREE` if no entry matches. An SK with a blank EEPROM therefore boots the EVM's DTB. That may be acceptable on a development board; a product should decide it deliberately.
 
 Sanitize identifiers before constructing paths. Handle unprogrammed EEPROM, invalid CRC, unknown future revisions, and conflicting identity sources. Log both the raw source and selected normalized identity without exposing secrets.
 
