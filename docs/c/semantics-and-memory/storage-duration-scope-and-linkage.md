@@ -267,6 +267,7 @@ For portable source, hide such declarations behind a platform header or macro an
 - [Compilation, Linking, And ABI](../compilation-linking-and-abi/index.md)
 - [Embedded C And Hardware](../embedded-c-and-hardware/index.md)
 - [C Programming](../index.md)
+- [Case study 14: Common Symbol Merge](../failure-case-studies/14-common-symbol-merge.md)
 
 ## References
 

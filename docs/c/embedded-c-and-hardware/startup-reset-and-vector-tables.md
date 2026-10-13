@@ -196,6 +196,7 @@ Avoid semihosting or complex formatted I/O as the only early diagnostic. A GPIO 
 - [Interrupts, Exceptions, And Faults](./interrupts-exceptions-and-faults.md)
 - [Bootloaders And Firmware Images](./bootloaders-and-firmware-images.md)
 - [Freestanding C](./freestanding-c.md)
+- [Case study 13: Misspelled Weak Handler](../failure-case-studies/13-misspelled-weak-handler.md)
 
 ## References
 

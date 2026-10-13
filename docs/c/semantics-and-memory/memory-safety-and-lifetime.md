@@ -293,6 +293,7 @@ Tools have blind spots. DMA, MMIO, custom pools, and interrupt races usually nee
 - [Memory Layout And Allocation](./memory-layout-and-allocation.md)
 - [DMA, Cache, And Memory Barriers](../embedded-c-and-hardware/dma-cache-and-memory-barriers.md)
 - [C Programming](../index.md)
+- [Case study 09: Pointer Into A Reallocated Array](../failure-case-studies/09-pointer-into-reallocated-array.md)
 
 ## References
 

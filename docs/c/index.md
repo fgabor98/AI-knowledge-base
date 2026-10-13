@@ -24,7 +24,8 @@ This section is currently an outline scaffold. Individual pages contain topic li
 8. [Embedded C And Hardware](./embedded-c-and-hardware/index.md)
 9. [Platform-Specific C](./platform-specific-c/index.md)
 10. [Advanced C](./advanced-c/index.md)
-11. [Professional Practice And Capstones](./professional-and-capstone/index.md)
+11. [Failure Case Studies](./failure-case-studies/index.md)
+12. [Professional Practice And Capstones](./professional-and-capstone/index.md)
 
 ## Coverage
 
@@ -39,6 +40,7 @@ This section is currently an outline scaffold. Individual pages contain topic li
 - Embedded C, interrupts, MMIO, DMA, real-time constraints, and drivers
 - Processor platforms, embedded Linux, multicore systems, and compiler extensions
 - Advanced concurrency, optimization, numerical C, protocols, and interoperability
+- Reproducible failure case studies with compiler output, detection results, and fixes
 - Senior engineering practice and integrated capstone projects
 
 ## Related Tracks

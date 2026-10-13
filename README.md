@@ -41,6 +41,15 @@ scripts/validate-bash.sh
 
 This check expects `shellcheck` to be installed.
 
+Run the C failure case-study checks:
+
+```sh
+scripts/validate-c-case-studies.sh
+```
+
+This check expects GCC with AddressSanitizer and UndefinedBehaviorSanitizer support,
+plus `shellcheck`.
+
 ## Content Workflow
 
 1. Extend `docs/topic-map.md`.

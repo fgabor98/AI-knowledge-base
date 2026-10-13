@@ -211,6 +211,10 @@ Suppressions and no-sanitize attributes should be narrow, justified, and reviewe
 - [Memory Safety And Lifetime](./memory-safety-and-lifetime.md)
 - [Correctness, Quality, And Security](../correctness-quality-and-security/index.md)
 - [C Programming](../index.md)
+- [Case study 01: NULL Check After Dereference](../failure-case-studies/01-null-check-after-dereference.md)
+- [Case study 02: Signed Overflow Check](../failure-case-studies/02-signed-overflow-check.md)
+- [Case study 03: Out-Of-Bounds Loop](../failure-case-studies/03-out-of-bounds-loop.md)
+- [Case study 04: Shift Count Equal To Width](../failure-case-studies/04-shift-count-width.md)
 
 ## References
 

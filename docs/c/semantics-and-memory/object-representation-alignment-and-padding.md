@@ -235,6 +235,8 @@ A cast is rarely a complete representation boundary.
 - [Structures, Unions, And Enumerations](../language-fundamentals/structures-unions-and-enums.md)
 - [Platform-Specific C](../platform-specific-c/index.md)
 - [C Programming](../index.md)
+- [Case study 10: Struct Padding Leak](../failure-case-studies/10-struct-padding-leak.md)
+- [Case study 12: Enum Size ABI Drift](../failure-case-studies/12-enum-size-abi-drift.md)
 
 ## References
 

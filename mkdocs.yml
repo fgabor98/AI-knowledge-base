@@ -140,6 +140,23 @@ nav:
           - "Protocols And Serialization": c/advanced-c/protocols-and-serialization.md
           - "C Library Implementation": c/advanced-c/c-library-implementation.md
           - "C Interoperability": c/advanced-c/c-interoperability.md
+      - "Failure Case Studies":
+          - "Failure Case Studies": c/failure-case-studies/index.md
+          - "01. NULL Check After Dereference": c/failure-case-studies/01-null-check-after-dereference.md
+          - "02. Signed Overflow Check": c/failure-case-studies/02-signed-overflow-check.md
+          - "03. Out-Of-Bounds Loop": c/failure-case-studies/03-out-of-bounds-loop.md
+          - "04. Shift Count Equal To Width": c/failure-case-studies/04-shift-count-width.md
+          - "05. Unsigned Short Promotion": c/failure-case-studies/05-unsigned-short-promotion.md
+          - "06. read() Error Passes A Length Check": c/failure-case-studies/06-read-error-passes-length-check.md
+          - "07. snprintf() Accumulation": c/failure-case-studies/07-snprintf-accumulation.md
+          - "08. Strict Aliasing Type Pun": c/failure-case-studies/08-strict-aliasing-type-pun.md
+          - "09. Pointer Into A Reallocated Array": c/failure-case-studies/09-pointer-into-reallocated-array.md
+          - "10. Struct Padding Leak": c/failure-case-studies/10-struct-padding-leak.md
+          - "11. Spin-Wait Data Race": c/failure-case-studies/11-spin-wait-data-race.md
+          - "12. Enum Size ABI Drift": c/failure-case-studies/12-enum-size-abi-drift.md
+          - "13. Misspelled Weak Handler": c/failure-case-studies/13-misspelled-weak-handler.md
+          - "14. Common Symbol Merge": c/failure-case-studies/14-common-symbol-merge.md
+          - "15. Fast-Math NaN Check": c/failure-case-studies/15-fast-math-nan-check.md
       - "Professional Practice And Capstones":
           - "Professional Practice And Capstones": c/professional-and-capstone/index.md
           - "Code Review And Maintainability": c/professional-and-capstone/code-review-and-maintainability.md

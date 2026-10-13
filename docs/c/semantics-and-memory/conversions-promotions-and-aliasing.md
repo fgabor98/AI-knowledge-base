@@ -251,6 +251,9 @@ A policy should permit well-understood low-level code while requiring evidence f
 - [Const, Volatile, And Restrict](./qualifiers-const-volatile-restrict.md)
 - [Object Representation, Alignment, And Padding](./object-representation-alignment-and-padding.md)
 - [C Programming](../index.md)
+- [Case study 05: Unsigned Short Promotion](../failure-case-studies/05-unsigned-short-promotion.md)
+- [Case study 06: read() Error Passes A Length Check](../failure-case-studies/06-read-error-passes-length-check.md)
+- [Case study 08: Strict Aliasing Type Pun](../failure-case-studies/08-strict-aliasing-type-pun.md)
 
 ## References
 
