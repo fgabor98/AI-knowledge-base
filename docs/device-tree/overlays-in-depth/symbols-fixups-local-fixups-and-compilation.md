@@ -20,10 +20,14 @@ dtc -@ -I dts -O dtb -o base.dtb base.dts
 
 ```dts
 __symbols__ {
-        spi2 = "/soc/spi@2000000";
-        gpio1 = "/soc/gpio@2100000";
+        mcasp1 = "/bus@f0000/audio-controller@2b10000";
+        sii9022 = "/bus@f0000/i2c@20010000/bridge-hdmi@3b";
+        codec_audio = "/sound";
+        /* ... one entry per label ... */
 };
 ```
+
+This is from the AM625 SK DTB. Kbuild adds `-@` for every base listed in a `*-dtbs` overlay composition in `arch/arm64/boot/dts/ti/Makefile`, such as `k3-am625-sk-hdmi-audio-dtbs := k3-am625-sk.dtb k3-am62x-sk-hdmi-audio.dtbo`.
 
 The property name is the source label and its string value is the node path. The exact phandle values assigned during compilation are implementation details; the exported label-to-path mapping is the useful overlay interface.
 
@@ -48,28 +52,32 @@ The source needs both:
 
 In a base DTB, `__symbols__` makes source labels available to overlays. In an overlay, `__symbols__` can describe labels introduced by that overlay:
 
+The HDMI audio overlay defines `hdmi_audio` and `hdmi_dailink_master`, and its compiled DTBO carries:
+
 ```dts
-module_reg: regulator-module {
-        compatible = "regulator-fixed";
-        ...
+__symbols__ {
+        hdmi_audio = "/fragment@0/__overlay__/sound-sii9022";
+        hdmi_dailink_master = "/fragment@0/__overlay__/sound-sii9022/simple-audio-card,cpu";
 };
 ```
 
-A later stacked overlay may reference `&module_reg` after the first overlay has been resolved and applied. This creates an explicit stack dependency; the first overlay cannot be removed while the later overlay depends on it.
+After application, the merged tree's entry becomes `hdmi_audio = "/sound-sii9022"`. A later stacked overlay may reference `&hdmi_audio` after the first overlay has been resolved and applied. This creates an explicit stack dependency; the first overlay cannot be removed while the later overlay depends on it.
 
 Treat exported overlay labels as ABI if other artifacts ship independently.
 
 ## `__fixups__`: External References
 
-Given:
+In the HDMI audio overlay, `mcasp1`, `sii9022`, and `codec_audio` do not exist inside the detached overlay. The compiled DTBO includes one `__fixups__` property per external symbol:
 
 ```dts
-&spi2 {
-        reset-gpios = <&gpio1 12 1>;
+__fixups__ {
+        mcasp1 = "/fragment@0/__overlay__/sound-sii9022/simple-audio-card,cpu:sound-dai:0\0/fragment@1:target:0";
+        sii9022 = "/fragment@0/__overlay__/sound-sii9022/simple-audio-card,codec:sound-dai:0";
+        codec_audio = "/fragment@2:target:0";
 };
 ```
 
-`spi2` and `gpio1` do not exist inside the detached overlay. The compiled DTBO includes `__fixups__` properties keyed by those external symbol names. Each value identifies one or more patch sites conceptually as:
+Each value lists one or more patch sites as:
 
 ```text
 overlay-node-path : property-name : byte-offset
@@ -88,18 +96,28 @@ Do not hand-edit offsets. Recompile the source.
 ## `__local_fixups__`: References Inside The Overlay
 
 ```dts
-&pinctrl {
-        module_pins: module-pins {
-                ...
-        };
-};
+simple-audio-card,bitclock-master = <&hdmi_dailink_master>;
+simple-audio-card,frame-master = <&hdmi_dailink_master>;
 
-&spi2 {
-        pinctrl-0 = <&module_pins>;
+hdmi_dailink_master: simple-audio-card,cpu { /* ... */ };
+```
+
+`hdmi_dailink_master` is defined inside the overlay. The compiler records both references:
+
+```dts
+__local_fixups__ {
+        fragment@0 {
+                __overlay__ {
+                        sound-sii9022 {
+                                simple-audio-card,bitclock-master = <0x00>;
+                                simple-audio-card,frame-master = <0x00>;
+                        };
+                };
+        };
 };
 ```
 
-`module_pins` is defined inside the overlay. Its compiler-assigned phandle can collide with phandles already used by the base. The resolver shifts overlay-local phandles into a non-conflicting range, then uses `__local_fixups__` to find and shift every reference to them by the same delta.
+ Its compiler-assigned phandle can collide with phandles already used by the base. The resolver shifts overlay-local phandles into a non-conflicting range, then uses `__local_fixups__` to find and shift every reference to them by the same delta.
 
 The local-fixup tree mirrors the overlay paths/properties that contain local phandle cells and stores patch offsets. It does not resolve labels against the base.
 
@@ -107,10 +125,10 @@ The local-fixup tree mirrors the overlay paths/properties that contain local pha
 
 | Reference | Definition lives in | Metadata | Resolver action |
 |---|---|---|---|
-| `&spi2` target | base | `__fixups__` | look up symbol and patch base phandle |
-| `&gpio1` GPIO provider | base | `__fixups__` | look up symbol and patch provider phandle |
-| `&module_pins` | same overlay | `__local_fixups__` | add relocation delta to local reference |
-| `&module_reg` from later overlay | earlier applied overlay | later overlay `__fixups__` | resolve against symbol exported into live tree |
+| `&codec_audio` target | base | `__fixups__` | look up symbol and patch base phandle |
+| `&mcasp1` in `sound-dai` | base | `__fixups__` | look up symbol and patch provider phandle |
+| `&hdmi_dailink_master` | same overlay | `__local_fixups__` | add relocation delta to local reference |
+| `&hdmi_audio` from a later overlay | earlier applied overlay | later overlay `__fixups__` | resolve against symbol exported into the merged tree |
 
 This classification is the fastest way to diagnose missing-symbol versus bad-local-relocation errors.
 
@@ -136,7 +154,7 @@ Tool output format varies, and decompilation is not a byte-for-byte source recon
 
 ## Symbol Names Are Case-Sensitive Interfaces
 
-Renaming `spi2` to `spi_2`, moving a label to another node, or building without `-@` breaks independently compiled overlays even when the node's runtime properties are identical. Export labels deliberately and avoid exporting incidental internal labels; [Labels Are Exported Interfaces](base-compatibility-versioning-and-overlay-abi.md#labels-are-exported-interfaces) defines what a stable label promises.
+Renaming `mcasp1` to `mcasp_1`, moving a label to another node, or building without `-@` breaks independently compiled overlays even when the node's runtime properties are identical. Export labels deliberately and avoid exporting incidental internal labels; [Labels Are Exported Interfaces](base-compatibility-versioning-and-overlay-abi.md#labels-are-exported-interfaces) defines what a stable label promises.
 
 ## Paths Inside Fixup Metadata
 
