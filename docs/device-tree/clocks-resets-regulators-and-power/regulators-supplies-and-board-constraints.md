@@ -16,44 +16,80 @@ Consumers name their rails with binding-defined `*-supply` properties that carry
 
 ## Fixed Regulators
 
-A board rail controlled by a GPIO can use the generic fixed-regulator binding:
+A board rail controlled by a GPIO can use the generic fixed-regulator binding. The AM642 SK SD-card load switch (`k3-am642-sk.dts`):
 
 ```dts
-reg_3v3_sensor: regulator-3v3-sensor {
+vdd_mmc1: regulator-2 {
+        /* TPS2051BD */
         compatible = "regulator-fixed";
-        regulator-name = "sensor-3v3";
+        regulator-name = "vdd_mmc1";
         regulator-min-microvolt = <3300000>;
         regulator-max-microvolt = <3300000>;
-        gpio = <&gpio2 4 GPIO_ACTIVE_HIGH>;
+        regulator-boot-on;
         enable-active-high;
-        startup-delay-us = <5000>;
-        vin-supply = <&reg_5v0_main>;
+        vin-supply = <&vcc_3v3_sys>;
+        gpio = <&exp1 3 GPIO_ACTIVE_HIGH>;
 };
 ```
 
-The example uses the fixed-regulator binding's historical `gpio` plus its separate `enable-active-high` semantics. Do not replace it mechanically with a consumer-style `gpios` property; follow the exact schema supported by the kernel version and binding.
+The node uses the fixed-regulator binding's historical `gpio` plus its separate `enable-active-high`. Do not replace it mechanically with a consumer-style `gpios` property, and note that for this compatible Linux ignores the GPIO flag entirely: `drivers/gpio/gpiolib-of.c` takes the polarity only from `enable-active-high`.
+
+A rail with selectable voltages uses `regulator-gpio`. The AM62x LP SK switches SD I/O between 1.8 V and 3.3 V for UHS modes (`k3-am62-lp-sk.dts`):
+
+```dts
+vddshv_sdio: regulator-4 {
+        compatible = "regulator-gpio";
+        regulator-name = "vddshv_sdio";
+        regulator-min-microvolt = <1800000>;
+        regulator-max-microvolt = <3300000>;
+        regulator-boot-on;
+        vin-supply = <&ldo1_reg>;
+        gpios = <&main_gpio0 31 GPIO_ACTIVE_HIGH>;
+        states = <1800000 0x0>,
+                 <3300000 0x1>;
+};
+
+&sdhci1 {
+        vmmc-supply = <&vdd_mmc1>;
+        vqmmc-supply = <&vddshv_sdio>;
+};
+```
 
 `startup-delay-us` describes how long the supply takes to become usable after enable. `off-on-delay-us` constrains rapid cycling. Neither property substitutes for a power-good signal when hardware requires one.
 
 ## PMIC Regulators
 
-PMIC bindings commonly contain a `regulators` subnode with provider-specific child names:
+PMIC bindings commonly contain a `regulators` subnode with provider-specific child names. The LP8733 on the PHYTEC phyCORE-AM64x (`k3-am64-phycore-som.dtsi`, trimmed):
 
 ```dts
-pmic@2d {
-        compatible = "example,board-pmic";
-        reg = <0x2d>;
+pmic@61 {
+        compatible = "ti,lp8733";
+        reg = <0x61>;
+
+        buck0-in-supply = <&vcc_5v0_som>;
+        buck1-in-supply = <&vcc_5v0_som>;
 
         regulators {
-                vdd_cpu: buck1 {
-                        regulator-name = "vdd-cpu";
-                        regulator-min-microvolt = <800000>;
-                        regulator-max-microvolt = <1100000>;
-                        regulator-ramp-delay = <12500>;
+                vdd_core: buck0 {
+                        regulator-name = "VDD_CORE";
+                        regulator-min-microvolt = <750000>;
+                        regulator-max-microvolt = <750000>;
+                        regulator-always-on;
+                        regulator-boot-on;
+                };
+
+                vdd_3v3: buck1 {
+                        regulator-name = "VDD_3V3";
+                        regulator-min-microvolt = <3300000>;
+                        regulator-max-microvolt = <3300000>;
+                        regulator-always-on;
+                        regulator-boot-on;
                 };
         };
 };
 ```
+
+Every rail is pinned to one voltage and always on: AM64x has no Linux-driven DVFS, so the board forbids any voltage change. The input supplies (`buck0-in-supply`) connect the PMIC into the regulator graph.
 
 The child node name, allowed properties, modes, and current limits are provider-specific. Use the PMIC schema in addition to the generic regulator schema.
 
@@ -61,7 +97,7 @@ Do not confuse similarly named timing constraints. `regulator-ramp-delay` is a s
 
 ## Constraints Are Board Safety Data
 
-The provider may physically generate 0.6–1.5 V, while the board safely permits only 0.8–1.1 V. DT constraints restrict the framework to the board range. Validate them against:
+A PMIC buck may physically generate a wide range while the board safely permits one value; the phyCORE `VDD_CORE` above is constrained to exactly 0.75 V. DT constraints restrict the framework to the board range. Validate them against:
 
 - the consumer absolute maximum and recommended operating values
 - PMIC accuracy and transient behavior

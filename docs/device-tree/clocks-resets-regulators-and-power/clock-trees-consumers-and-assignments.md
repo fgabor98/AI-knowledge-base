@@ -31,11 +31,25 @@ These properties answer different questions:
 
 A device can consume a clock without assigning its parent or rate. It can also configure an assigned clock that is not one of its direct inputs, when its binding and clock topology justify doing so.
 
+Two AM64x nodes show both forms (`k3-am64-main.dtsi`). A timer selects a parent for its functional clock, and the OSPI controller selects a parent and a rate:
+
 ```dts
-assigned-clocks = <&clock_controller SOC_CLK_VIDEO_CORE>;
-assigned-clock-parents = <&clock_controller SOC_CLK_PLL_VIDEO>;
-assigned-clock-rates = <600000000>;
+main_timer0: timer@2400000 {
+        clocks = <&k3_clks 36 1>;
+        clock-names = "fck";
+        assigned-clocks = <&k3_clks 36 1>;
+        assigned-clock-parents = <&k3_clks 36 2>;
+};
+
+ospi0: spi@fc40000 {
+        clocks = <&k3_clks 75 6>;
+        assigned-clocks = <&k3_clks 75 6>;
+        assigned-clock-parents = <&k3_clks 75 7>;
+        assigned-clock-rates = <166666666>;
+};
 ```
+
+On K3, “parents” such as `<&k3_clks 36 2>` are other clock IDs of the same TI-SCI device: the firmware exposes each mux input as its own clock, and `assigned-clock-parents` asks the firmware to switch the mux.
 
 Parallel assignment arrays are positional. A zero entry can mean “leave unchanged” where the generic clock binding permits it. Read the binding before using omission or zero as a placeholder.
 

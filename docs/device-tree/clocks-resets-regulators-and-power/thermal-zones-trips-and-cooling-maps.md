@@ -12,40 +12,55 @@ Thermal DT data connects temperature sensing to hardware safety limits and avail
 
 ## Sensor Providers
 
-A thermal sensor provider declares `#thermal-sensor-cells` according to its binding:
+A thermal sensor provider declares `#thermal-sensor-cells` according to its binding. The AM62x voltage and thermal manager (`k3-am62-wakeup.dtsi`):
 
 ```dts
-tsens: thermal-sensor@13000 {
-        compatible = "example,soc-tsens";
-        reg = <0x13000 0x1000>;
+wkup_vtm0: temperature-sensor@b00000 {
+        compatible = "ti,j7200-vtm";
+        reg = <0x00 0xb00000 0x00 0x400>,
+              <0x00 0xb01000 0x00 0x400>;
+        power-domains = <&k3_pds 95 TI_SCI_PD_EXCLUSIVE>;
         #thermal-sensor-cells = <1>;
 };
 ```
 
-The argument might select a physical sensor channel. Calibration data may come from nvmem, firmware, or provider registers. A plausible temperature is not proof that the right channel or calibration was selected.
+The argument selects a sensor within the VTM. Calibration data may come from eFuses, firmware, or provider registers. A plausible temperature is not proof that the right channel or calibration was selected.
 
 ## Thermal Zones And Trips
+
+`k3-am62-thermal.dtsi` defines one zone per sensor (one shown):
 
 ```dts
 #include <dt-bindings/thermal/thermal.h>
 
-thermal-zones {
-        gpu_thermal: gpu-thermal {
-                polling-delay-passive = <250>;
-                polling-delay = <1000>;
-                thermal-sensors = <&tsens 2>;
+thermal_zones: thermal-zones {
+        main0_thermal: main0-thermal {
+                polling-delay-passive = <250>;  /* milliSeconds */
+                polling-delay = <500>;          /* milliSeconds */
+                thermal-sensors = <&wkup_vtm0 0>;
 
                 trips {
-                        gpu_passive: trip-passive {
-                                temperature = <85000>;
-                                hysteresis = <3000>;
+                        main0_alert: main0-alert {
+                                temperature = <95000>;
+                                hysteresis = <2000>;
                                 type = "passive";
                         };
 
-                        gpu_critical: trip-critical {
-                                temperature = <105000>;
-                                hysteresis = <2000>;
+                        main0_crit: main0-crit {
+                                temperature = <105000>; /* milliCelsius */
+                                hysteresis = <2000>;    /* milliCelsius */
                                 type = "critical";
+                        };
+                };
+
+                cooling-maps {
+                        map0 {
+                                trip = <&main0_alert>;
+                                cooling-device =
+                                        <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+                                        <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+                                        <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+                                        <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
                         };
                 };
         };
@@ -53,6 +68,8 @@ thermal-zones {
 ```
 
 Temperatures and hysteresis are expressed in millicelsius. The values must reflect the correct physical location and platform limit. A sensor under the CPU cluster may not safely represent a distant PMIC or accelerator hotspot.
+
+Compare AM64x (`k3-am64-thermal.dtsi`): its zones contain only a 105 °C critical trip and no cooling maps, because AM64x has no CPU frequency scaling to act as a cooling device. The only mitigation left is shutdown.
 
 Hysteresis prevents rapid toggling around a threshold. It is not a substitute for validating sensor noise, thermal inertia, governor behavior, and the latency of the cooling action.
 
@@ -69,25 +86,7 @@ Do not rely on a critical trip as the normal control loop. The passive/active sy
 
 ## Cooling Devices And Maps
 
-A frequency-scaled device can register as a cooling device when its driver/subsystem supports it:
-
-```dts
-gpu@60000 {
-        #cooling-cells = <2>;
-};
-```
-
-The thermal zone maps a trip to allowed cooling-state limits:
-
-```dts
-cooling-maps {
-        map-gpu {
-                trip = <&gpu_passive>;
-                cooling-device = <&gpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-                contribution = <1024>;
-        };
-};
-```
+A frequency-scaled device can register as a cooling device when its driver supports it. Each AM625 CPU node declares `#cooling-cells = <2>`, and cpufreq registers the shared policy as a cooling device. The map above lets the 95 °C passive trip throttle all four cores.
 
 The two cooling cells represent minimum and maximum cooling states according to the generic binding. State numbering is cooling-device specific; for frequency cooling, higher cooling state normally means more throttling, not a higher frequency.
 

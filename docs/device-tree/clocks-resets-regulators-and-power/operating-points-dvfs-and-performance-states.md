@@ -12,30 +12,46 @@ An operating performance point is a supported hardware state, commonly a frequen
 
 ## The `operating-points-v2` Relationship
 
+The AM625 Cortex-A53 table (`k3-am625.dtsi`, three of six entries shown):
+
 ```dts
-gpu_opp_table: opp-table-gpu {
-        compatible = "operating-points-v2";
+cpu0: cpu@0 {
+        compatible = "arm,cortex-a53";
+        operating-points-v2 = <&a53_opp_table>;
+        clocks = <&k3_clks 135 0>;
+        #cooling-cells = <2>;
+        /* ... */
+};
+
+a53_opp_table: opp-table {
+        compatible = "operating-points-v2-ti-cpu";
+        opp-shared;
+        syscon = <&opp_efuse_table>;
 
         opp-200000000 {
                 opp-hz = /bits/ 64 <200000000>;
-                opp-microvolt = <800000>;
+                opp-supported-hw = <0x01 0x0007>;
+                clock-latency-ns = <6000000>;
         };
 
-        opp-600000000 {
-                opp-hz = /bits/ 64 <600000000>;
-                opp-microvolt = <950000>;
-                clock-latency-ns = <200000>;
+        opp-1000000000 {
+                opp-hz = /bits/ 64 <1000000000>;
+                opp-supported-hw = <0x01 0x0006>;
+                clock-latency-ns = <6000000>;
         };
-};
 
-gpu@60000 {
-        operating-points-v2 = <&gpu_opp_table>;
+        opp-1250000000 {
+                opp-hz = /bits/ 64 <1250000000>;
+                opp-supported-hw = <0x01 0x0004>;
+                clock-latency-ns = <6000000>;
+                opp-suspend;
+        };
 };
 ```
 
-The 64-bit frequency encoding is significant. `opp-hz` is in hertz. Voltage values are in microvolts. Power values such as `opp-microwatt` are in microwatts. Unit mistakes can remain syntactically valid while producing a catastrophically wrong table.
+The 64-bit frequency encoding is significant. `opp-hz` is in hertz, voltages in microvolts, and power values such as `opp-microwatt` in microwatts. Unit mistakes can remain syntactically valid while producing a catastrophically wrong table.
 
-The node names are descriptive; the properties carry semantics. Keep names consistent with schema conventions so review tools and humans can detect duplicates easily.
+This table has no `opp-microvolt` at all: on AM625 Linux changes only the frequency, through the TI-SCI clock, while the core rail stays fixed. The 6 ms `clock-latency-ns` reflects a firmware-mediated clock change, not a PLL lock time.
 
 ## Voltage Forms And Tolerance
 
@@ -51,15 +67,15 @@ If a device has multiple supplies, the OPP binding can express multiple voltage 
 
 ## Shared OPP Tables
 
-`opp-shared` means devices sharing the table must transition together because they share the underlying performance domain. It is not merely a source-deduplication hint.
+`opp-shared` means devices sharing the table must transition together because they share the underlying performance domain; all four AM625 A53 cores reference `a53_opp_table` and form one cpufreq policy. It is not merely a source-deduplication hint.
 
 For CPUs, several CPU nodes can reference one shared table when the hardware uses a common clock/voltage domain. If cores can scale independently, falsely marking the table shared sacrifices behavior; omitting it for a truly coupled cluster can produce conflicting requests.
 
 ## Supported Hardware And Variants
 
-SoCs often ship in speed bins, revisions, or process variants. OPP bindings support hardware masks and named property sets for platform-specific selection. The platform OPP driver can disable entries based on fuses or firmware.
+SoCs often ship in speed bins, revisions, or process variants. The AM625 table above is the union of every speed grade, gated per entry by `opp-supported-hw = <revision eFuse-mask>`. The `ti-cpufreq` driver reads the speed-grade eFuse through the `syscon` phandle (`opp_efuse_table`, a 4-byte register in the wake-up control module) and enables only matching entries: per the binding, the second cell's bits are “the eFuse bits that indicate the particular OPP is available.” `am625_efuse_xlate()` turns the eFuse value into a cumulative mask for the K, S, and T speed grades (bits 0, 1, 2), so 1.25 GHz (`0x0004`) runs only on T-grade parts, 1 GHz (`0x0006`) on S and T, and the lower frequencies (`0x0007`) on all three.
 
-Do not create one permissive table containing the union of every SKU unless the selection mechanism reliably removes unsafe entries before scaling begins. Validate the slowest silicon, voltage tolerance, and thermal extremes—not only a typical bench unit.
+Do not create a union table like this unless the selection mechanism reliably removes unsafe entries before scaling begins, as `ti-cpufreq` does here. Validate the slowest silicon, voltage tolerance, and thermal extremes—not only a typical bench unit.
 
 `status = "disabled"` can mark an OPP unavailable by default where the schema allows it. Board DTS layers may enable an OPP only when hardware evidence justifies the override.
 
