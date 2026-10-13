@@ -12,49 +12,94 @@ Embedded audio contains several overlapping graphs: physical digital audio inter
 
 ## Components And Machine Topology
 
-ASoC separates CPU/platform DAIs, codecs, and the machine-level description that connects them. An audio graph card can express DAI relationships through graph ports when the participating bindings support it.
+ASoC separates CPU DAIs, codecs, and the machine-level description that connects them. TI's AM62x SK uses `simple-audio-card`, which links DAIs with `sound-dai` phandles rather than graph endpoints. From `k3-am62x-sk-common.dtsi` (trimmed):
 
 ```dts
-sound {
-        compatible = "audio-graph-card";
-        label = "Board Audio";
-        dais = <&cpu_dai_port>;
+tlv320_mclk: clk-0 {
+        #clock-cells = <0>;
+        compatible = "fixed-clock";
+        clock-frequency = <12288000>;
 };
 
-&i2s0 {
-        cpu_dai_port: port {
-                cpu_endpoint: endpoint {
-                        remote-endpoint = <&codec_endpoint>;
-                        dai-format = "i2s";
-                        bitclock-master;
-                        frame-master;
-                };
+codec_audio: sound {
+        compatible = "simple-audio-card";
+        simple-audio-card,name = "AM62x-SKEVM";
+        simple-audio-card,widgets =
+                "Headphone",    "Headphone Jack",
+                "Line",         "Line In",
+                "Microphone",   "Microphone Jack";
+        simple-audio-card,routing =
+                "Headphone Jack",       "HPLOUT",
+                "Headphone Jack",       "HPROUT",
+                "LINE1L",               "Line In",
+                "LINE1R",               "Line In",
+                "MIC3R",                "Microphone Jack",
+                "Microphone Jack",      "Mic Bias";
+        simple-audio-card,format = "dsp_b";
+        simple-audio-card,bitclock-master = <&sound_master>;
+        simple-audio-card,frame-master = <&sound_master>;
+        simple-audio-card,bitclock-inversion;
+
+        simple-audio-card,cpu {
+                sound-dai = <&mcasp1>;
+        };
+
+        sound_master: simple-audio-card,codec {
+                sound-dai = <&tlv320aic3106>;
+                clocks = <&tlv320_mclk>;
         };
 };
 
-codec@1a {
-        compatible = "vendor,audio-codec";
-        reg = <0x1a>;
+&mcasp1 {
+        #sound-dai-cells = <0>;
+        op-mode = <0>;          /* MCASP_IIS_MODE */
+        tdm-slots = <2>;
 
-        port {
-                codec_endpoint: endpoint {
-                        remote-endpoint = <&cpu_endpoint>;
-                };
+        serial-dir = <  /* 0: INACTIVE, 1: TX, 2: RX */
+               1 0 2 0
+               0 0 0 0
+               0 0 0 0
+               0 0 0 0
+        >;
+};
+```
+
+The codec, `tlv320aic3106: audio-codec@1b`, is an I²C child of `main_i2c1` with `#sound-dai-cells = <0>` and three supplies.
+
+The graph-based alternative is `audio-graph-card`. Renesas's `ulcb-audio-graph-card.dtsi` lists DAI ports in `dais`, and each endpoint pairs a CPU port with a codec or HDMI port:
+
+```dts
+sound_card: sound {
+        compatible = "audio-graph-card";
+        label = "snd-ulcb";
+        dais = <&snd_ulcb1 /* (A) CPU0 <-> ak4613 */
+                &snd_ulcb2 /* (B) CPU1  -> HDMI   */
+        >;
+};
+
+snd_ulcb1: port@0 {
+        reg = <0>;
+        rsnd_for_ak4613: endpoint {
+                remote-endpoint = <&ak4613_endpoint>;
+                bitclock-master;
+                frame-master;
+                playback = <&ssi0>, <&src0>, <&dvc0>;
+                capture  = <&ssi1>, <&src1>, <&dvc1>;
         };
 };
 ```
 
-This is illustrative: exact master/format property placement has evolved across simple-card and audio-graph bindings. Use the schemas and examples for the target kernel rather than translating mechanically.
+Both forms describe the same contract. The graph form helps when one device has several audio ports, such as an HDMI transmitter's `port@2` sound input; the SiI9022 binding likewise reserves `port@3` for sound input. Use the schemas and examples for the target kernel rather than translating mechanically between them.
 
 ## DAI Link Contract
 
-For each CPU-to-codec link, prove:
+For each CPU-to-codec link, prove the following. The AM62x SK values are in parentheses:
 
-- serial format: I²S, left/right justified, DSP A/B, AC97, or binding-defined mode
-- bit-clock and frame-clock mastership
-- clock inversion and polarity
-- time-division multiplexing slots, masks, width, and channel mapping
-- system/master clock source and allowed rates
+- serial format (`dsp_b`)
+- bit-clock and frame-clock mastership (both driven by the codec, through `sound_master`)
+- clock inversion and polarity (`bitclock-inversion`)
+- TDM slots, masks, width, and channel mapping (two slots; McASP serializer 0 transmits and serializer 2 receives)
+- system/master clock source and allowed rates (a fixed 12.288 MHz oscillator to the codec, a 48 kHz family rate)
 - sample formats and rates supported by both endpoints
 
 Mastership is directional. Exactly one capable component should drive each clock. Two masters cause contention; zero masters leaves a static bus.
@@ -63,7 +108,7 @@ Mastership is directional. Exactly one capable component should drive each clock
 
 The endpoint link connects component DAIs. DAPM describes audio signal paths and power dependencies within components and across board widgets such as microphones, headphone jacks, and amplifiers. A graph endpoint does not mean every mixer route is active.
 
-Properties such as `audio-routing` commonly list sink/source name pairs whose strings must match codec widgets and board widgets exactly. A card can register successfully while a misspelled DAPM route produces silence.
+Routing properties list sink/source name pairs whose strings must match codec widgets and board widgets exactly. In the SK card, `HPLOUT`, `HPROUT`, `LINE1L`, `LINE1R`, `MIC3R`, and `Mic Bias` are widget names defined in `sound/soc/codecs/tlv320aic3x.c`; `Headphone Jack`, `Line In`, and `Microphone Jack` are board widgets declared in `simple-audio-card,widgets`. A card can register successfully while a misspelled route produces silence.
 
 ## Multi-Link And DPCM Systems
 

@@ -12,15 +12,22 @@ last_reviewed: null
 
 ## Reciprocal Links
 
-```dts
-tx_out: endpoint {
-        remote-endpoint = <&rx_in>;
-};
+The AM62x SK links its display controller to the HDMI bridge. In `k3-am62x-sk-common.dtsi`, the DSS side is:
 
-rx_in: endpoint {
-        remote-endpoint = <&tx_out>;
+```dts
+&dss_ports {
+        /* VP2: DPI Output */
+        port@1 {
+                reg = <1>;
+
+                dpi1_out: endpoint {
+                        remote-endpoint = <&sii9022_in>;
+                };
+        };
 };
 ```
+
+and the bridge side, under `bridge-hdmi@3b`, is `sii9022_in: endpoint { remote-endpoint = <&dpi1_out>; };`.
 
 Treat reciprocity as required even where a parser could follow one direction. It enables independent traversal from either component and allows validation to detect dangling or mismatched edges.
 
@@ -34,36 +41,71 @@ Review each property through its binding rather than applying a blanket “both 
 
 ## Parallel Video Example
 
+The AM437x Starter Kit (`arch/arm/boot/dts/ti/omap/am437x-sk-evm.dts`) connects an OmniVision OV2659 sensor to the VPFE capture block over an 8-bit parallel bus:
+
 ```dts
-endpoint {
-        remote-endpoint = <&receiver>;
-        bus-type = <5>;
-        bus-width = <8>;
-        data-shift = <0>;
-        hsync-active = <1>;
-        vsync-active = <1>;
-        pclk-sample = <1>;
+&i2c1 {
+        ov2659@30 {
+                compatible = "ovti,ov2659";
+                reg = <0x30>;
+                clocks = <&clkout1_mux_ck>;
+                clock-names = "xvclk";
+
+                port {
+                        ov2659_1: endpoint {
+                                remote-endpoint = <&vpfe0_ep>;
+                                link-frequencies = /bits/ 64 <70000000>;
+                        };
+                };
+        };
+};
+
+&vpfe0 {
+        /* Camera port */
+        port {
+                vpfe0_ep: endpoint {
+                        remote-endpoint = <&ov2659_1>;
+                        ti,am437x-vpfe-interface = <0>;
+                        bus-width = <8>;
+                        hsync-active = <0>;
+                        vsync-active = <0>;
+                };
+        };
 };
 ```
 
-The numeric `bus-type` comes from the generic video binding, but device schemas can constrain allowed types. `bus-width` and `data-shift` describe connected data lines. Polarity and sample-edge settings must match transmitter behavior, board inversions, and receiver capability.
+The two ends carry different properties because each binding asks for what its driver must configure. The receiver states bus width and sync polarities (active low) and selects its interface mode through a vendor property. The sensor states only the link frequency it should run at. No `bus-type` is given; the parallel bus is implied by the receiver binding. Polarities must match the transmitter's behavior and any board inversion.
 
-Do not infer pixel format from bus width alone. An 8-bit bus might carry raw Bayer, YUV, RGB components over multiple cycles, or another device-defined encoding.
+Do not infer pixel format from bus width alone. An 8-bit bus might carry raw Bayer, YUV, or RGB components over multiple cycles.
 
 ## CSI-2 And Lane Maps
 
+From the AM62x SK OV5640 overlay (`k3-am62x-sk-csi2-ov5640.dtso`), sensor side:
+
 ```dts
-sensor_out: endpoint {
-        remote-endpoint = <&csi_in>;
-        clock-lanes = <0>;
-        data-lanes = <1 2>;
-        link-frequencies = /bits/ 64 <400000000>;
+port {
+        csi2_cam0: endpoint {
+                remote-endpoint = <&csi2rx0_in_sensor>;
+                clock-lanes = <0>;
+                data-lanes = <1 2>;
+        };
 };
 ```
 
-Lane indices describe physical lane mapping according to the binding. Array order can represent logical lane order. Verify lane swaps and polarity support on both devices; PCB swaps are valid only if the receiver/transmitter can compensate and the binding describes them.
+and receiver side, on the Cadence CSI-2 bridge:
 
-`link-frequencies` describes supported bus link frequencies, not pixel rate. Derive required throughput from format, resolution, blanking/overhead, frame rate, lane count, and protocol encoding. A sensor clock, pixel rate control, and CSI-2 link frequency are related but not interchangeable.
+```dts
+csi2rx0_in_sensor: endpoint {
+        remote-endpoint = <&csi2_cam0>;
+        bus-type = <4>; /* CSI2 DPHY. */
+        clock-lanes = <0>;
+        data-lanes = <1 2>;
+};
+```
+
+Here both ends agree on one clock lane and two data lanes; `bus-type = <4>` (MIPI CSI-2 D-PHY in `video-interfaces.yaml`) appears only on the receiver. Lane indices describe physical lane mapping. Verify lane swaps and polarity support on both devices; a PCB lane swap is valid only if one side can compensate and its binding describes it.
+
+The OV5640 endpoint has no `link-frequencies`, while the J721E SK's IMX219 overlay sets `link-frequencies = /bits/ 64 <456000000>` because `sony,imx219.yaml` requires it and the driver checks the value against the rates it supports. `link-frequencies` lists allowed bus link frequencies, not the pixel rate. Derive required throughput from format, resolution, blanking, frame rate, lane count, and protocol encoding.
 
 ## Format Negotiation And Constraints
 

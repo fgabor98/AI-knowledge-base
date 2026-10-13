@@ -12,58 +12,84 @@ Camera systems combine a control bus with a high-bandwidth media path. The senso
 
 ## Control And Data Are Separate
 
-```dts
-&i2c2 {
-        camera@36 {
-                compatible = "vendor,image-sensor";
-                reg = <0x36>;
-                clocks = <&camera_clock>;
-                avdd-supply = <&reg_cam_2v8>;
-                dvdd-supply = <&reg_cam_1v2>;
-                reset-gpios = <&gpio4 2 GPIO_ACTIVE_LOW>;
+The AM62x SK camera overlay `k3-am62x-sk-csi2-ov5640.dtso` adds an OmniVision OV5640 behind a PCA9543 mux on `main_i2c2` (trimmed):
 
-                port {
-                        sensor_out: endpoint {
-                                remote-endpoint = <&csi_in>;
-                                clock-lanes = <0>;
-                                data-lanes = <1 2>;
-                                link-frequencies = /bits/ 64 <400000000>;
+```dts
+&main_i2c2 {
+        i2c-mux@71 {
+                compatible = "nxp,pca9543";
+                reg = <0x71>;
+
+                /* CAM port */
+                i2c@1 {
+                        reg = <1>;
+
+                        ov5640: camera@3c {
+                                compatible = "ovti,ov5640";
+                                reg = <0x3c>;
+                                clocks = <&clk_ov5640_fixed>;
+                                clock-names = "xclk";
+                                AVDD-supply = <&reg_2p8v>;
+                                DOVDD-supply = <&reg_1p8v>;
+                                DVDD-supply = <&reg_1p5v>;
+                                powerdown-gpios = <&exp1 13 GPIO_ACTIVE_LOW>;
+                                port {
+                                        csi2_cam0: endpoint {
+                                                remote-endpoint = <&csi2rx0_in_sensor>;
+                                                clock-lanes = <0>;
+                                                data-lanes = <1 2>;
+                                        };
+                                };
                         };
                 };
         };
 };
 ```
 
-The I²C address says how to configure the sensor. The endpoint says where image data travels. Its external clock is not the CSI-2 link frequency or pixel rate.
+The I²C path (bus, mux channel 1, address `0x3c`) says how to configure the sensor. The endpoint says where image data travels. Everything else is a resource edge: the overlay defines `clk_ov5640_fixed` as a 12 MHz `fixed-clock` (an oscillator on the camera module, not the CSI-2 link frequency) and three always-on fixed regulators, and `powerdown-gpios` comes from the SK's `exp1`.
 
 ## Receiver And Downstream Processing
 
+The receiver half lives in `k3-am62-main.dtsi` (trimmed):
+
 ```dts
-&csi_receiver {
-        ports {
-                #address-cells = <1>;
-                #size-cells = <0>;
+ti_csi2rx0: ticsi2rx@30102000 {
+        compatible = "ti,j721e-csi2rx-shim";
+        dmas = <&main_bcdma 0 0x4700 0>;
+        dma-names = "rx0";
+        reg = <0x00 0x30102000 0x00 0x1000>;
+        power-domains = <&k3_pds 182 TI_SCI_PD_EXCLUSIVE>;
+        ranges;
+        status = "disabled";
 
-                port@0 {
-                        reg = <0>;
-                        csi_in: endpoint {
-                                remote-endpoint = <&sensor_out>;
-                                clock-lanes = <0>;
-                                data-lanes = <1 2>;
-                        };
-                };
+        cdns_csi2rx0: csi-bridge@30101000 {
+                compatible = "ti,j721e-csi2rx", "cdns,csi2rx";
+                phys = <&dphy0>;
+                phy-names = "dphy";
 
-                port@1 {
-                        reg = <1>;
-                        csi_out: endpoint {
-                                remote-endpoint = <&isp_in>;
+                ports {
+                        csi0_port0: port@0 {
+                                reg = <0>;
+                                status = "disabled";
                         };
+
+                        csi0_port1: port@1 {
+                                reg = <1>;
+                                status = "disabled";
+                        };
+                        /* port@2 .. port@4 */
                 };
         };
 };
 ```
 
-The receiver may expose multiple virtual channels, inputs, or source pads. Port and endpoint numbering are provider-defined. A remote-endpoint connection does not select a virtual-channel policy unless the binding includes such a property.
+The overlay sets `port@0` to `okay`, adds the `csi2rx0_in_sensor` endpoint, and enables `ti_csi2rx0` and `dphy0`. Three details are worth noting:
+
+- ports can carry `status`. The SoC file declares all five Cadence ports disabled, and the overlay enables only the one it wires.
+- the Cadence bridge's stream outputs (`port@1`–`port@4`) are not linked to anything. The TI shim finds the bridge as its `csi-bridge` child node, not through the graph, and receives frames from it over BCDMA. Containment and graph each carry part of the topology.
+- `cdns-csi2rx` reads only `port@0`/`endpoint@0`. It rejects any bus type other than CSI-2 D-PHY and any `data-lanes` count above what the hardware supports, then registers an async connection to the remote sensor.
+
+Port and endpoint numbering are binding-defined. A `remote-endpoint` does not select a virtual-channel policy unless the binding includes such a property.
 
 ## Media Controller And V4L2 Subdevices
 
