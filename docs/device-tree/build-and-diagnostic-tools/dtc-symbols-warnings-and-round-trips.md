@@ -31,11 +31,11 @@ Prefer the project build system for production artifacts. Standalone commands ar
 ## Symbol Generation
 
 ```bash
-dtc -@ -I dts -O dtb -o base-with-symbols.dtb base.dts
-dtc -@ -I dts -O dtb -o module.dtbo module.dtso
+dtc -@ -I dts -O dtb -o k3-am625-sk.dtb k3-am625-sk.pp.dts
+dtc -@ -I dts -O dtb -o k3-am62x-sk-hdmi-audio.dtbo k3-am62x-sk-hdmi-audio.pp.dts
 ```
 
-`-@` emits symbol/fixup information used by label-based overlays. It can change artifact contents and size. Compare symbol-bearing and non-symbol-bearing DTBs semantically before treating a byte/hash difference as a hardware-description change.
+`-@` emits symbol/fixup information used by label-based overlays. It can change artifact contents and size: the AM625 SK DTB is 61,786 bytes with symbols and 46,668 without. Compare symbol-bearing and non-symbol-bearing DTBs semantically before treating a byte/hash difference as a hardware-description change.
 
 Do not add `-@` casually to one ad hoc build while production uses different rules. Make symbol policy explicit in Kbuild or packaging.
 
@@ -132,6 +132,15 @@ For each warning:
 8. confirm no warning was merely hidden by selection changes
 
 Do not globally disable a warning because one downstream tree has historical noise. If a narrowly justified suppression is required, document scope, tool-version rationale, and an exit plan.
+
+Also check whether the input is complete. Two real overlays warn only because `dtc` compiles them without their base:
+
+```text
+k3-am642-evm-icssg1-dualemac.dtso:16.3-51: Warning (alias_paths): /fragment@0/__overlay__/aliases:ethernet1: aliases property is not a valid node (/icssg1-eth/ethernet-ports/port@1)
+k3-am62x-sk-csi2-ov5640.dtso:90.8-105.4: Warning (graph_child_address): /fragment@2/__overlay__/ports: graph node has single child node 'port@0', #address-cells/#size-cells are not necessary
+```
+
+The alias target and the other four `port@N` nodes exist only after the overlay is applied. Decompiling the merged DTBs (`k3-am642-evm.dtb` with the ICSSG overlay, `k3-am625-sk.dtb` with the OV5640 overlay) produces neither warning. Re-check on the merged tree before deciding a warning is real.
 
 ## `dtc` Versus Schema Checks
 

@@ -26,14 +26,14 @@ Target one artifact using the path expected by the architecture makefiles:
 
 ```bash
 make O=build ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-  arch/arm64/boot/dts/acme/falcon.dtb
+  arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
 ```
 
 Exact target paths vary by architecture and kernel version. First find the source and its Makefile entry:
 
 ```bash
-rg -n 'falcon.*\.dtb' arch/arm64/boot/dts
-rg --files arch/arm64/boot/dts | rg 'falcon.*\.dts$'
+rg -n 'k3-am62-lp-sk.*\.dtb' arch/arm64/boot/dts
+rg --files arch/arm64/boot/dts | rg 'k3-am62-lp-sk.*\.dts$'
 ```
 
 Use `make help` and neighboring platform conventions when a direct target is rejected.
@@ -42,7 +42,7 @@ Use `make help` and neighboring platform conventions when a direct target is rej
 
 ```bash
 make O=build ARCH=arm64 V=1 \
-  arch/arm64/boot/dts/acme/falcon.dtb
+  arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
 ```
 
 Verbose output reveals:
@@ -69,7 +69,7 @@ Find candidates:
 
 ```bash
 find build/arch/arm64/boot/dts -name '*.cmd' -print
-rg -n 'falcon\.dtb|falcon\.dts' build/arch/arm64/boot/dts -g '*.cmd'
+rg -n 'k3-am62-lp-sk\.dtb|k3-am62-lp-sk\.dts' build/arch/arm64/boot/dts -g '*.cmd'
 ```
 
 Treat these as generated evidence tied to one build tree, not portable configuration files.
@@ -90,7 +90,7 @@ Look for:
 Search narrowly:
 
 ```bash
-rg -n 'ethernet@|acme,temp100|module_3v3|status' board.preprocessed.dts
+rg -n 'bridge-hdmi@3b|tps65219|vddshv_sdio|status' board.preprocessed.dts
 ```
 
 Do not edit the preprocessed file and deploy its result as a normal fix. Correct the owning source or generated input.
@@ -102,9 +102,9 @@ With `O=build`, generated artifacts belong under the output tree. The source tre
 Before copying a DTB, record:
 
 ```bash
-realpath build/arch/arm64/boot/dts/acme/falcon.dtb
-stat build/arch/arm64/boot/dts/acme/falcon.dtb
-sha256sum build/arch/arm64/boot/dts/acme/falcon.dtb
+realpath build/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
+stat build/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
+sha256sum build/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dtb
 ```
 
 Never choose “the newest `*.dtb` found anywhere” as a release rule. Map one build target to one packaging input explicitly.
@@ -126,7 +126,7 @@ Record generator version, input, output hash, and ownership. A clean DTS diff ca
 After build, find every consumer of the output:
 
 ```bash
-rg -n 'falcon\.dtb|fdtfile|FDT|devicetree' \
+rg -n 'k3-am62-lp-sk\.dtb|fdtfile|FDT|devicetree' \
   Makefile scripts arch boot packaging recipes
 ```
 

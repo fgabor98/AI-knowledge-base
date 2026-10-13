@@ -21,27 +21,29 @@ Tool output becomes useful when it narrows a hypothesis. Use immutable checkpoin
 Example:
 
 ```text
-symptom: second clock missing in driver
-required final fact: clocks has two entries named bus/sample
-C2 built DTB: correct
-C3 packaged FIT DTB: correct
-C4 U-Boot selected DTB: wrong board variant
-root cause: FIT configuration selection, not DTS or driver
+symptom: no HDMI audio card on an AM62x LP SK
+required final fact: /sound-sii9022 exists and /sound is disabled
+P2 built k3-am62-lp-sk.dtb: correct, has __symbols__
+P3 packaged k3-am62-lp-sk.dtb: copied from a v6.6 build, no __symbols__
+P4 U-Boot selected DTB: k3-am625-sk.dtb (wrong board), overlay failed
+root causes: packaging input and U-Boot defconfig, not DTS or driver
 ```
+
+The [lab](device-tree-artifact-provenance-and-diagnosis-lab.md) works through this incident.
 
 ## Artifact Ledger
 
 | Checkpoint | Identity | Hash | Producer/selector | Expected changes |
 |---|---|---|---|---|
-| C0 | source commit + entry DTS | repository state | Kbuild target | includes/macros |
-| C1 | preprocessed DTS | hash | cpp command | expansion only |
-| C2 | built DTB | hash | dtc command | flatten/symbols |
-| C3 | packaged DTB | extracted hash | packaging rule | ideally none |
-| C4 | selected/merged | hash | boot config/overlays | declared overlay delta |
-| C5 | pre-handoff FDT | hash | firmware/U-Boot | owned fixups |
-| C6 | live tree | semantic capture | Linux | early-kernel effects only |
+| P0 | source commit + entry DTS | repository state | Kbuild target | includes/macros |
+| P1 | preprocessed DTS | hash | cpp command | expansion only |
+| P2 | built DTB | hash | dtc command | flatten/symbols |
+| P3 | packaged DTB | extracted hash | packaging rule | ideally none |
+| P4 | selected/merged | hash | boot config/overlays | declared overlay delta |
+| P5 | pre-handoff FDT | hash | firmware/U-Boot | owned fixups |
+| P6 | live tree | semantic capture | Linux | early-kernel effects only |
 
-Do not compare C0 text hash with C2 binary hash. Compare like artifacts or decoded semantics.
+Do not compare P0 text hash with P2 binary hash. Compare like artifacts or decoded semantics.
 
 ## Exact Versus Semantic Comparison
 
@@ -110,10 +112,14 @@ Decompiled, sorted diffs contain noise from phandle renumbering, generated symbo
 Automate high-value invariants:
 
 ```bash
-test "$(fdtget final.dtb / model)" = 'Acme Falcon revision B'
-test "$(fdtget final.dtb /soc/capture@48000000 status)" = 'okay'
-test "$(fdtget final.dtb /soc/capture@48000000 clock-names)" = 'bus sample'
+test "$(fdtget final.dtb / model)" = 'Texas Instruments AM62x LP SK'
+test "$(fdtget final.dtb /sound-sii9022 simple-audio-card,name)" = 'AM62x-Sil9022-HDMI'
+test "$(fdtget final.dtb /sound status)" = 'disabled'
+test "$(fdtget -tx final.dtb /sound-sii9022/simple-audio-card,cpu sound-dai)" = \
+     "$(fdtget -tx final.dtb "$(fdtget final.dtb /__symbols__ mcasp1)" phandle)"
 ```
+
+All four pass on `k3-am62-lp-sk.dtb` with `k3-am62x-sk-hdmi-audio.dtbo` applied. The last one checks the relationship, that the card's CPU DAI resolves to the node the base calls `mcasp1`, rather than a phandle number that changes between builds.
 
 Shell output formatting varies. For robust CI, compare token counts/types or use `libfdt`/structured tooling rather than depending on display whitespace.
 

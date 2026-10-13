@@ -49,20 +49,22 @@ Complete [Boot-Time Mutation And Ownership](boot-time-mutation-and-ownership.md)
 ## The Checkpoint Model
 
 ```text
-C0 source entry point + includes + generated headers
+P0 source entry point + includes + generated headers
   -> preprocess
-C1 preprocessed DTS
+P1 preprocessed DTS
   -> dtc with exact flags/version
-C2 built DTB/DTBO
+P2 built DTB/DTBO
   -> package/copy/sign
-C3 deployed or packaged artifact
+P3 deployed or packaged artifact
   -> boot selection
-C4 selected base + ordered overlays
+P4 selected base + ordered overlays
   -> firmware/bootloader mutations
-C5 final FDT at OS handoff
+P5 final FDT at OS handoff
   -> unflatten/early kernel processing
-C6 Linux live tree and device model
+P6 Linux live tree and device model
 ```
+
+The `P` prefix marks provenance checkpoints. `P5` and `P6` are the same trees as `C5` and `C6` in [Boot-Time Mutation And Ownership](boot-time-mutation-and-ownership.md#treat-the-dtb-as-a-build-product-with-a-timeline); `P0`–`P4` follow the build and packaging path instead of the boot-time mutation path.
 
 At each checkpoint, record identity, hash, producer, command/version, inputs, and expected semantic changes. Debug the first divergence, not the last visible symptom.
 
@@ -79,7 +81,7 @@ At each checkpoint, record identity, hash, producer, command/version, inputs, an
 | What will U-Boot pass to Linux? | working-FDT address, U-Boot `fdt` inspection, captured blob/hash |
 | Which mutation changed the tree? | checkpointed hashes and normalized semantic diffs |
 | Why did a libfdt operation fail? | checked return code and `fdt_strerror()` |
-| Why did no driver appear? | first prove C5/C6 tree identity, then move to runtime diagnosis |
+| Why did no driver appear? | first prove P5/P6 tree identity, then move to runtime diagnosis |
 
 ## Mutation Rule
 

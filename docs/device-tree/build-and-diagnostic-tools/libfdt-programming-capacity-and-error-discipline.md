@@ -35,7 +35,7 @@ int node;
 int len;
 const fdt32_t *cells;
 
-node = fdt_path_offset(fdt, "/soc/device@48000000");
+node = fdt_path_offset(fdt, "/bus@f0000/mmc@fa00000");
 if (node < 0)
         return node;
 
@@ -99,6 +99,8 @@ lookup -> copy/consume bounded data -> mutate -> discard offsets/pointers -> loo
 
 Never hold an internal pointer across `fdt_setprop()`, node addition/deletion, overlay application, open-into, or packing unless the exact API explicitly guarantees it.
 
+A host test against the kernel's `scripts/dtc/libfdt` on the AM62 LP SK DTB shows both failure modes. Adding a string property to `/chosen` in the packed file returns `-3` (`FDT_ERR_NOSPACE`). After `fdt_open_into()` into a buffer 4 KiB larger, the same call succeeds, but a `stdout-path` pointer obtained from `fdt_getprop()` before the write no longer equals the pointer returned after it.
+
 ## Create Writable Capacity
 
 Packed build artifacts often have no free space. Open into a validated larger destination:
@@ -136,9 +138,9 @@ A sequence of successful individual writes is not an atomic product transaction.
 ## Error Reporting
 
 ```c
-ret = fdt_setprop_u32(fdt, node, "clock-frequency", rate);
+ret = fdt_setprop_u32(fdt, node, "temperature", 1000 * maxc);
 if (ret != 0) {
-        log_error("clock-frequency update failed: %s",
+        log_error("critical trip update failed: %s",
                   fdt_strerror(ret));
         return ret;
 }

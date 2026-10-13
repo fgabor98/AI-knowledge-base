@@ -107,8 +107,8 @@ The decoded diff is diagnostic normalization. Preserve exact before/after hashes
 ## Apply Overlays On The Host
 
 ```bash
-fdtoverlay -i base.dtb -o merged.dtb \
-  board-revision.dtbo module-power.dtbo module-sensor.dtbo
+fdtoverlay -i k3-am625-sk.dtb -o merged.dtb \
+  k3-am62x-sk-hdmi-audio.dtbo k3-am62x-sk-csi2-ov5640.dtbo
 ```
 
 Overlay order is the command-line order and part of the resulting semantics. Start from the pristine base for each test. Check command status before inspecting the output.
@@ -116,8 +116,8 @@ Overlay order is the command-line order and part of the resulting semantics. Sta
 Inspect:
 
 ```bash
-sha256sum base.dtb board-revision.dtbo module-power.dtbo \
-  module-sensor.dtbo merged.dtb
+sha256sum k3-am625-sk.dtb k3-am62x-sk-hdmi-audio.dtbo \
+  k3-am62x-sk-csi2-ov5640.dtbo merged.dtb
 dtc -s -I dtb -O dts -o merged.sorted.dts merged.dtb
 fdtdump merged.dtb
 ```
@@ -127,10 +127,10 @@ Then run binding/schema and product resource-conflict validation on the merged t
 ## Check Overlay Inputs Before Applying
 
 ```bash
-fdtdump base.dtb > base.dump.txt
-fdtdump module-sensor.dtbo > module-sensor.dump.txt
-rg -n '__symbols__|expansion_spi' base.dump.txt
-rg -n '__fixups__|expansion_spi' module-sensor.dump.txt
+fdtget -p k3-am62x-sk-hdmi-audio.dtbo /__fixups__
+for sym in $(fdtget -p k3-am62x-sk-hdmi-audio.dtbo /__fixups__); do
+        fdtget k3-am625-sk.dtb /__symbols__ "$sym" || echo "missing: $sym"
+done
 ```
 
 Verify:
