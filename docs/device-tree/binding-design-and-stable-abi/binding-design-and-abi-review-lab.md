@@ -111,7 +111,14 @@ Then, in a scratch copy of `k3-am62-main.dtsi`, try three variants and record th
 2. the four-string compatible without `power-domain-names`
 3. the four-string compatible with `clocks` listing two entries
 
-Expected: variant 2 violates the `img,img-axe-1-16m` requirement and variant 3 the `ti,am62-gpu` limit. For variant 1, note whether your `dt-schema` version reports deprecated alternatives at all.
+Expected, with `dt-schema` 2026.9:
+
+```text
+gpu@fd00000 (ti,am62-gpu): 'power-domain-names' is a required property
+gpu@fd00000 (ti,am62-gpu): clocks: [[2, 187, 0], [2, 187, 1]] is too long
+```
+
+for variants 2 and 3. Variant 1 (also without `power-domain-names`) passes silently: the deprecated alternative is still valid, and `dt-validate` does not warn about it. Explain why deprecation therefore needs review and producer cleanup, not only schema metadata.
 
 ## Step 8: Apply The Method To A Second Case
 
