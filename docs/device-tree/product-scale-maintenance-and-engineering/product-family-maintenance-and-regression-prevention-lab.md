@@ -6,351 +6,116 @@ difficulty: advanced
 last_reviewed: null
 ---
 
-# Product-Family Maintenance And Regression Prevention Lab
+# Product Family Maintenance And Regression Prevention Lab
 
-This lab treats a field regression as a product-system failure, not a one-line DTS exercise. You will reconstruct source inheritance, binding history, patch-stack drift, CI selection, hardware coverage, and release decisions; then design an upstreamable correction and durable prevention controls.
+This lab studies a real product family over three years of upstream history: TI's AM62x starter kits in mainline Linux. Four real commits each changed several boards at once, and one fixed a board-specific fact that had sat in a shared file since v5.19. You will rebuild the family model, review each change across dimensions, plan a downstream branch that carries them, and design CI that would have caught the failures earlier.
 
-## Scenario
+## The Family
 
-Acme maintains the AXC family:
-
-| Product | Module | Carrier | Board revision | Capture hardware | Kernel |
-|---|---|---|---|---|---|
-| AXC200 | MX2 revB | CA1 | revB | capture v3, stream `0x31` | 6.6 LTS |
-| AXC200 | MX2 revB | CA1 | revC | capture v3, stream `0x47` | 6.6/6.12 |
-| AXC210 | MX2 revB | CA2 | revA | no capture fitted | 6.12 |
-| AXC220 | MX3 revA | CA2 | revA | capture v4, stream `0x52` | 6.12 |
-
-The source tree grew from AXC200 revB. To add revC quickly, an engineer changed the stream ID in `acme-mx2-common.dtsi`. AXC210 overrides capture to `status = "disabled"`, and AXC200 revB is no longer present in the main lab. AXC220 work later copied the capture node into another file.
-
-A dt-schema tightening patch then marked `acme,stream-id` invalid because the upstream binding expects standard `iommus`. Downstream suppresses the warning globally. The driver still reads `acme,stream-id` first, then `iommus`. The vendor has 27 DT patches over upstream 6.12; nine lack owners, six have no upstream status, and three modify the same binding differently across 6.6 and 6.12 branches.
-
-Release R48 changes the common stream ID to `0x47`, updates dtc/dt-schema, and refactors file ordering. CI builds only AXC200 revC and AXC220. It runs `dtbs_check` with the capture schema excluded and boots one AXC200 revC. AXC200 revB devices receive the release and suffer DMA failure. Rollback succeeds, but support initially cannot identify the DTB because filenames and release manifests omit board revision.
-
-## Learning Objectives
-
-You will:
-
-- map the physical product hierarchy to source layers
-- calculate the transitive impact of a common include change
-- separate hardware correctness, ABI, style, maintainability, and process findings
-- reconcile an undocumented downstream property with upstream binding design
-- create a compatible migration from `acme,stream-id` to `iommus`
-- design a reviewable upstream/downstream patch sequence
-- replace warning suppression with classified validation
-- derive an inventory-driven CI and hardware matrix
-- write a blameless causal postmortem with verifiable actions
-
-## Evidence A: Source Graph
-
-```text
-acme-ax9.dtsi
-  <- acme-mx2-common.dtsi
-       <- acme-axc200-revb.dts
-       <- acme-axc200-revc.dts
-       <- acme-axc210-reva.dts
-
-acme-ax10.dtsi
-  <- acme-mx3-common.dtsi
-       <- acme-axc220-reva.dts
-```
-
-### Shared include excerpt before R48
-
-```dts
-capture0: capture@4a100000 {
-    compatible = "acme,axc-capture-v3";
-    reg = <0x0 0x4a100000 0x0 0x10000>;
-    interrupts = <GIC_SPI 91 IRQ_TYPE_LEVEL_HIGH>;
-    acme,stream-id = <0x31>;
-
-    status = "disabled";
-};
-```
-
-### R48 common change
-
-```diff
- &capture0 {
--    acme,stream-id = <0x31>;
-+    acme,stream-id = <0x47>;
- };
-```
-
-### Board fragments
-
-```dts
-/* AXC200 revB */
-&capture0 {
-    status = "okay";
-};
-
-/* AXC200 revC */
-&capture0 {
-    status = "okay";
-};
-
-/* AXC210 revA: capture block not routed or populated */
-&capture0 {
-    status = "disabled";
-};
-```
-
-## Evidence B: Hardware Record
-
-```text
-AXC200 revB schematic: capture master connects IOMMU input 0x31
-AXC200 revC ECO-17: capture master rerouted to IOMMU input 0x47
-MX2 module: contains SoC and RAM; capture connector/routing is on CA1 carrier
-AXC210 CA2 BOM: no capture device fitted; pins repurposed
-AXC220: new SoC capture v4 and IOMMU input 0x52
-```
-
-## Evidence C: Binding And Driver Drift
-
-### Downstream binding fragment on 6.6
-
-```yaml
-properties:
-  compatible:
-    const: acme,axc-capture-v3
-
-  acme,stream-id:
-    $ref: /schemas/types.yaml#/definitions/uint32
-```
-
-### Upstream/current design
-
-```yaml
-properties:
-  compatible:
-    enum:
-      - acme,axc-capture-v3
-      - acme,axc-capture-v4
-
-  iommus:
-    maxItems: 1
-
-required:
-  - compatible
-  - reg
-  - interrupts
-  - iommus
-```
-
-### Driver behavior
-
-```c
-if (!of_property_read_u32(np, "acme,stream-id", &stream_id))
-        return axc_configure_stream(dev, stream_id);
-
-return axc_configure_standard_iommu(dev);
-```
-
-The downstream property shipped in releases R22 through R48 and exists in recovery DTBs embedded in boot firmware.
-
-## Evidence D: CI Configuration
-
-```yaml
-dtbs:
-  - acme/axc200-revc.dtb
-  - acme/axc220-reva.dtb
-
-schema_excludes:
-  - acme,axc-capture.yaml
-
-hardware:
-  smoke:
-    asset: AXC200-C-0481
-    assertions:
-      - reaches-userspace
-      - capture-driver-bound
-```
-
-No machine-readable product inventory exists. A release script finds DTBs using a filename glob and packages the newest matching file as `axc200.dtb`.
-
-## Evidence E: Field Incident
-
-```text
-release: R48
-affected: AXC200 revB, estimated 1,840 units
-symptom: capture frames time out; CPU load rises due to retry loop
-live compatible: acme,axc200-revb
-driver log: configured legacy stream ID 0x47
-rollback: R47 successful
-detection: customer report after 11 hours
-initial support bundle: kernel version and dmesg, no DTB hash or board OTP revision
-```
-
-## Part 1: Build The Product And Source Model
-
-Create a table with:
-
-| Hardware fact | Correct layer | Owner | Products inheriting it |
+| Board | Top-level file | Shared layers (v6.19) | Notable differences |
 |---|---|---|---|
-| AX9 capture block address/IRQ |  |  |  |
-| CA1 revB stream routing |  |  |  |
-| CA1 revC stream routing |  |  |  |
-| AXC210 capture absence |  |  |  |
-| AX10 capture v4 block |  |  |  |
+| AM625 SK | `k3-am625-sk.dts` | `k3-am625-sk-common.dtsi` → `k3-am62x-sk-common.dtsi` | 1.4 GHz OPP, OSPI NOR, two Ethernet PHYs, eMMC needs internal pull-ups |
+| AM6254atl SiP SK | `k3-am6254atl-sk.dts` | same as AM625 SK | memory node in the SiP's SoC file |
+| AM62x LP SK | `k3-am62-lp-sk.dts` | `k3-am62x-sk-common.dtsi` | TPS65219 PMIC (VDD_CORE 0.75 V), external eMMC pull-ups, MCU CAN wake pins |
+| AM62A7 SK (related) | `k3-am62a7-sk.dts` | none of the above | redefines the labels the HDMI audio overlay needs |
 
-Then propose a source layout. Decide whether revB/revC routing belongs in separate board DTS files, carrier-revision includes, or another physical layer. Explain why it must not remain in the MX2 module include.
-
-List every artifact and hardware class transitively affected by the original common-file edit.
-
-## Part 2: Review R48 Across Dimensions
-
-Classify at least two findings in each category:
+## The Four Events
 
 ```text
-hardware correctness
-binding/ABI
-style/source organization
-maintainability
-integration/release
-test evidence
+73387da70f9c  v6.6-rc1   k3-am62x-sk-common: main_i2c1 400 kHz -> 100 kHz
+                          (SiI9022 DDC transactions time out above 100 kHz)
+69c570ebc396  v6.7-rc1   Makefile: compose k3-am62x-sk-hdmi-audio.dtbo with
+                          AM625 SK and AM62-LP SK instead of leaving it "floating"
+a0b8da04153e  v6.17-rc1  move eMMC pinmux from k3-am62x-sk-common.dtsi to each board;
+                          AM625 SK gets PIN_INPUT_PULLUP on DAT1-7 (Fixes: d19a66ae488a, v5.19; Cc: stable)
+2517e476b819  v6.18-rc1  new k3-am625-sk-common.dtsi shared by AM625 SK and SiP SK;
+                          most of k3-am625-sk.dts moves into it
+1446fc4dc072  v6.19-rc1  rgmii-rxid -> rgmii-id for all CPSW ports, 33 files
 ```
 
-For each finding state severity, evidence, requested change, and verification. Do not call the field failure merely “wrong stream ID”; include why the source layer, warning policy, inventory, qualification, and artifact identity allowed it to escape.
+## Inputs
 
-## Part 3: Design The Binding Migration
+- a mainline Linux clone with history, and `git log`, `git show`, `git describe --contains`
+- the ability to build DTBs for at least two tags (manual `cpp` + `dtc` is enough)
+- `fdtget`, `dtc`, and optionally `dt-validate`
 
-You cannot instantly remove `acme,stream-id` because deployed normal, recovery, and bootloader-embedded DTBs use it.
+## Part 1: Build The Source Model
 
-Define behavior for:
+1. Draw the include graph for each board at v6.6 and at v6.19. Use `git show <tag>:arch/arm64/boot/dts/ti/<file> | grep '#include'`.
+2. For `k3-am62x-sk-common.dtsi`, list every board in its blast radius at each tag.
+3. List which nodes in the shared files are true for every inheritor, and mark the ones you would challenge. The eMMC pin group should be on your list; look for other per-board electrical facts.
 
-| DTB | Old 6.6 driver | Migrating driver | Final driver during support window |
-|---|---|---|---|
-| legacy property only |  |  |  |
-| `iommus` only |  |  |  |
-| both and agree |  |  |  |
-| both and disagree |  |  |  |
-| neither |  |  |  |
+## Part 2: Review Each Event Across Dimensions
 
-Decide:
+For each commit, fill in:
 
-- whether current compatibles can safely support both representations
-- whether v4 needs a new compatible for hardware reasons independent of property migration
-- how schema documents/deprecates the legacy property
-- which property wins during transition or whether dual presence is rejected
-- how old-DTB/new-kernel compatibility is tested
-- whether new-DTB/old-kernel is supported by the product update sequence
-- what evidence permits eventual legacy parser removal
+| Dimension | Question |
+|---|---|
+| hardware truth | Is the change true for every board in the blast radius? |
+| binding | Does any schema constrain the changed value? |
+| driver | Does any driver behavior depend on it? |
+| tooling | Would `dtc`, `W=1`, or `dtbs_check` have reported the old or new state? |
+| deployed artifacts | Which shipped DTBs or overlays change meaning? |
+| tests | Which hardware test proves the change? |
 
-## Part 4: Create A Patch And Branch Plan
+Expected findings to confirm:
 
-Build a bisectable plan for:
+- `73387da70f9c` lowers a shared bus speed for one device's sake, and the commit argues it does not affect “any other devices on the bus.” Verify that claim for each board's `main_i2c1` children.
+- `69c570ebc396` changes no hardware description, yet it changes the bytes of `k3-am625-sk.dtb` and `k3-am62-lp-sk.dtb`, because they become `-@` overlay bases. Build both at v6.6 and v6.7 and compare `fdtget -p ... /__symbols__ | wc -l`.
+- `a0b8da04153e` is invisible to every tool. Both `PIN_INPUT` and `PIN_INPUT_PULLUP` are valid. Decode the pad values from your built DTBs:
 
-1. incident fix on supported 6.6 and 6.12 product branches
-2. schema migration
-3. driver compatibility
-4. source-layer correction for revB/revC
-5. AXC220 v4 cleanup
-6. CI/inventory additions
-7. upstream submission
-8. later downstream convergence and patch removal
-
-For each patch state target tree/branch, dependency, affected artifacts, validation, upstream status, and drop condition. Keep the urgent property correction separate from file reordering and common-layer refactoring.
-
-## Part 5: Replace The CI Design
-
-Write a variant inventory covering all four table rows in the scenario. Include:
-
-- stable product/revision ID and identity source
-- SoC/module/carrier composition
-- exact base DTB
-- allowed overlays
-- supported kernel and bootloader lines
-- hardware equivalence class
-- required functional tests
-- final owner
-
-Create change-impact rules:
-
-```text
-acme-ax9.dtsi change -> ?
-acme-mx2-common.dtsi change -> ?
-CA1 revC layer change -> ?
-capture binding change -> ?
-capture driver change -> ?
-dtc/dt-schema baseline change -> ?
-packaging selector change -> ?
+```sh
+P=/bus@f0000/pinctrl@f4000/main-mmc0-default-pins
+fdtget -tx k3-am625-sk.dtb  $P pinctrl-single,pins
+fdtget -tx k3-am62-lp-sk.dtb $P pinctrl-single,pins
 ```
 
-Design validation layers from schema through physical hardware. The full build must include AXC200 revB even when no lab asset is available. State how missing hardware coverage blocks, waives, or changes release risk.
+At v6.19 the SK shows `0x54000` for CMD, CLK, and DAT0 and `0x64000` for DAT1–DAT7, while the LP SK shows `0x54000` everywhere. From `k3-pinctrl.h`, `0x54000` is `PIN_INPUT` (input enable, Schmitt trigger, pull disabled) and `0x64000` is `PIN_INPUT_PULLUP`.
+- `2517e476b819` moves content without changing the AM625 SK DTB's meaning. Prove that with a sorted semantic diff of the DTB built before and after.
+- `1446fc4dc072` depends on earlier binding and driver changes. Find them from the commit message and order them.
 
-## Part 6: Define Semantic Assertions
+## Part 3: Plan A Downstream Branch
 
-Create machine-checkable assertions such as:
+A product team maintains products based on the AM625 SK and the LP SK on a v6.12 branch. Write a patch ledger entry (see [Maintain A Downstream Patch Ledger](upstream-development-and-downstream-patch-stack-discipline.md#maintain-a-downstream-patch-ledger)) for each event they need. Then answer:
 
-```text
-AXC200 revB:
-  compatible contains acme,axc200-revb
-  capture status is okay
-  effective IOMMU stream is 0x31
+1. `a0b8da04153e` is tagged for stable. On v6.12, which files does it touch, and where does the pin group live in v6.19 after `2517e476b819`? What `drop_when` rule still works after the move?
+2. If the team had earlier fixed the SK by adding pull-ups in its own copy of `k3-am62x-sk-common.dtsi`, which product would have silently changed, and how would the upstream backport conflict?
+3. Which of the four events can be carried independently, and which must travel with binding or driver changes?
 
-AXC200 revC:
-  compatible contains acme,axc200-revc
-  capture status is okay
-  effective IOMMU stream is 0x47
+## Part 4: Replace The CI Design
 
-AXC210 revA:
-  capture device is absent or disabled by defined architecture
+Design CI for the family that would have caught or contained each event:
 
-AXC220 revA:
-  compatible selects capture v4
-  effective IOMMU stream is 0x52
-```
+- build every board in the include-graph blast radius of any changed file
+- compose every `*-dtbs` overlay pair in the TI `Makefile` and fail on any overlay that is built but composed with no base (the v6.6 “floating” state)
+- run `dtbs_check` without excluding schemas
+- produce a sorted semantic diff of every affected DTB, and require an approved mutation ID for each changed property
+- keep per-board semantic assertions for facts no tool checks, such as the eMMC pad values above
 
-Add artifact rules so the package name, manifest, board identity, DTB hash, and runtime evidence cannot lose revision identity.
+## Part 5: Define Semantic Assertions
 
-## Part 7: Select Hardware Qualification
+Write assertions for at least: root `model` per board; the eMMC pad configuration per board; `main_i2c1` `clock-frequency`; the presence of `opp-1400000000` only on the AM625 SK and SiP SK; `phy-mode = "rgmii-id"` on every enabled CPSW port; and `__symbols__` present on every overlay base. Each assertion should name the hardware fact it protects.
 
-Given only three available assets—AXC200 revC, AXC210 revA, and AXC220 revA—decide:
+## Part 6: Select Hardware Qualification
 
-- which tests can run now
-- which risks remain unproven for AXC200 revB
-- whether revC can represent revB for any checks
-- what fixture or asset must be acquired
-- what release containment applies until then
+For each event, name the board and test that proves it: eMMC stress at HS200 on the AM625 SK with and without internal pull-ups, HDMI hot-plug and EDID reads at 100 kHz, overlay application in U-Boot on each base, and Ethernet traffic at 1 Gbit/s on both ports after the RGMII change.
 
-Define more than `driver-bound`: exercise DMA data integrity, interrupt counts, IOMMU mapping/fault behavior, stress, error recovery, suspend/resume if supported, and concurrent subsystem load.
+## Part 7: Write The Postmortem For The eMMC Pull-Ups
 
-## Part 8: Write The Postmortem
-
-Produce:
-
-- impact and affected population
-- evidence-backed causal timeline
-- technical, introduction, escape, amplification, and recovery causes
-- containment and correction
-- what worked (rollback)
-- at least eight prevention/detection actions
-- owner, due release, verification, and effectiveness review for each action
-- affected branch/backport/upstream plan
-
-At minimum, actions must cover source layering, product inventory, warning suppression, semantic assertions, hardware coverage, patch ownership, artifact provenance, and support evidence.
+Write a blameless postmortem for the fact that sat in a shared file from v5.19 to v6.17. Cover the detection gap (no tool can know which board has external pull-ups), why the comment `(Y3/V3)` was a warning sign that one node described two packages, and the process change that would catch the next such fact.
 
 ## Deliverables
 
-1. physical/source/ownership architecture
-2. multidimensional R48 review
-3. legacy-property migration matrix
-4. bisectable upstream/downstream patch plan
-5. variant inventory and impact-derived CI matrix
-6. semantic artifact assertions
-7. hardware qualification and gap decision
-8. complete postmortem and verified action register
+1. include graphs and blast-radius lists at v6.6 and v6.19
+2. the dimension tables for all five commits
+3. the downstream patch ledger and branch answers
+4. the CI design and semantic assertions
+5. the hardware qualification plan
+6. the eMMC postmortem
 
 ## Reference Analysis
 
-The immediate defect is that AXC200 revB receives stream ID `0x47` instead of `0x31`. The source architecture caused it: a carrier-revision routing fact was stored in a module-common file inherited by both revisions. The correct common AX9 layer owns the capture block's address and interrupt; the CA1 board/carrier revision layer owns the IOMMU routing difference.
-
-The legacy property cannot be deleted immediately because shipped DTBs form part of the supported ABI, including recovery and bootloader-embedded artifacts. A migrating driver should continue accepting known legacy trees while adopting the standard `iommus` contract. Dual-property precedence or rejection must be unambiguous, schema-documented, and tested. v4 should receive a distinct compatible only for real programming-model differences, not merely to rename the property.
-
-The escape was systemic: no complete variant inventory, glob-based packaging that erased revision identity, excluded schema, global warning suppression, no revB build or hardware representative, a health test that stopped at driver binding, and an unowned divergent patch stack. Reordering files and upgrading tools in the same release obscured the functional delta.
-
-Containment is to stop R48 for revB, retain the successful rollback, preserve artifacts, and add revision/hash evidence. Correction is a minimal branch fix followed by source-layer repair and migration. Prevention requires inventory-generated artifacts, full-family builds, zero anonymous schema exclusions, semantic stream assertions per revision, a revB hardware gate, owned patch ledger, revision-specific manifests, and support bundles containing OTP identity plus boot/live DT hashes.
+The shared-file model was sound for wiring that is identical across boards, such as most of `main_i2c1`, which is why `73387da70f9c` could change one line and fix all of them. It failed for the eMMC pins, an electrical fact that depends on each board's resistors. No schema, `dtc` check, or boot test distinguishes `PIN_INPUT` from `PIN_INPUT_PULLUP`; only a pin review against each schematic does. `69c570ebc396` shows that build composition is part of the description: until an overlay is composed in Kbuild, its bases are not built with `-@`, so the overlay is untested and unusable at boot. `2517e476b819` shows the cost of refactoring: every downstream patch against `k3-am625-sk.dts` must be re-targeted. `1446fc4dc072` shows a migration done in the right order, binding and drivers first, then 33 DTS files, with downstream users testing before merge.
 
 ## Further Reading
 

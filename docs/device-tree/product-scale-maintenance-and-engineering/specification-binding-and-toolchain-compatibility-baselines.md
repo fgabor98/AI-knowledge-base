@@ -56,26 +56,30 @@ A tool may be both consumer and producer: U-Boot reads a packaged DTB, mutates i
 Use exact identities rather than “recent dtc”:
 
 ```yaml
-baseline_id: axc-family-k6.12-r4
+baseline_id: am62x-family-v6.19-r1
 dt_spec_target: "v0.4 plus documented platform constraints"
 source:
-  linux_commit: 0123456789abcdef0123456789abcdef01234567
+  linux_commit: ea1013c1539270e372fc99854bc6e4d94eaeff66   # v6.19-rc1-48
+  u_boot_commit: 209bbc4e0032228c6ea17e2172a8a6b89756c4f5  # TI v2026.01-rc3-79
 tools:
-  cpp: "aarch64-linux-gnu-gcc 14.2 preprocessor"
-  dtc: "1.7.2 commit ..."
-  dtschema: "2025.8"
-  libfdt: "1.7.2 commit ..."
+  cpp: "host gcc preprocessor, -nostdinc -undef -D__DTS__"
+  dtc: "scripts/dtc from the kernel tree (DTC v1.7.0+ in SDK tests)"
+  dtschema: "2026.9"
+  libfdt: "scripts/dtc/libfdt from the kernel tree"
 build_flags:
-  dtc: ["-@", "-Wno-interrupt_provider"]
+  dtc: ["-Wno-unique_unit_address", "-Wno-unit_address_vs_reg",
+        "-Wno-avoid_unnecessary_addr_size", "-Wno-alias_paths",
+        "-Wno-graph_child_address", "-Wno-interrupt_map",
+        "-Wno-simple_bus_reg", "-@ for overlay bases"]
 runtime:
-  u_boot: "v2025.07 + product patches 1..6"
-  kernel_lines: ["6.6-product", "6.12-product"]
+  u_boot: "TI v2026.01-rc3, am62x_lpsk_a53_defconfig"
+  kernel_lines: ["6.19"]
 supported_artifacts:
   fdt_versions: [17]
   overlays: true
 ```
 
-An exception flag is part of the baseline; document its reason, owner, affected sources, and removal criterion.
+An exception flag is part of the baseline; document its reason, owner, affected sources, and removal criterion. The `dtc` flags above are Kbuild's defaults in `scripts/Makefile.dtbs` without `W=1`; they hide, among others, `alias_paths` and `graph_child_address`, the two checks that also produce overlay-only false positives ([Diagnose A Warning](../build-and-diagnostic-tools/dtc-symbols-warnings-and-round-trips.md#diagnose-a-warning)).
 
 ## Test Syntax, Semantics, And Implementation
 

@@ -128,18 +128,20 @@ An allowlist should state the expected semantic change and expire with the chang
 
 ## Target Checks Precisely
 
-Illustrative commands:
+For a change to the AM62x SK family's shared files:
 
 ```bash
-make dt_binding_check DT_SCHEMA_FILES=/acme,axc-capture/
-make ARCH=arm64 dtbs_check DT_SCHEMA_FILES=/acme,axc-capture/
-make ARCH=arm64 W=1 acme/axc200-revc.dtb
+make dt_binding_check DT_SCHEMA_FILES=/sdhci-am654/
+make ARCH=arm64 CHECK_DTBS=y ti/k3-am625-sk.dtb ti/k3-am6254atl-sk.dtb ti/k3-am62-lp-sk.dtb
+make ARCH=arm64 W=1 ti/k3-am62-lp-sk.dtb
 
 fdtoverlay \
-  -i acme/axc200-revc.dtb \
-  -o composed/axc200-revc-radio.dtb \
-  acme/radio-v1.dtbo
+  -i ti/k3-am62-lp-sk.dtb \
+  -o composed/k3-am62-lp-sk-hdmi-audio.dtb \
+  ti/k3-am62x-sk-hdmi-audio.dtbo
 ```
+
+The board list comes from the include graph: every DTS that includes `k3-am62x-sk-common.dtsi`, directly or through `k3-am625-sk-common.dtsi`.
 
 Also schedule periodic complete validation so targeted filters cannot conceal failures outside an author's expected scope.
 
@@ -176,9 +178,9 @@ Do not automatically retry until green and discard the first failure. Preserve e
 ## CI Result Contract
 
 ```yaml
-variant: axc200-revc-radio
+variant: k3-am62-lp-sk-hdmi-audio
 source_commit: ...
-baseline_id: axc-family-k6.12-r4
+baseline_id: am62x-family-v6.19-r1
 artifact_manifest_digest: ...
 jobs:
   schema: pass
@@ -187,7 +189,8 @@ jobs:
   semantic_diff: approved-change-174
   old_dtb_new_kernel: pass
   virtual_boot: pass
-  hardware_capture_dma: pass
+  hardware_emmc_hs200: pass
+  hardware_hdmi_audio: pass
   hardware_thermal: pass
 exceptions: []
 evidence_uri: immutable://...
