@@ -79,6 +79,8 @@ void counter_reset(void)
 
 ~~~c
 /* private.c */
+#include <stdint.h>
+
 static uint32_t diagnostic_count;
 ~~~
 
@@ -100,6 +102,8 @@ An object’s storage duration does not by itself specify physical placement. A 
 ## Automatic Objects
 
 Automatic objects are created when execution enters their block and cease to exist when execution leaves:
+
+<!-- c-check: expect-warning -->
 
 ~~~c
 #include <stddef.h>
@@ -198,6 +202,8 @@ Use an extern declaration in the header and one definition in a source file. Com
 A pointer can outlive the name used to access its target, or the target can die while a copied pointer remains in another object:
 
 ~~~c
+#include <stddef.h>
+
 struct view {
     const int *data;
     size_t length;

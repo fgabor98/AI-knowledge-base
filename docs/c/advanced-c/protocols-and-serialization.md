@@ -219,6 +219,8 @@ field merely because it happened to contain a zero byte in a test.
 A zero-copy field can be represented as:
 
 ```c
+#include <stddef.h>
+
 struct byte_view {
     const unsigned char *data;
     size_t length;

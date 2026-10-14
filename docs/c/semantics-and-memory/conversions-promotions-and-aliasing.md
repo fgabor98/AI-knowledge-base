@@ -24,6 +24,8 @@ C performs many conversions implicitly. Some preserve a value, some change its r
 
 Integer types narrower than int are usually promoted before arithmetic, comparison, and many argument operations:
 
+<!-- c-check: expect-warning -->
+
 ~~~c
 #include <stdbool.h>
 #include <stddef.h>
@@ -47,6 +49,8 @@ The promotion rules depend on the implementation’s integer ranges. Do not infe
 ## Usual Arithmetic Conversions
 
 When two arithmetic operands meet, C converts them to a common type. Signedness and rank matter:
+
+<!-- c-check: expect-warning -->
 
 ~~~c
 #include <stdbool.h>

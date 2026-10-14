@@ -25,11 +25,15 @@ Learning to parse declarations mechanically is more useful than memorizing isola
 
 Start with declaration specifiers:
 
+<!-- c-check: skip -- partial declaration, read piece by piece -->
+
 ~~~c
 static const unsigned long
 ~~~
 
 Then read the declarator:
+
+<!-- c-check: skip -- partial declaration, read piece by piece -->
 
 ~~~c
 *volatile register_pointer
@@ -40,6 +44,8 @@ Together, at file scope, this declares register_pointer as an internally linked 
 A simpler set:
 
 ~~~c
+#include <stdint.h>
+
 const uint32_t *read_only_data;
 uint32_t *const fixed_address = (uint32_t *)0x40000000u;
 const uint32_t *const fixed_read_only_address =
@@ -97,6 +103,9 @@ Typedefs create aliases, not new runtime types. Use them when they clarify opaqu
 A function prototype specifies parameter types:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 int send_frame(const uint8_t *data, size_t length);
 int reset_device(void);
 ~~~
@@ -104,6 +113,9 @@ int reset_device(void);
 Parameter names are useful in headers:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 int copy_frame(uint8_t *destination,
                size_t destination_capacity,
                const uint8_t *source,
@@ -189,12 +201,16 @@ struct device {
 Pointers to incomplete types are useful for opaque modules. You cannot define an object of incomplete type or apply sizeof until the type is complete. An array can also be incomplete until a bound is supplied:
 
 ~~~c
+#include <stdint.h>
+
 extern uint8_t receive_buffer[];
 ~~~
 
 ## Compatible Types And Redeclarations
 
 Declarations in different translation units must be compatible. Compatibility includes parameter types, qualifiers in relevant positions, tags, and return types.
+
+<!-- c-check: expect-error -->
 
 ~~~c
 int read_value(void);

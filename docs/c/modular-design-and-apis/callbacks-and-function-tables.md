@@ -51,6 +51,9 @@ Never cast an incompatible function pointer to fit a callback type. Add an adapt
 The context pointer usually points to an object owned by the registering caller:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 struct application {
     unsigned int event_count;
 };
@@ -73,6 +76,11 @@ Do not store a pointer to a stack-local context in a long-lived driver.
 A registration API needs a clear replacement rule:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
+typedef void (*event_callback)(void *context, uint32_t event);
+
 enum callback_result {
     CALLBACK_OK,
     CALLBACK_BUSY,
@@ -152,6 +160,9 @@ A table is an ABI: member order, parameter types, calling convention, and lifeti
 A driver table can separate portable policy from hardware operations:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 struct uart_driver {
     int (*configure)(void *context, unsigned int baud);
     int (*write)(void *context, const uint8_t *data, size_t length);
@@ -213,6 +224,9 @@ Define whether callbacks run inside or outside locks, whether they may call publ
 A function table makes a hardware dependency replaceable:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 struct storage_ops {
     int (*read)(void *context, uint32_t address,
                 uint8_t *data, size_t length);

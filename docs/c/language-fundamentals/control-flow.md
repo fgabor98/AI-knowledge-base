@@ -23,6 +23,8 @@ Control flow determines which statements execute, how often they execute, and ho
 
 A compound statement is a block delimited by braces:
 
+<!-- c-check: skip -- compound-statement fragment -->
+
 ~~~c
 {
     int local_value = 3;
@@ -33,6 +35,8 @@ A compound statement is a block delimited by braces:
 The block creates scope for identifiers declared within it. Use braces even for one-line branches in production embedded code. They prevent later statements from escaping the intended branch.
 
 An if selects one statement when its condition is nonzero and optionally another when it is zero:
+
+<!-- c-check: skip -- statement fragment -->
 
 ~~~c
 if (error != 0) {
@@ -49,6 +53,10 @@ The else attaches to the nearest unmatched if. Braces eliminate the ambiguity fo
 switch compares an integer or enumeration expression with case constants:
 
 ~~~c
+void prepare_sample(void);
+void collect_sample(void);
+void disable_outputs(void);
+
 enum device_state {
     DEVICE_IDLE,
     DEVICE_SAMPLING,
@@ -87,6 +95,8 @@ Important rules:
 
 Intentional fall-through should be visible:
 
+<!-- c-check: skip -- statement fragment inside a command handler -->
+
 ~~~c
 switch (command) {
 case CMD_START:
@@ -107,6 +117,8 @@ A compiler-specific fall-through attribute can document more complex cases, but 
 
 A for loop groups initialization, continuation, and iteration:
 
+<!-- c-check: skip -- statement fragment -->
+
 ~~~c
 for (size_t i = 0u; i < count; ++i) {
     process(data[i]);
@@ -115,6 +127,8 @@ for (size_t i = 0u; i < count; ++i) {
 
 A while loop checks before each iteration:
 
+<!-- c-check: skip -- statement fragment -->
+
 ~~~c
 while (queue_has_work()) {
     process_one();
@@ -122,6 +136,8 @@ while (queue_has_work()) {
 ~~~
 
 A do while loop executes at least once:
+
+<!-- c-check: skip -- statement fragment -->
 
 ~~~c
 do {
@@ -145,7 +161,12 @@ For every loop answer:
 An embedded wait should normally include a timeout:
 
 ~~~c
+#include <stdbool.h>
 #include <stdint.h>
+
+uint32_t clock_ticks(void);
+bool peripheral_ready(void);
+void service_background_work(void);
 
 enum wait_result {
     WAIT_READY,
@@ -170,6 +191,9 @@ The unsigned subtraction pattern assumes the maximum wait is shorter than one co
 A loop with no bound can be valid in a scheduler or RTOS task:
 
 ~~~c
+void wait_for_event(void);
+void handle_event(void);
+
 void worker_task(void)
 {
     for (;;) {
@@ -184,6 +208,8 @@ Document who stops it, its stack budget, fatal-error behavior, and shutdown or r
 ## break And continue
 
 break exits the nearest loop or switch. continue skips to the next iteration of the nearest loop:
+
+<!-- c-check: skip -- statement fragment -->
 
 ~~~c
 for (size_t i = 0u; i < count; ++i) {
@@ -206,6 +232,14 @@ Use them to express a clear policy. Check that continue does not skip required c
 An early return can clearly reject invalid input:
 
 ~~~c
+#include <stdbool.h>
+#include <stddef.h>
+
+struct config;
+
+bool config_is_valid(const struct config *config);
+void apply_config(const struct config *config);
+
 int configure(const struct config *config)
 {
     if (config == NULL) {
@@ -227,6 +261,16 @@ Replace unexplained numeric errors with a documented status type or named consta
 A forward jump to one cleanup block can prevent duplicated error handling:
 
 ~~~c
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+int lock_device(void);
+void unlock_device(void);
+int begin_transaction(void);
+void end_transaction(void);
+int write_payload(const uint8_t *data, size_t length);
+
 int update_device(const uint8_t *data, size_t length)
 {
     int result = -1;
@@ -267,6 +311,12 @@ Good cleanup usage jumps forward, makes ownership explicit, avoids jumping into 
 A state machine makes legal transitions and per-state actions visible:
 
 ~~~c
+#include <stdbool.h>
+
+void enable_motor_power(void);
+void disable_motor_power(void);
+bool motor_is_stable(void);
+
 enum motor_state {
     MOTOR_STOPPED,
     MOTOR_STARTING,

@@ -199,6 +199,8 @@ Non-local jumps can bypass ordinary cleanup:
 ~~~c
 #include <setjmp.h>
 
+void risky_operation(void);
+
 static jmp_buf recovery;
 
 int protected_operation(void)

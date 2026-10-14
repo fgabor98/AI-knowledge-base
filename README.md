@@ -41,14 +41,32 @@ scripts/validate-bash.sh
 
 This check expects `shellcheck` to be installed.
 
-Run the C failure case-study checks:
+Run the C documentation and example checks:
 
 ```sh
-scripts/validate-c-case-studies.sh
+scripts/validate-c.sh
 ```
 
-This check expects GCC with AddressSanitizer and UndefinedBehaviorSanitizer support,
-plus `shellcheck`.
+This builds and runs the C examples (`make -C examples/c check sanitize tsan`),
+compiles every C code block under `docs/c` (`scripts/check-c-snippets.py`),
+validates the failure case studies (`scripts/validate-c-case-studies.sh`), and
+builds the documentation. It expects GCC with AddressSanitizer,
+UndefinedBehaviorSanitizer, and ThreadSanitizer support, plus `shellcheck`.
+
+C code blocks in `docs/c` must compile on their own with
+`-std=c17 -Wall -Wextra -Wformat=2 -Werror`. A block whose first line is a
+file-name comment such as `/* sensor.h */` can be included by later blocks on the
+same page. Blocks that are not meant to compile carry a marker comment on the line
+above the fence:
+
+```markdown
+<!-- c-check: skip -- statement fragment -->
+<!-- c-check: expect-warning -->
+<!-- c-check: expect-error -->
+```
+
+Use `skip` only for fragments, and always give a reason. Use `expect-warning` for
+deliberately bad examples; the check then fails if the example stops warning.
 
 ## Content Workflow
 

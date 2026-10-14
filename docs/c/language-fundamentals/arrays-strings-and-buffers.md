@@ -66,6 +66,8 @@ void inspect(void)
 
 Important exceptions include sizeof, unary address-of, and a string literal used to initialize an array. Once an array is passed to a function, the function receives a pointer and cannot infer the caller’s bound.
 
+<!-- c-check: expect-warning -->
+
 ~~~c
 #include <stddef.h>
 #include <stdint.h>

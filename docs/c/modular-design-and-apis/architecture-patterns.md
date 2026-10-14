@@ -57,6 +57,8 @@ struct sensor_port {
 
 A target adapter supplies the operations:
 
+<!-- c-check: skip -- target adapter excerpt; BOARD_ADC comes from the vendor device header -->
+
 ~~~c
 static int board_read_raw(void *context, uint16_t *value)
 {
@@ -137,6 +139,14 @@ Separate the pure transition function from side effects where possible. That mak
 An event-driven module receives messages rather than being called for every detail:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
+void process_sample(uint32_t value);
+void complete_transfer(uint32_t value);
+void handle_timeout(void);
+void begin_shutdown(void);
+
 enum event_type {
     EVENT_SAMPLE_READY,
     EVENT_TRANSFER_DONE,
@@ -179,6 +189,13 @@ Define queue capacity, event ownership, ordering, coalescing, overflow behavior,
 A table can replace repeated conditionals:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
+int handle_start(void *context, const uint8_t *data, size_t length);
+int handle_stop(void *context, const uint8_t *data, size_t length);
+int handle_status(void *context, const uint8_t *data, size_t length);
+
 struct command_handler {
     unsigned int command;
     int (*handle)(void *context, const uint8_t *data, size_t length);
@@ -209,6 +226,8 @@ Validate tables at compile time where possible. Handle duplicate keys, null func
 Dependency injection means providing dependencies rather than constructing them inside the module:
 
 ~~~c
+#include <stddef.h>
+
 struct logger {
     void (*write)(void *context, const char *message);
     void *context;
@@ -244,6 +263,9 @@ Useful patterns include:
 A common interface shape is:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 struct stream_ops {
     int (*read)(void *context, uint8_t *data, size_t capacity);
     int (*write)(void *context, const uint8_t *data, size_t length);
@@ -270,6 +292,8 @@ Use compile-time configuration for structural differences:
 - safety profile.
 
 Validate combinations:
+
+<!-- c-check: expect-error -->
 
 ~~~c
 #if defined(BOARD_SMALL) && defined(BOARD_LARGE)

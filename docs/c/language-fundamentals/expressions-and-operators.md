@@ -47,6 +47,8 @@ Precedence answers which operands belong to which operator. It does not answer w
 
 Small integer types are usually promoted to int or unsigned int before many arithmetic and comparison operations. Usual arithmetic conversions then bring two operands to a common type:
 
+<!-- c-check: expect-warning -->
+
 ~~~c
 #include <stdbool.h>
 #include <stdint.h>
@@ -65,6 +67,8 @@ uint32_t add_count(uint16_t left, uint16_t right)
 The first condition is always false for a uint8_t value after promotion. The explicit casts in add_count make the intended arithmetic domain visible, but the destination range must still be sufficient.
 
 Mixed signed and unsigned arithmetic can change a comparison:
+
+<!-- c-check: expect-warning -->
 
 ~~~c
 #include <stdbool.h>
@@ -107,6 +111,8 @@ Inspect compiler output before manually replacing division with shifts or recipr
 
 Relational and equality operators produce int values of zero or one:
 
+<!-- c-check: skip -- expression fragment -->
+
 ~~~c
 if (temperature_c > limit_c && !sensor_fault) {
     start_heater();
@@ -119,6 +125,8 @@ Logical and and logical or evaluate left to right and short-circuit:
 - a || b does not evaluate b when a is true.
 
 This can guard an access:
+
+<!-- c-check: skip -- expression fragment -->
 
 ~~~c
 if (count < capacity && data[count] == expected) {

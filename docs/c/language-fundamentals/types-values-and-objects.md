@@ -167,6 +167,8 @@ sizeof includes padding inserted for alignment. It does not give the number of m
 
 An array’s size is preserved only where it has not converted to a pointer:
 
+<!-- c-check: expect-warning -->
+
 ~~~c
 #include <stddef.h>
 #include <stdint.h>

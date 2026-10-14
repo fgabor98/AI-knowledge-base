@@ -38,6 +38,8 @@ Write ownership into function names, parameter names, documentation, and tests. 
 
 ## Use-After-Scope
 
+<!-- c-check: expect-warning -->
+
 ~~~c
 #include <stddef.h>
 
@@ -53,6 +55,8 @@ The returned pointer outlives local. Fix it by returning a value, writing into c
 A pointer stored in a structure can be just as stale as a pointer returned directly:
 
 ~~~c
+#include <stddef.h>
+
 struct span {
     const unsigned char *data;
     size_t length;
@@ -153,6 +157,9 @@ Avoid APIs that accept a pointer with an undocumented assumed size. Static analy
 An asynchronous operation extends the lifetime requirement beyond a normal call:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 enum dma_result {
     DMA_STARTED,
     DMA_BUSY,
@@ -192,6 +199,13 @@ Draw acquisition and release edges. A failure at step four must release resource
 Forward cleanup is often clearer than duplicated returns:
 
 ~~~c
+#include <stdbool.h>
+
+int enable_clock(void);
+void disable_clock(void);
+int register_irq(void);
+void unregister_irq(void);
+
 int start_component(void)
 {
     int result = -1;

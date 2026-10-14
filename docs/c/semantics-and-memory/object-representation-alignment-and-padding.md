@@ -172,6 +172,8 @@ Validate external bytes first, then decode into typed objects with explicit rule
 Compiler packing attributes can remove padding but often create misaligned members:
 
 ~~~c
+#include <stdint.h>
+
 struct __attribute__((packed)) wire_header {
     uint8_t type;
     uint32_t length;

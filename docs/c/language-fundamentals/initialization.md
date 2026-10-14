@@ -33,6 +33,7 @@ void update_retry_limit(void)
 {
     uint32_t retry_limit = 3u;
     retry_limit = 4u;
+    (void)retry_limit;
 }
 ~~~
 
@@ -109,6 +110,8 @@ static const char terminator = '\0';
 ~~~
 
 The compiler converts the initializer to the destination type. Narrowing can lose information:
+
+<!-- c-check: expect-warning -->
 
 ~~~c
 #include <stdint.h>
@@ -208,7 +211,7 @@ struct point {
     int16_t y;
 };
 
-static void draw_point(struct point point);
+void draw_point(struct point point);
 
 void draw_origin(void)
 {
@@ -259,6 +262,10 @@ C has no language-level constructor system that runs arbitrary code for all glob
 Do not rely on link order between modules. Use an explicit sequence:
 
 ~~~c
+int clock_init(void);
+int gpio_init(void);
+int sensor_init(void);
+
 int system_init(void)
 {
     if (clock_init() != 0) {

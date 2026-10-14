@@ -131,6 +131,8 @@ Wrap such facilities behind project interfaces when multiple environments are su
 A useful structure is:
 
 ~~~c
+#include <stddef.h>
+
 struct diagnostic_port {
     int (*write)(void *context, const char *data, size_t length);
     void *context;

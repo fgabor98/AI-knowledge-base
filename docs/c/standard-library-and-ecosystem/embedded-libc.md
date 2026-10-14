@@ -40,6 +40,8 @@ An embedded libc may call project-provided low-level functions for I/O and proce
 #include <stddef.h>
 #include <sys/types.h>
 
+int uart_putc(unsigned char byte);
+
 ssize_t _write(int file, const void *buffer, size_t length)
 {
     const unsigned char *bytes = buffer;
