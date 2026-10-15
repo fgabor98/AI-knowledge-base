@@ -3,6 +3,7 @@
 # - standalone examples: strict build, run, ASan+UBSan, TSan (examples/c/Makefile);
 # - C code blocks in docs/c compile (scripts/check-c-snippets.py);
 # - failure case studies (scripts/validate-c-case-studies.sh);
+# - tool sessions quoted in the docs still produce the quoted output;
 # - documentation build.
 set -euo pipefail
 
@@ -19,6 +20,14 @@ python3 scripts/check-c-snippets.py docs/c
 
 printf 'Validating C failure case studies...\n'
 scripts/validate-c-case-studies.sh
+
+printf 'Running tool sessions...\n'
+shellcheck -x -P SCRIPTDIR examples/c/tool-sessions/lib.sh \
+    examples/c/tool-sessions/run-all.sh examples/c/tool-sessions/*/run.sh
+for session in examples/c/tool-sessions/*/run.sh; do
+    printf '  %s\n' "$(basename "$(dirname "$session")")"
+    bash "$session" >/dev/null
+done
 
 printf 'Building documentation...\n'
 "$mkdocs_cmd" build --strict

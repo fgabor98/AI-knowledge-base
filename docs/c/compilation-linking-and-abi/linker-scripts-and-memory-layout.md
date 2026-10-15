@@ -37,56 +37,114 @@ The image’s file representation and runtime memory representation can differ. 
 
 ## A Minimal GNU ld Script
 
-The following is illustrative, not a drop-in board script:
+The following is a minimal script, not a drop-in board script. It is the exact file the
+session below links (`examples/c/tool-sessions/linker-script/firmware.ld`):
 
-~~~ld
-MEMORY
-{
-    FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 256K
-    RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 64K
-}
-
-ENTRY(Reset_Handler)
-
-SECTIONS
-{
-    .text :
-    {
-        . = ALIGN(4);
-        KEEP(*(.isr_vector))
-        *(.text .text.*)
-        *(.rodata .rodata.*)
-        . = ALIGN(4);
-        __text_end__ = .;
-    } > FLASH
-
-    .data :
-    {
-        . = ALIGN(4);
-        __data_start__ = .;
-        *(.data .data.*)
-        . = ALIGN(4);
-        __data_end__ = .;
-    } > RAM AT> FLASH
-
-    __data_load_start__ = LOADADDR(.data);
-
-    .bss (NOLOAD) :
-    {
-        . = ALIGN(4);
-        __bss_start__ = .;
-        *(.bss .bss.* COMMON)
-        . = ALIGN(4);
-        __bss_end__ = .;
-    } > RAM
-
-    ASSERT(__bss_end__ <= ORIGIN(RAM) + LENGTH(RAM), "RAM overflow")
-}
-~~~
+```text
+--8<-- "examples/c/tool-sessions/linker-script/firmware.ld"
+```
 
 The syntax and target defaults belong to GNU ld or a compatible linker. `MEMORY` describes regions, `SECTIONS` maps input to output, `AT` gives a load address, `NOLOAD` reserves runtime space without file payload, `KEEP` prevents section garbage collection, and `ASSERT` makes a violated invariant a link failure.
 
 Always inspect the actual map and program headers. A script that parses successfully can still place a region incorrectly for the board’s memory controller or boot protocol.
+
+## Link It And Look
+
+The script above, linked for real. The image is built with the host x86-64 compiler as a
+freestanding program (`-ffreestanding -nostdlib -static -no-pie`), so it is inspected
+rather than run. The linker's behavior is the same as with a microcontroller toolchain.
+All output comes from `bash examples/c/tool-sessions/linker-script/run.sh`. The
+application has one object of each kind:
+
+```c
+--8<-- "examples/c/tool-sessions/linker-script/app.c"
+```
+
+### Memory Usage At Link Time
+
+```text
+$ gcc -nostdlib -static -no-pie -T firmware.ld -Wl,-Map=firmware.map -Wl,--print-memory-usage startup.o app.o -o firmware.elf
+Memory region         Used Size  Region Size  %age Used
+           FLASH:         272 B       256 KB      0.10%
+             RAM:        4128 B        64 KB      6.30%
+```
+
+`--print-memory-usage` reports each `MEMORY` region after placement. Keep it in every
+firmware build log, and diff it in review. RAM holds the 4-byte `.data` and the
+4096-byte `.bss`, with alignment padding between them. FLASH holds `.text`, the *load copy*
+of `.data`, and two note sections, discussed below.
+
+### Load Address Versus Run Address
+
+```text
+$ objdump -h firmware.elf | grep -A1 -E ' \.(text|data|bss) '
+  0 .text         000000c4  0000000008000000  0000000008000000  00001000  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+--
+  3 .data         00000004  0000000020000000  000000000800010c  00002000  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  4 .bss          00001000  0000000020000020  0000000008000110  00002020  2**5
+                  ALLOC
+$ grep -A1 -E '^\.data ' firmware.map
+.data           0x0000000020000000        0x4 load address 0x000000000800010c
+                0x0000000020000000                . = ALIGN (0x4)
+$ readelf -lW firmware.elf | grep -E 'Type|LOAD'
+  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+  LOAD           0x001000 0x0000000008000000 0x0000000008000000 0x00010c 0x00010c R E 0x1000
+  LOAD           0x002000 0x0000000020000000 0x000000000800010c 0x000004 0x000004 RW  0x1000
+  LOAD           0x000020 0x0000000020000020 0x0000000008000110 0x000000 0x001000 RW  0x1000
+```
+
+The three tools show the same fact in three ways. In `objdump -h` the columns are VMA
+then LMA. The map file says `load address`. In `readelf -l` they are `VirtAddr` and
+`PhysAddr`. `.data` *runs* at `0x20000000` in RAM, while its initial bytes are *stored* at
+`0x0800010c` in flash, which is what `> RAM AT> FLASH` means. `.bss` has `MemSiz`
+0x1000 but `FileSiz` 0: `NOLOAD` reserves space without any bytes in the image.
+
+Programming tools and `objcopy -O binary` place bytes by load address. A debugger that
+loads an ELF over a probe follows the program headers. A wrong `AT>` therefore produces an
+image that looks correct in the debugger's symbol view and fails at reset.
+
+### The Symbols Startup Code Uses
+
+```text
+$ nm -n firmware.elf | grep -E '__|boot_count|sample_buffer|firmware_name'
+00000000080000b8 T firmware_name
+00000000080000c4 T __text_end__
+000000000800010c A __data_load_start__
+0000000020000000 D boot_count
+0000000020000000 D __data_start__
+0000000020000004 D __data_end__
+0000000020000020 B __bss_start__
+0000000020000020 B sample_buffer
+0000000020001020 B __bss_end__
+```
+
+These are the values `initialize_memory()` below works with. Copy 4 bytes from
+`0x0800010c` to `0x20000000`, then zero `0x20000020` up to `0x20001020`. `firmware_name`
+appears as `T` because this script puts `.rodata` into the `.text` output section.
+`__data_load_start__` is `A` (absolute) because it is assigned from `LOADADDR()` outside
+any output section.
+
+### Sections The Script Does Not Mention
+
+The script never names `.note.gnu.build-id` or `.note.gnu.property`, yet the FLASH total
+(272 bytes) is larger than `.text` (`0xc4` = 196 bytes) plus the 4-byte `.data` copy. GNU
+ld places unmentioned *orphan* sections by its own heuristics. Ask it to report them:
+
+```text
+$ gcc -nostdlib -static -no-pie -T firmware.ld -Wl,--orphan-handling=warn startup.o app.o -o firmware_orphans.elf 2>&1 | head -4
+/usr/bin/ld: warning: orphan section `.comment' from `startup.o' being placed in section `.comment'
+/usr/bin/ld: warning: orphan section `.note.GNU-stack' from `startup.o' being placed in section `.note.GNU-stack'
+/usr/bin/ld: warning: orphan section `.note.gnu.property' from `startup.o' being placed in section `.note.gnu.property'
+/usr/bin/ld: warning: orphan section `.note.gnu.build-id' from `startup.o' being placed in section `.note.gnu.build-id'
+```
+
+A production script should account for every input section. Place the ones it needs
+(a build-ID note in flash is useful for crash records), discard the rest with
+`/DISCARD/ : { *(.comment) *(.note.GNU-stack) }`, and build with
+`--orphan-handling=error` so a new compiler or library cannot silently add sections to
+flash.
 
 ## Linker-Defined Symbols In C
 
@@ -181,6 +239,25 @@ ASSERT(ADDR(.dma_buffer) % 32 == 0, "DMA buffer alignment error")
 ~~~
 
 Keep arithmetic in the linker’s address space and make the message actionable. Add CI checks for section sizes, load addresses, entry point, image holes, and bootloader boundaries.
+
+With `.bss` grown past the 64 KB region, the example script fails with three messages:
+
+```text
+$ gcc -nostdlib -static -no-pie -T firmware.ld -Wl,--print-memory-usage startup.o app_big.o -o firmware_big.elf
+/usr/bin/ld: firmware_big.elf section `.bss' will not fit in region `RAM'
+/usr/bin/ld: RAM overflow
+/usr/bin/ld: region `RAM' overflowed by 4496 bytes
+Memory region         Used Size  Region Size  %age Used
+           FLASH:         272 B       256 KB      0.10%
+             RAM:       70032 B        64 KB    106.86%
+collect2: error: ld returned 1 exit status
+[exit status 1]
+```
+
+The first and third messages come from the `MEMORY` region check, the second from the
+script's own `ASSERT`. A region check catches only "does not fit". An assertion can state
+a product budget that is tighter than the hardware (`SIZEOF(.text) <= 240K`), an alignment
+rule, or a minimum stack reservation, none of which the region check knows about.
 
 ## Bootloader And Multiple Images
 

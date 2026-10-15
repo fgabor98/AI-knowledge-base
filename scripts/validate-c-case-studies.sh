@@ -22,7 +22,7 @@ sources_of() {
     fi
 }
 
-# Docs embed parts of the sources as --8<-- "file:START:END". Each range is
+# Docs under docs/c embed parts of example sources as --8<-- "file:START:END". Each range is
 # meant to end on a closing brace; anything else means the source moved.
 printf 'Checking snippet line ranges in the docs...\n'
 range_errors=0
@@ -35,7 +35,7 @@ while IFS= read -r snippet; do
         printf 'error: %s ends on "%s", expected a closing brace\n' "$snippet" "$last_line" >&2
         range_errors=1
     fi
-done < <(grep -ohE -- '--8<-- "[^"]+:[0-9]+:[0-9]+"' docs/c/failure-case-studies/*.md |
+done < <(grep -rohE --include='*.md' -- '--8<-- "[^"]+:[0-9]+:[0-9]+"' docs/c |
     sed -E 's/^--8<-- "(.*)"$/\1/')
 ((range_errors == 0))
 
