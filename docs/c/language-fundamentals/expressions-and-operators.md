@@ -324,6 +324,28 @@ sizeof(char) is one C byte; it is not necessarily one octet unless CHAR_BIT is e
 5. Find a cast in a driver and document the range, alignment, and ownership facts that make it safe.
 6. Parenthesize a mixed bitwise, equality, and logical expression, then test every branch.
 
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 1: predicting types and values"
+    With `uint8_t u8 = 200; int i = -1; unsigned int u = 1;` on a target with 32-bit `int`
+    (verified with GCC 13 on x86-64 using `_Generic` to print the types):
+
+    | Expression | Type | Value | Why |
+    | --- | --- | --- | --- |
+    | `u8 + u8` | `int` | 400 | both operands promote to `int`; no wraparound at 255 |
+    | `u8 * u8` | `int` | 40000 | fits in 32-bit `int`; with 16-bit `int` it overflows, which is undefined |
+    | `i + u` | `unsigned int` | 0 | `i` converts to `UINT_MAX`, and the sum wraps |
+    | `i < u` | `int` | 0 | the comparison happens in `unsigned int` |
+    | `~u8` | `int` | -201 | promotion first, then the complement of 0x000000C8 |
+    | `u8 << 24` | `int` | undefined | 200 × 2^24 does not fit in `int`; shifting into the sign bit is undefined |
+
+    Two patterns cover most surprises: narrow types are promoted *before* the operator runs,
+    and when a signed and an unsigned operand of the same rank meet, the signed one converts.
+    `-Wconversion` and `-Wsign-compare` report many of the risky cases; `~u8` comparisons are
+    caught by `-Wsign-compare` as well.
+
 ## Common Mistakes
 
 - Confusing precedence with evaluation order.

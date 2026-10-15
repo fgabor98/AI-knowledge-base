@@ -49,6 +49,7 @@ scripts/validate-c.sh
 
 This builds and runs the C examples (`make -C examples/c check sanitize tsan`),
 compiles every C code block under `docs/c` (`scripts/check-c-snippets.py`),
+checks the test-out answer keys against the compiler (`examples/c/diagnostics/check.py`),
 validates the failure case studies (`scripts/validate-c-case-studies.sh`), reruns
 the tool sessions quoted in the docs (`examples/c/tool-sessions/*/run.sh`; each checks
 that the output the docs quote still appears), and builds the documentation. It expects GCC with AddressSanitizer,

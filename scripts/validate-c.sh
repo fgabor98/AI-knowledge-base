@@ -2,6 +2,7 @@
 # Run every C check in the repository:
 # - standalone examples: strict build, run, ASan+UBSan, TSan (examples/c/Makefile);
 # - C code blocks in docs/c compile (scripts/check-c-snippets.py);
+# - test-out diagnostic answer keys (examples/c/diagnostics/check.py);
 # - failure case studies (scripts/validate-c-case-studies.sh);
 # - tool sessions quoted in the docs still produce the quoted output;
 # - documentation build.
@@ -17,6 +18,9 @@ make --no-print-directory -C examples/c check sanitize tsan
 
 printf 'Compiling C snippets in the documentation...\n'
 python3 scripts/check-c-snippets.py docs/c
+
+printf 'Checking the test-out answer keys...\n'
+python3 examples/c/diagnostics/check.py
 
 printf 'Validating C failure case studies...\n'
 scripts/validate-c-case-studies.sh

@@ -250,6 +250,33 @@ The opaque struct keeps representation private. The API documentation must still
 5. Put a global definition in a header in a two-file program, observe the link failure, then use extern plus one definition.
 6. Register callbacks and deliberately introduce an incompatible callback to see the warning.
 
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 1: worked examples"
+    Start at the identifier, then read right while you can (`[]` and `()`), and left when you
+    must (`*` and qualifiers), with parentheses overriding the order:
+
+    | Declaration | In words |
+    | --- | --- |
+    | `int *p[4];` | `p` is an array of 4 pointers to `int` |
+    | `int (*p)[4];` | `p` is a pointer to an array of 4 `int` |
+    | `int (*f)(void);` | `f` is a pointer to a function taking no arguments and returning `int` |
+    | `int *(*table[8])(const char *);` | `table` is an array of 8 pointers to functions taking `const char *` and returning a pointer to `int` |
+    | `volatile uint32_t *const reg;` | `reg` is a `const` pointer to a `volatile uint32_t` |
+    | `const char *const names[];` | `names` is an array of `const` pointers to `const char` |
+
+    Typedefs make the long ones readable:
+
+    ```c
+    typedef int *lookup_function(const char *key);
+
+    lookup_function *table[8];
+    ```
+
+    See also [test-out Q10](./test-out.md#q10-reading-a-declaration).
+
 ## Common Mistakes
 
 - Reading int *a[4] as a pointer to an array.

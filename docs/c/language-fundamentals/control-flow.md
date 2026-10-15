@@ -383,6 +383,53 @@ Keep transition policy separate from hardware actions when possible. The state f
 5. Model a UART receiver with idle, receiving, frame-ready, and error states.
 6. State the invariant and maximum iteration count for every loop in a small driver.
 
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 1: which if does the else bind to?"
+    An `else` binds to the nearest unmatched `if` in the same block (C11 6.8.4.1p3), whatever
+    the indentation says. Written without braces:
+
+    ~~~text
+    if (armed)
+        if (fault)
+            puts("A");
+    else
+        puts("B");
+    ~~~
+
+    This is parsed as the first function below, although the indentation suggests the second:
+
+    ```c
+    #include <stdio.h>
+
+    void parsed_as(int armed, int fault)
+    {
+        if (armed) {
+            if (fault) {
+                puts("A");
+            } else {
+                puts("B");
+            }
+        }
+    }
+
+    void probably_intended(int armed, int fault)
+    {
+        if (armed) {
+            if (fault) {
+                puts("A");
+            }
+        } else {
+            puts("B");
+        }
+    }
+    ```
+
+    GCC reports the ambiguous form (`-Wdangling-else`, part of `-Wall`). Braces on every branch
+    remove the question. See [test-out Q5](./test-out.md#q5-nested-conditions).
+
 ## Common Mistakes
 
 - Omitting braces around a branch that will later receive another statement.

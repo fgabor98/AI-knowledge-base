@@ -305,6 +305,26 @@ Make reset behavior explicit:
 6. Trace target startup and linker map to identify data copying and bss clearing.
 7. Define explicit initialization order for clock, GPIO, communication, and sensor subsystems.
 
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 4: an exactly sized character array"
+    In `char id[4] = "ABCD";` the literal has five characters including its terminator, and
+    the array has room for four. C stores the terminator only "if there is room" (C11
+    6.7.9p14), so `id` holds four characters and no `'\0'`. This is not an error in C (C++
+    rejects it), and GCC does not warn at default settings.
+
+    | Declaration | `sizeof` | Terminated? |
+    | --- | ---: | --- |
+    | `char id[4] = "ABCD";` | 4 | no |
+    | `char id[5] = "ABCD";` | 5 | yes |
+    | `char id[] = "ABCD";` | 5 | yes |
+
+    The unterminated form is right for fixed-width fields in file and protocol formats, as
+    long as the code treats them as byte arrays with a known length (`memcpy`, `%.4s`) and
+    never as strings. See [test-out Q8](./test-out.md#q8-an-exactly-sized-string).
+
 ## Common Mistakes
 
 - Reading an uninitialized automatic or allocated object.

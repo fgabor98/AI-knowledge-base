@@ -205,6 +205,47 @@ A cast is rarely a complete representation boundary.
 5. Use a static assertion to protect a documented ABI layout.
 6. Define a protocol decoder that rejects invalid lengths, reserved bits, and unsupported versions.
 
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 3: member comparison versus memcmp"
+    ```c
+    #include <stdio.h>
+    #include <string.h>
+
+    struct sample {
+        char kind;
+        int value;
+    };
+
+    static int same_members(const struct sample *a, const struct sample *b)
+    {
+        return a->kind == b->kind && a->value == b->value;
+    }
+
+    int main(void)
+    {
+        struct sample a;
+        struct sample b = { .kind = 'T', .value = 21 };
+
+        memset(&a, 0xff, sizeof a);
+        a.kind = 'T';
+        a.value = 21;
+        printf("members equal: %d, memcmp: %s\n", same_members(&a, &b),
+               memcmp(&a, &b, sizeof a) == 0 ? "equal" : "different");
+        return 0;
+    }
+    ```
+
+    GCC 13 on x86-64 prints `members equal: 1, memcmp: different`. `struct sample` has three
+    padding bytes after `kind`. In `a` they still hold `0xff` from the `memset`, and in `b`
+    they hold whatever the initialization left there. Padding bytes take unspecified values
+    (C11 6.2.6.1p6), so `memcmp` compares bytes that are not part of the value. Compare
+    structures member by member, or serialize them into a defined byte format first. The
+    same unspecified bytes are what leak in
+    [case study 10](../failure-case-studies/10-struct-padding-leak.md).
+
 ## Common Mistakes
 
 - Treating sizeof(struct) as a wire-format size.

@@ -12,6 +12,11 @@ This chapter explains the rules beneath C syntax: what an object is, when its va
 
 The language fundamentals chapter taught how to write the constructs. This chapter teaches how to decide whether those constructs are valid, portable, and safe on a real embedded target.
 
+!!! tip "Already fluent in C?"
+    Take the [Semantics And Memory test-out](./test-out.md) first. It has ten questions
+    on scope, conversions, qualifiers, pointer validity, lifetime, and undefined behavior,
+    and maps each one to the page that covers it.
+
 ## The Core Mental Model
 
 For every access, track five things:

@@ -278,6 +278,45 @@ For structures with padding, memcmp may report inequality even when named member
 5. Demonstrate why sizeof works for a local array but not an array parameter.
 6. Design a DMA-buffer contract naming producer, consumer, ownership, alignment, and cache operations.
 
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 5: sizeof on a local array versus an array parameter"
+    Inside the function that defines it, an array keeps its type, so `sizeof` gives the size
+    of the whole array. A parameter declared as an array is adjusted to a pointer (C11
+    6.7.6.3p7), so `sizeof` gives the size of a pointer, whatever number appears in the
+    brackets. GCC warns: `'sizeof' on array function parameter will return size of
+    'unsigned char *'`.
+
+    The fix is to pass the length with the pointer and compute it where the array type is
+    still visible:
+
+    ```c
+    #include <stddef.h>
+    #include <stdint.h>
+
+    #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
+
+    void clear(uint8_t *data, size_t length)
+    {
+        for (size_t i = 0; i < length; i++) {
+            data[i] = 0u;
+        }
+    }
+
+    void reset_frame(void)
+    {
+        uint8_t frame[32];
+
+        clear(frame, ARRAY_SIZE(frame));
+    }
+    ```
+
+    `ARRAY_SIZE` itself gives the wrong answer if it is applied to a pointer, which is why it
+    belongs only where the array is declared. See also
+    [test-out Q7](./test-out.md#q7-sizes-of-strings).
+
 ## Common Mistakes
 
 - Using sizeof(pointer) where the array size was intended.

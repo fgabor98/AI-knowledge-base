@@ -1,0 +1,3 @@
+run -O0
+0
+warn suggest parentheses around comparison in operand of .&.

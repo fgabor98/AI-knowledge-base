@@ -47,6 +47,7 @@ nav:
           - "Learning Workflow And Tooling": c/orientation/learning-workflow-and-tooling.md
       - "Language Fundamentals":
           - "Language Fundamentals": c/language-fundamentals/index.md
+          - "Test-Out Diagnostic": c/language-fundamentals/test-out.md
           - "Source Code And Syntax": c/language-fundamentals/source-code-and-syntax.md
           - "Types, Values, And Objects": c/language-fundamentals/types-values-and-objects.md
           - "Expressions And Operators": c/language-fundamentals/expressions-and-operators.md
@@ -58,6 +59,7 @@ nav:
           - "Initialization": c/language-fundamentals/initialization.md
       - "Semantics And Memory":
           - "Semantics And Memory": c/semantics-and-memory/index.md
+          - "Test-Out Diagnostic": c/semantics-and-memory/test-out.md
           - "Storage Duration, Scope, And Linkage": c/semantics-and-memory/storage-duration-scope-and-linkage.md
           - "Pointer Fundamentals": c/semantics-and-memory/pointer-fundamentals.md
           - "Pointer Arithmetic And Bounds": c/semantics-and-memory/pointer-arithmetic-and-bounds.md
