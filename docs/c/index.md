@@ -10,7 +10,31 @@ last_reviewed: null
 
 A comprehensive C roadmap for systems and embedded engineering, from language fundamentals through senior-level platform, toolchain, safety, and low-level hardware knowledge.
 
-This section is currently an outline scaffold. Individual pages contain topic lists and drafting boilerplate; extended learning materials will be added in later passes.
+## How To Use This Section
+
+If you already write C professionally, do not start at page one:
+
+1. Take the [Language Fundamentals](./language-fundamentals/test-out.md) and
+   [Semantics And Memory](./semantics-and-memory/test-out.md) test-outs. Each question
+   points to the page to read if you miss it, so you read only the pages that cover your
+   gaps.
+2. Work through the [Failure Case Studies](./failure-case-studies/index.md): fifteen
+   reproducible failures, each with the generated code, the rule involved, and which
+   tools did and did not catch it.
+3. Use the later chapters as reference and practice. The pages on
+   [GDB](./correctness-quality-and-security/debugging-with-gdb.md),
+   [sanitizers](./correctness-quality-and-security/sanitizers-and-dynamic-analysis.md),
+   [binary inspection](./compilation-linking-and-abi/debug-information-and-binary-inspection.md),
+   [linking](./compilation-linking-and-abi/static-and-dynamic-linking.md), and
+   [linker scripts](./compilation-linking-and-abi/linker-scripts-and-memory-layout.md)
+   walk through real tool sessions.
+4. Finish with the [capstones](./professional-and-capstone/index.md) and the
+   [senior-level outcomes](./professional-and-capstone/senior-level-outcomes.md).
+
+Code on these pages is checked: C code blocks compile under `-Wall -Wextra -Werror`,
+and the examples, case studies, test-out answers, and tool-session transcripts are
+rerun by `scripts/validate-c.sh`. Transcripts come from GCC 13 on x86-64 Linux; where a
+page states a result for another target, it says so.
 
 ## Learning Path
 
@@ -56,4 +80,14 @@ This section is currently an outline scaffold. Individual pages contain topic li
 
 ## References
 
-- Add primary C standards, WG14 materials, compiler documentation, ABI references, and platform manuals during the content pass.
+- [ISO/IEC 9899 standards and drafts (WG14)](https://open-std.org/jtc1/sc22/wg14/www/standards.html)
+- [C11 public draft N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf);
+  clause numbers in this section refer to it unless a page says otherwise
+- [GCC manual](https://gcc.gnu.org/onlinedocs/gcc/)
+- [GNU Binary Utilities](https://sourceware.org/binutils/docs/binutils.html) and
+  [GNU ld](https://sourceware.org/binutils/docs/ld/)
+- [GDB documentation](https://sourceware.org/gdb/current/onlinedocs/gdb.html/)
+- [System V ABI and ELF specifications](https://refspecs.linuxfoundation.org/elf/)
+- [Arm ABI specifications](https://github.com/ARM-software/abi-aa)
+- [POSIX.1-2024](https://pubs.opengroup.org/onlinepubs/9799919799/)
+- [SEI CERT C Coding Standard](https://wiki.sei.cmu.edu/confluence/display/c)
