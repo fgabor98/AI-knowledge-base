@@ -1,0 +1,99 @@
+/* C learning progress checklist (docs/c/progress.md, javascripts/c-progress.js). */
+
+/* The readthedocs theme gives list items a bullet, a left margin, and 12px of
+   vertical margin on every child; a checklist row needs none of them. */
+.rst-content .c-progress ul,
+.c-progress ul {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding-left: 0;
+}
+
+.rst-content .c-progress ul li,
+.c-progress li {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.2rem 0;
+}
+
+.rst-content .c-progress ul li > * {
+  margin: 0;
+}
+
+.c-progress-box {
+  cursor: pointer;
+  flex: none;
+  transform: scale(1.15);
+}
+
+.c-progress li.c-progress-learnt > a {
+  color: #6b7280;
+  text-decoration: line-through;
+}
+
+.c-progress-visited {
+  color: #6b7280;
+  font-size: 0.85em;
+}
+
+.c-progress-count {
+  color: #6b7280;
+  font-size: 0.7em;
+  font-weight: normal;
+  margin-left: 0.6rem;
+}
+
+.c-progress-count.c-progress-complete {
+  color: #15803d;
+}
+
+.c-progress-summary {
+  margin: 1rem 0 1.5rem;
+}
+
+.c-progress-totals {
+  font-weight: bold;
+  margin-bottom: 0.4rem;
+}
+
+.c-progress-bar {
+  background: #e5e7eb;
+  border-radius: 4px;
+  height: 0.6rem;
+  overflow: hidden;
+}
+
+.c-progress-bar-fill {
+  background: #15803d;
+  height: 100%;
+  transition: width 0.2s ease;
+  width: 0;
+}
+
+.c-progress-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.c-progress-hide {
+  margin-right: auto;
+}
+
+.c-progress-button {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0.25rem 0.8rem;
+}
+
+.c-progress-button:hover {
+  background: #e5e7eb;
+}

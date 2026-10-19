@@ -30,14 +30,17 @@ markdown_extensions:
 extra_javascript:
   - javascripts/mermaid.min.js
   - javascripts/mermaid.js
+  - javascripts/c-progress.js
 extra_css:
   - stylesheets/layout.css
   - stylesheets/mermaid.css
+  - stylesheets/c-progress.css
 nav:
   - Home: index.md
   - Topic Map: topic-map.md
   - C:
       - "Overview": c/index.md
+      - "Progress Checklist": c/progress.md
       - "Orientation":
           - "Orientation": c/orientation/index.md
           - "Origins And History": c/orientation/origins-and-history.md

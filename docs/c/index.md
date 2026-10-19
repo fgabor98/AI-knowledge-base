@@ -12,6 +12,9 @@ A comprehensive C roadmap for systems and embedded engineering, from language fu
 
 ## How To Use This Section
 
+Track what you have covered on the [progress checklist](./progress.md): tick topics
+as you learn them, and see which pages you have visited but not finished.
+
 If you already write C professionally, do not start at page one:
 
 1. Take the [Language Fundamentals](./language-fundamentals/test-out.md) and

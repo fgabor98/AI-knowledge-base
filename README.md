@@ -70,6 +70,10 @@ above the fence:
 Use `skip` only for fragments, and always give a reason. Use `expect-warning` for
 deliberately bad examples; the check then fails if the example stops warning.
 
+`docs/c/progress.md` (the C progress checklist) is generated from the C section of
+`mkdocs.yml`. After adding or renaming a C page, run `scripts/generate-c-progress.py`;
+`scripts/validate-c.sh` fails while the checklist is out of date.
+
 ## Content Workflow
 
 1. Extend `docs/topic-map.md`.
