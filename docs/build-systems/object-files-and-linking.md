@@ -175,6 +175,47 @@ nm util.o
 
 You should see that `main.o` refers to `add`, and `util.o` defines it.
 
+## What Is Inside An Executable
+
+The linker does more than resolve names. It also merges the *sections* of every input object (`.text`, `.rodata`, `.data`, `.bss`, ...) and groups them into *segments*, the pieces the loader maps into memory with one set of permissions. The transcripts below come from `bash examples/build-systems/tool-sessions/compiler-driver/run.sh`:
+
+```text
+$ gcc -O2 -Iinclude main.c -o app && size app
+   text	   data	    bss	    dec	    hex	filename
+   1417	    600	      8	   2025	    7e9	app
+$ readelf -lW app | grep -E '^ +(Type|INTERP|LOAD|DYNAMIC|GNU_RELRO)'
+  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+  INTERP         0x000318 0x0000000000000318 0x0000000000000318 0x00001c 0x00001c R   0x1
+  LOAD           0x000000 0x0000000000000000 0x0000000000000000 0x000648 0x000648 R   0x1000
+  LOAD           0x001000 0x0000000000001000 0x0000000000001000 0x000189 0x000189 R E 0x1000
+  LOAD           0x002000 0x0000000000002000 0x0000000000002000 0x0000ec 0x0000ec R   0x1000
+  LOAD           0x002db8 0x0000000000003db8 0x0000000000003db8 0x000258 0x000260 RW  0x1000
+  DYNAMIC        0x002dc8 0x0000000000003dc8 0x0000000000003dc8 0x0001f0 0x0001f0 RW  0x8
+  GNU_RELRO      0x002db8 0x0000000000003db8 0x0000000000003db8 0x000248 0x000248 R   0x1
+$ readelf -lW app | sed -n '/Section to Segment mapping/,$p'
+ Section to Segment mapping:
+  Segment Sections...
+   00
+   01     .interp
+   02     .interp .note.gnu.property .note.gnu.build-id .note.ABI-tag .gnu.hash .dynsym .dynstr .gnu.version .gnu.version_r .rela.dyn .rela.plt
+   03     .init .plt .plt.got .plt.sec .text .fini
+   04     .rodata .eh_frame_hdr .eh_frame
+   05     .init_array .fini_array .dynamic .got .data .bss
+...
+```
+
+How to read it:
+
+- The four `LOAD` segments are the program as the loader sees it: read-only metadata (02), executable code (03, flags `R E`), read-only constants (04), and writable data (05, `RW`).
+- In the last `LOAD` segment `MemSiz` (0x260) is larger than `FileSiz` (0x258): the difference is `.bss`, which takes memory but no bytes in the file.
+- `INTERP` names the dynamic loader. `DYNAMIC` holds the `NEEDED` library list and search paths that `readelf -d` prints.
+- `GNU_RELRO` is made read-only after relocation, a hardening feature.
+- Addresses start at 0 because this is a position-independent executable; the loader picks the real base address.
+
+`size` sums the same data per kind: `text` includes code and read-only data, `data` is initialized writable data, `bss` is zero-initialized data. Use `size` to track growth in CI, and `readelf -lW` when the question is about permissions, the loader, or which section ended up where.
+
+Firmware images use the same mechanism with a linker script that places segments at fixed flash and RAM addresses. See [Linker Scripts and Memory Layout](../c/compilation-linking-and-abi/linker-scripts-and-memory-layout.md).
+
 ## Real-World Example
 
 An embedded Linux application may have separate modules for hardware access, configuration parsing, logging, and the main command-line interface:
@@ -315,6 +356,16 @@ During cross-compilation, a link command can accidentally search `/usr/lib` from
 - Use `readelf -Ws file.o` or `readelf -Ws libname.so` when `nm` output is not enough.
 - For runtime failures, check the target root filesystem, not only the build host.
 
+## Go Deeper
+
+The C section covers this material at intermediate and advanced depth, with real tool transcripts:
+
+- [Object Files, Symbols, and Relocations](../c/compilation-linking-and-abi/object-files-symbols-and-relocations.md): sections, symbol binding, weak symbols, relocations
+- [Static and Dynamic Linking](../c/compilation-linking-and-abi/static-and-dynamic-linking.md): archive member extraction, map files, `--gc-sections`, SONAME, `$ORIGIN`, interposition, `-fvisibility=hidden`
+- [Linker Scripts and Memory Layout](../c/compilation-linking-and-abi/linker-scripts-and-memory-layout.md): LMA/VMA, memory regions, orphan sections
+- [Debug Information and Binary Inspection](../c/compilation-linking-and-abi/debug-information-and-binary-inspection.md): from a crash address to a source line
+- [Shared Libraries, ABI, and Runtime Linking](shared-libraries-abi-and-runtime-linking.md): library names, symbol versions, loader search order
+
 ## Related Topics
 
 - [Direct Compiler Invocation](direct-compiler-invocation.md)
@@ -324,9 +375,7 @@ During cross-compilation, a link command can accidentally search `/usr/lib` from
 
 ## References
 
-- GCC manual
-- GNU Binutils documentation
-- `man ld`
-- `man ar`
-- `man nm`
-- `man readelf`
+- [GNU ld manual](https://sourceware.org/binutils/docs/ld/)
+- [GNU Binutils: `ar`, `nm`, `readelf`, `objdump`, `size`](https://sourceware.org/binutils/docs/binutils/)
+- [GCC: Options for linking](https://gcc.gnu.org/onlinedocs/gcc/Link-Options.html)
+- [System V ABI and ELF specification](https://refspecs.linuxfoundation.org/elf/)

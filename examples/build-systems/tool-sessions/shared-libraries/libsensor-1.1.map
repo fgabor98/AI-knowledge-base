@@ -1,0 +1,11 @@
+LIBSENSOR_1.0 {
+    global:
+        sensor_read;
+    local:
+        *;
+};
+
+LIBSENSOR_1.1 {
+    global:
+        sensor_read_average;
+} LIBSENSOR_1.0;

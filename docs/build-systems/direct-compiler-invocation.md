@@ -68,6 +68,100 @@ When reading a build log, separate the command into questions:
 
 That habit scales from one `gcc` command to Make, CMake, kernel builds, Yocto recipes, and TI Processor SDK logs.
 
+## What The Driver Really Runs
+
+The stage list above is not only a model: `gcc` is a small program that starts other programs. The transcripts below come from `bash examples/build-systems/tool-sessions/compiler-driver/run.sh` (GCC 13.3 on Ubuntu 24.04, x86-64).
+
+`-###` prints the commands without running them:
+
+```text
+$ gcc -### -Iinclude main.c -o app 2>&1 | grep -E '^ ' | awk '{print $1}' | sed 's|.*/||'
+cc1
+as
+collect2
+```
+
+`cc1` preprocesses and compiles C to assembly, `as` assembles it into an object, and `collect2` is a wrapper that runs the linker `ld`. A cross toolchain has the same structure with prefixed names (`aarch64-linux-gnu-as`, `aarch64-linux-gnu-ld`).
+
+`-save-temps` keeps every intermediate file. With `-o app`, GCC names them after the output:
+
+```text
+$ gcc -save-temps -Iinclude -O2 main.c -o app && ls app*
+app
+app-main.i
+app-main.o
+app-main.s
+$ grep -c '' app-main.i && grep -n 'LEDs' app-main.i
+1168
+1166:    printf("%d LEDs\n", 4);
+$ grep -E 'call|printf|puts' app-main.s
+	call	__printf_chk@PLT
+$ file app-main.o app | sed 's/, BuildID.*//'
+app-main.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
+app:        ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2
+```
+
+Each artifact answers a different question:
+
+- `app-main.i` is what the compiler proper sees: a 10-line file grew to 1168 lines of headers, and `BOARD_LED_COUNT` is already replaced by `4`. Missing-header and macro problems are diagnosed here.
+- `app-main.s` shows a distribution default at work: Ubuntu's GCC enables `_FORTIFY_SOURCE` at `-O2`, so `printf` became the checked `__printf_chk`. A Yocto or Buildroot toolchain may make different choices from the same source.
+- `app-main.o` is *relocatable*: code with unresolved references, not yet a program.
+- `app` is a *PIE executable* with an *interpreter*, the dynamic loader that will start it on the target.
+
+The include search order is printed by `-v`:
+
+```text
+$ gcc -v -Iinclude -E main.c -o /dev/null 2>&1 | sed -n '/#include "..." search starts here:/,/End of search list./p'
+#include "..." search starts here:
+#include <...> search starts here:
+ include
+ /usr/lib/gcc/x86_64-linux-gnu/13/include
+ /usr/local/include
+ /usr/include/x86_64-linux-gnu
+ /usr/include
+End of search list.
+```
+
+`-I` directories come first, then the compiler's own headers, then the system directories. In a cross build the last three must be inside the target sysroot; seeing `/usr/include` in a cross compiler's list means the host headers leak in.
+
+The link step adds files you never typed:
+
+```text
+$ gcc -c -Iinclude main.c && gcc -v main.o -o app 2>&1 | grep collect2 | tr ' ' '\n' | grep -E 'crt|^-l|^-dynamic-linker|ld-linux' | sed 's|.*/||'
+-dynamic-linker
+ld-linux-x86-64.so.2
+Scrt1.o
+crti.o
+crtbeginS.o
+-lgcc
+-lgcc_s
+-lc
+-lgcc
+-lgcc_s
+crtendS.o
+crtn.o
+```
+
+`Scrt1.o`, `crti.o`, and `crtn.o` come from the C library and contain the real entry point that calls `main`. `crtbeginS.o`/`crtendS.o` and `libgcc` come from the compiler. `-dynamic-linker` records the loader path in the executable. This is why you link through `gcc`, not `ld`, and why a sysroot must contain the target's crt files and libc. See [Startup, Runtime, and `main`](../c/compilation-linking-and-abi/startup-runtime-and-main.md).
+
+Each stage fails with its own kind of message:
+
+```text
+$ printf '#include "missing.h"\n' > pp.c && gcc -c pp.c
+pp.c:1:10: fatal error: missing.h: No such file or directory
+...
+$ printf 'int f(void) { return undeclared; }\n' > cc.c && gcc -c cc.c
+cc.c: In function ‘f’:
+cc.c:1:22: error: ‘undeclared’ undeclared (first use in this function)
+...
+$ printf 'int helper(void);\nint main(void) { return helper(); }\n' > ld.c && gcc -c ld.c && gcc ld.o -o ld_app
+/usr/bin/ld: ld.o: in function `main':
+ld.c:(.text+0x9): undefined reference to `helper'
+collect2: error: ld returned 1 exit status
+```
+
+Read the prefix: `fatal error: ... No such file` is the preprocessor, `error:` with a source line and column is the compiler, and a message from `/usr/bin/ld` (or `collect2`) is the linker. Fixing a link error by editing headers, or a preprocessor error by adding `-l` flags, wastes time. The [Translation Pipeline](../c/compilation-linking-and-abi/translation-pipeline.md) page has the full failure classification.
+
 ## Syntax / API / Mechanism
 
 Common compiler-driver options:
@@ -295,16 +389,27 @@ If a larger build system fails, copy the failing compiler command and simplify i
 - Use `readelf -h app` to inspect architecture and ABI details.
 - If a target binary will not run on the board, compare `file app` with known-good target binaries.
 
+## Go Deeper
+
+This page is the build-system view. The C section covers the same ground in depth:
+
+- [Translation Pipeline](../c/compilation-linking-and-abi/translation-pipeline.md): every stage, its artifacts, and its failures
+- [Compiler Modes, Warnings, and Optimization](../c/compilation-linking-and-abi/compiler-modes-warnings-and-optimization.md)
+- [Startup, Runtime, and `main`](../c/compilation-linking-and-abi/startup-runtime-and-main.md): what runs before `main`
+- [Cross-Compilation and Sysroots](../c/compilation-linking-and-abi/cross-compilation-and-sysroots.md)
+
 ## Related Topics
 
 - [Object Files and Linking](object-files-and-linking.md)
 - [Native Linux Userspace Builds](native-linux-userspace-builds.md)
+- [Cross-Compilation](cross-compilation.md)
 - [Build Systems for Embedded Linux](embedded-linux-roadmap.md)
 - [C Programming](../c/index.md)
 
 ## References
 
-- GCC manual
-- Clang command guide
-- `man gcc`
-- `man ld`
+- [GCC: Overall options (`-c`, `-S`, `-E`, `-save-temps`, `-###`)](https://gcc.gnu.org/onlinedocs/gcc/Overall-Options.html)
+- [GCC: Options for directory search (`-I`, `-L`, `--sysroot`)](https://gcc.gnu.org/onlinedocs/gcc/Directory-Options.html)
+- [GCC: Options for linking](https://gcc.gnu.org/onlinedocs/gcc/Link-Options.html)
+- [GCC: Developer options (`-print-file-name`, `-dumpmachine`)](https://gcc.gnu.org/onlinedocs/gcc/Developer-Options.html)
+- [Clang command line reference](https://clang.llvm.org/docs/ClangCommandLineReference.html)
