@@ -1,0 +1,65 @@
+{
+    "description": "Knowledge base example: TI AM62x (meta-ti-bsp) on Yocto 6.0 'wrynose' with the meta-kb-example product layer",
+    "expires": "2030-05-31",
+    "sources": {
+        "bitbake": {
+            "git-remote": {
+                "uri": "https://git.openembedded.org/bitbake",
+                "branch": "2.18",
+                "rev": "6e260eb6ab1631607ea414d9ff8ede1155faa5d9"
+            }
+        },
+        "openembedded-core": {
+            "git-remote": {
+                "uri": "https://git.openembedded.org/openembedded-core",
+                "branch": "wrynose",
+                "rev": "636e5d3b12d54951c13d57346648bc29a0e6b24e"
+            }
+        },
+        "meta-yocto": {
+            "git-remote": {
+                "uri": "https://git.yoctoproject.org/meta-yocto",
+                "branch": "wrynose",
+                "rev": "7c25b11156553145fa6b241a2d4f65d94438f804"
+            }
+        },
+        "meta-arm": {
+            "git-remote": {
+                "uri": "https://git.yoctoproject.org/meta-arm",
+                "branch": "wrynose",
+                "rev": "673e8d7c5dcd14de58092eb73e6ecc5eee5c1735"
+            }
+        },
+        "meta-ti": {
+            "git-remote": {
+                "uri": "https://git.yoctoproject.org/meta-ti",
+                "branch": "wrynose",
+                "rev": "e05eebd04959c4ef69666727e1ea593d267391d1"
+            }
+        }
+    },
+    "bitbake-setup": {
+        "configurations": [
+            {
+                "name": "am62xx-evm",
+                "description": "Poky distro, TI AM62x EVM machine, example product layer",
+                "setup-dir-name": "kb-am62xx-wrynose",
+                "bb-layers": [
+                    "openembedded-core/meta",
+                    "meta-yocto/meta-poky",
+                    "meta-arm/meta-arm-toolchain",
+                    "meta-arm/meta-arm",
+                    "meta-ti/meta-ti-bsp"
+                ],
+                "bb-layers-file-relative": [
+                    "meta-kb-example"
+                ],
+                "oe-fragments": [
+                    "distro/poky",
+                    "machine/am62xx-evm"
+                ]
+            }
+        ]
+    },
+    "version": "1.0"
+}

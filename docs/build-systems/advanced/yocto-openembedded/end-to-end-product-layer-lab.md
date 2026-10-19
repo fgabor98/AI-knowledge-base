@@ -93,14 +93,16 @@ Store source in a separate Git repository for realistic development, or use loca
 ```bitbake
 SUMMARY = "Product agent"
 LICENSE = "MIT"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=<checksum>"
+LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
 SRC_URI = "file://product-agent.c \
            file://product-agent.service \
            file://product-agent.conf \
 "
 
-S = "${WORKDIR}"
+# Local files unpack into UNPACKDIR. "S = ${WORKDIR}" (scarthgap style)
+# is a fatal error on wrynose.
+S = "${UNPACKDIR}"
 
 inherit systemd
 
@@ -113,11 +115,11 @@ do_install() {
     install -m 0755 product-agent ${D}${bindir}/product-agent
 
     install -d ${D}${sysconfdir}/product
-    install -m 0644 ${WORKDIR}/product-agent.conf \
+    install -m 0644 ${UNPACKDIR}/product-agent.conf \
         ${D}${sysconfdir}/product/agent.conf
 
     install -d ${D}${systemd_system_unitdir}
-    install -m 0644 ${WORKDIR}/product-agent.service \
+    install -m 0644 ${UNPACKDIR}/product-agent.service \
         ${D}${systemd_system_unitdir}/product-agent.service
 }
 

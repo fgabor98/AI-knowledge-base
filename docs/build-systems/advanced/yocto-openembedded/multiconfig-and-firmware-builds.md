@@ -62,43 +62,76 @@ flowchart LR
 
 ## Configuration Files
 
-Conceptual build configuration:
+A multiconfig is enabled by name and defined by a file of the same name in any layer's `conf/multiconfig/` directory:
 
 ```bitbake
-BBMULTICONFIG = "mcu"
+BBMULTICONFIG += "mcu"
 ```
-
-Then:
 
 ```text
 conf/multiconfig/mcu.conf
 ```
 
-The multiconfig file can select different machine, distro, tune, toolchain policy, or layer-visible configuration.
+The file is parsed **on top of** the normal configuration, so it only states what differs: usually `MACHINE`, often `TMPDIR` (so the two configurations do not share a work tree), sometimes `DISTRO` or `TCLIBC`.
 
-Exact availability and integration depend on layers and release.
+## Real Example: TI K3 `k3r5`
+
+Every TI K3 machine in meta-ti uses a multiconfig to build the 32-bit R5 bootloader next to the 64-bit Linux build. It is the clearest production example of the mechanism (meta-ti `wrynose`):
+
+```text
+# meta-ti-bsp/conf/machine/include/mc_k3r5.inc  (required by am62xx.inc and the other K3 SoC includes)
+BBMULTICONFIG += "k3r5"
+
+do_image[mcdepends] += "mc::k3r5:virtual/bootloader:do_deploy"
+```
+
+```text
+# meta-ti-bsp/conf/multiconfig/k3r5.conf
+MAINMACHINE := "${MACHINE}"
+
+DEPLOY_DIR_IMAGE:k3r5 = "${TI_COMMON_DEPLOY}/images/${MAINMACHINE}"
+
+MACHINE:append = "-k3r5"
+TCLIBC = "baremetal"
+TI_TMPDIR_APPEND ?= "-k3r5"
+TMPDIR:append = "${TI_TMPDIR_APPEND}"
+```
+
+Each line teaches one rule:
+
+- **Enable from the machine, not from `local.conf`.** Putting `BBMULTICONFIG` in the SoC include means every build for that SoC gets it automatically.
+- **Derive, do not duplicate.** `MAINMACHINE := "${MACHINE}"` captures the main machine with immediate expansion *before* `MACHINE:append` changes it, and `MACHINE:append = "-k3r5"` derives the R5 machine name. A product board `myboard` therefore needs a `myboard-k3r5.conf`.
+- **Separate work trees.** `TMPDIR:append` gives the R5 configuration its own `tmp-k3r5`; its toolchain (`TCLIBC = "baremetal"`, Armv7 tune) never mixes with the AArch64 one.
+- **Shared hand-off point.** Both configurations deploy into the same images directory, so the image and WIC steps find `tiboot3.bin` next to `tispl.bin`.
+- **Declare the cross-config edge.** `do_image` of every image waits for the R5 bootloader's `do_deploy`.
+
+The proof that the edge is in the task graph is in [Machines, Distros, and Image Targets](../ti-processor-sdk/machines-distros-and-image-targets.md#the-task-graph-crosses-into-the-k3r5-multiconfig) (`bitbake -g` output from the reference build).
 
 ## Building A Multiconfig Target
 
-Conceptual syntax:
-
 ```sh
-bitbake mc:mcu:product-firmware
+bitbake mc:k3r5:virtual/bootloader               # only the R5 bootloader
+bitbake virtual/bootloader mc:k3r5:virtual/bootloader   # both U-Boot builds
+bitbake mc::kb-image                             # "mc::" = the default configuration, same as kb-image
 ```
 
-A normal target and multiconfig target can be built in one invocation or connected through dependencies.
+Query a variable inside a multiconfig with `bitbake -e mc:k3r5:<recipe>`; `bitbake-getvar` reads the default configuration.
 
 ## Cross-Config Dependency
 
-A task in one configuration can depend on a task in another.
+The syntax has **two** configuration fields, the depending one and the depended-on one:
 
-Conceptual form:
-
-```bitbake
-do_compile[mcdepends] += "mc:mcu:product-firmware:do_deploy"
+```text
+<task>[mcdepends] += "mc:<from-config>:<to-config>:<recipe>:<task>"
 ```
 
-Use the exact task and recipe relationship needed. Do not add broad dependencies to serialize whole builds unnecessarily.
+An empty `<from-config>` means the default configuration, which is why meta-ti writes `mc::k3r5:...`. For a hypothetical MCU firmware consumed by a Linux recipe:
+
+```bitbake
+do_install[mcdepends] += "mc::mcu:product-firmware:do_deploy"
+```
+
+The dependency only orders tasks; it does not copy anything. The consumer must read the producer's output from an agreed location (here, the shared deploy directory). Use the exact task relationship needed; do not add broad dependencies that serialize whole builds.
 
 ## Worked Example: Firmware Package For Linux Rootfs
 
@@ -119,7 +152,7 @@ Linux-side packaging recipe declares a cross-config dependency on firmware deplo
 Conceptual dependency:
 
 ```bitbake
-do_install[mcdepends] += "mc:mcu:product-firmware:do_deploy"
+do_install[mcdepends] += "mc::mcu:product-firmware:do_deploy"
 ```
 
 Conceptual install:

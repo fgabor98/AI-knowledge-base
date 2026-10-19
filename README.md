@@ -74,6 +74,21 @@ deliberately bad examples; the check then fails if the example stops warning.
 `mkdocs.yml`. After adding or renaming a C page, run `scripts/generate-c-progress.py`;
 `scripts/validate-c.sh` fails while the checklist is out of date.
 
+Run the build systems documentation and example checks:
+
+```sh
+scripts/validate-build-systems.sh
+```
+
+This runs the tool sessions under `examples/build-systems/tool-sessions/` (real
+`make`, `gcc`, `ld`, and loader runs; each checks the lines it `expect`s) and then
+`scripts/check-build-transcripts.py`, which fails if any transcript quoted in
+`docs/build-systems` (a ```` ```text ```` block starting with `$ `) does not appear,
+line for line, in real session output. A quoted `...` line skips output lines.
+Yocto transcripts come from a real BitBake run that is too large for routine
+validation; they are recorded under `examples/build-systems/yocto/transcripts/` and
+refreshed by `examples/build-systems/yocto/run.sh` (see its header for setup).
+
 ## Content Workflow
 
 1. Extend `docs/topic-map.md`.

@@ -30,15 +30,27 @@ BitBake recipe
 
 ## Provider Selection
 
-Inspect the kernel provider:
+meta-ti does not hard-code one kernel. `meta-ti-bsp/conf/machine/include/ti-bsp.inc` maps one switch, `TI_PREFERRED_BSP`, to a kernel recipe and version:
+
+| `TI_PREFERRED_BSP` | Kernel recipe | Version (wrynose) |
+| --- | --- | --- |
+| `ti-6_18` (default) | `linux-ti-staging` | 6.18 |
+| `ti-6_12` | `linux-ti-staging` | 6.12 |
+| `ti-6_6` | `linux-ti-staging` | 6.6 |
+| `mainline` | `linux-ti-mainline` | latest upstream release |
+| `next` | `linux-ti-next` | upstream next |
+
+The switch also adds a `bsp-<value>` machine override, so kernel deltas in your layer can be scoped: `SRC_URI:append:bsp-ti-6_18 = " file://0001-board-fix.patch"`. When you move to the next BSP line, patches scoped to the old one stop applying instead of failing silently.
+
+Check the result rather than assuming it:
 
 ```bash
-bitbake-layers show-recipes virtual/kernel
-bitbake -e virtual/kernel | grep '^PREFERRED_PROVIDER_virtual/kernel'
-bitbake -e virtual/kernel | grep '^PN='
+bitbake-getvar --quiet --value TI_PREFERRED_BSP
+bitbake-getvar --quiet PREFERRED_PROVIDER_virtual/kernel      # with history: which file set it
+bitbake-getvar --quiet --value PREFERRED_VERSION_linux-ti-staging
 ```
 
-Provider selection can come from distro, machine, or layer policy. Do not assume the recipe name from memory.
+The real values for the reference build are on [Machines, Distros, and Image Targets](machines-distros-and-image-targets.md#what-the-machine-selects-real-values).
 
 ## Kernel Configuration
 

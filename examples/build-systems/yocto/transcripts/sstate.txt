@@ -1,0 +1,15 @@
+
+== Nothing changed: everything comes from shared state or is already done
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake board-tool 2>&1 | grep -E '^(Sstate summary|NOTE: Tasks Summary)'
+NOTE: Tasks Summary: Attempted 933 tasks of which 933 didn't need to be rerun and all succeeded.
+
+== Change one variable and ask why tasks reran
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake board-tool 2>&1 | grep -E '^NOTE: Tasks Summary'
+NOTE: Tasks Summary: Attempted 933 tasks of which 924 didn't need to be rerun and all succeeded.
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake-diffsigs -t board-tool do_compile 2>&1 | head -n 12
+Hash for task dependency board-tool:do_configure changed from 1b9722a9aa54dec47d69647d7414fa49ce0c469d5ad1750a283064d83ad4ddf7 to 79a292ee19e34ce9911fbc324ea3d68cd76ca395774f9485ad18fb1c2db9017b
+    basehash changed from e7307533d1853e9d7aa03f608cea665d8fb24aec20566ce5658578bf8b4ec91f to a12ca07af70bfeef2eb9aecfa6df877960abf065658f26f5959540fd52bc05da
+    Variable EXTRA_OEMAKE value changed:
+    "VERSION=${PV} {+CFLAGS=-Os+}"
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake board-tool 2>&1 | grep -E '^(Sstate summary|NOTE: Tasks Summary)'
+NOTE: Tasks Summary: Attempted 933 tasks of which 932 didn't need to be rerun and all succeeded.

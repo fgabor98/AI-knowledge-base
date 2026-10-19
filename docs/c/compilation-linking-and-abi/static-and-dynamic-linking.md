@@ -337,6 +337,7 @@ For public binary interfaces, use opaque handles, fixed-width types where approp
 - [Startup, Runtime, And `main`](./startup-runtime-and-main.md)
 - [ABI, Calling Conventions, And FFI](./abi-calling-conventions-and-ffi.md)
 - [Embedded libc Implementations](../standard-library-and-ecosystem/embedded-libc.md)
+- [Shared Libraries, ABI, and Runtime Linking](../../build-systems/shared-libraries-abi-and-runtime-linking.md): library names, symbol versions, loader search order, `-z defs`
 
 ## References
 

@@ -94,7 +94,7 @@ BBFILE_PATTERN_product = "^${LAYERDIR}/"
 BBFILE_PRIORITY_product = "10"
 
 LAYERDEPENDS_product = "core vendor-bsp"
-LAYERSERIES_COMPAT_product = "<supported-release>"
+LAYERSERIES_COMPAT_product = "wrynose"
 ```
 
 Use the actual release series names supported by the layer.
@@ -130,11 +130,28 @@ Examples:
 
 Undeclared dependencies make a layer appear reusable when it is not.
 
+BitBake enforces declared dependencies when a layer is added. On the reference setup, adding `meta-arm` before the toolchain layer it declares fails immediately:
+
+```text
+ERROR: Layer 'meta-arm' depends on layer 'arm-toolchain', but this layer is not enabled in your configuration
+ERROR: Parse failure with the specified layer added, exiting.
+```
+
+The name in the message is the layer's **collection name** (`BBFILE_COLLECTIONS` in its `layer.conf`), not its directory name: `arm-toolchain` lives in `meta-arm/meta-arm-toolchain`. `bitbake-layers show-layers` lists both. Add layers in dependency order.
+
 ## Release Compatibility
 
 `LAYERSERIES_COMPAT` states which Yocto/OE release series a layer supports.
 
 This is a compatibility declaration, not proof. CI should still parse and build against each declared series.
+
+The value is a list of release code names, checked against `LAYERSERIES_CORENAMES` of OE-Core. meta-ti on wrynose, for example, declares `LAYERSERIES_COMPAT_meta-ti-bsp = "whinlatter wrynose"`. A product layer that still says `scarthgap` after an upgrade stops the parse with a fatal error, built from this format string in BitBake's `cookerdata.py`:
+
+```text
+Layer %s is not compatible with the core layer which only supports these series: %s (layer is compatible with %s)
+```
+
+Update the declaration deliberately, after the layer has been ported, not to silence the message.
 
 ## Layer Types
 

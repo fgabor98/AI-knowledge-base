@@ -40,32 +40,55 @@ This section covers the tools and workflows that turn source code into native bi
 
 ## Learning Path
 
+### Intermediate Track: Compile, Link, Make, Yocto, TI SDK
+
+For an engineer who can already write C and wants to work confidently with embedded Linux builds, this is the shortest path to intermediate level. Each step has real, re-runnable command output.
+
+1. **Compilation stages and the compiler driver**: [Direct Compiler Invocation](direct-compiler-invocation.md), then [Translation Pipeline](../c/compilation-linking-and-abi/translation-pipeline.md) in the C section.
+2. **Objects, symbols, and how binaries are composed**: [Object Files and Linking](object-files-and-linking.md), [Object Files, Symbols, and Relocations](../c/compilation-linking-and-abi/object-files-symbols-and-relocations.md), [Static and Dynamic Linking](../c/compilation-linking-and-abi/static-and-dynamic-linking.md), [Linker Scripts and Memory Layout](../c/compilation-linking-and-abi/linker-scripts-and-memory-layout.md).
+3. **Runtime linking on the target**: [Shared Libraries, ABI, and Runtime Linking](shared-libraries-abi-and-runtime-linking.md).
+4. **Make**: [Make Basics](make-basics.md), [Make Variables and Pattern Rules](make-variables-and-pattern-rules.md), [Intermediate Make](make-intermediate.md).
+5. **Cross-compilation**: [Cross-Compilation](cross-compilation.md), [Target Triples and Sysroots](target-triples-and-sysroots.md).
+6. **Yocto**: the [Yocto and OpenEmbedded](advanced/yocto-openembedded/index.md) overview (release baseline and hands-on environment), then Mental Model, Build Directory and Configuration, Recipes, Tasks and Workdirs, Packaging and QA, Debugging BitBake Builds.
+7. **TI Processor SDK**: [TI Processor SDK Linux](advanced/ti-processor-sdk/index.md), then TI Yocto and Arago Build Flow, Boot Artifact Pipeline, Machines, Distros, and Image Targets, Custom Sitara Board Bring-Up.
+
+You have reached intermediate level when you can, without looking anything up:
+
+- name the program behind each stage of a `gcc` command and the error each stage produces;
+- explain why a link succeeds and the program still does not start on the target, and prove which library the loader picked;
+- write a Makefile that builds correctly incrementally, in parallel, and when called by Yocto or Buildroot;
+- create a product layer with a Makefile-based recipe, find any variable's origin with `bitbake-getvar`, and fix the QA errors from a wrongly written Makefile;
+- map every file that boots an AM62x to the core that runs it and the recipe and configuration that built it.
+
+### All Pages By Level
+
 Beginner pages:
 
 1. [Direct Compiler Invocation](direct-compiler-invocation.md)
 2. [Object Files and Linking](object-files-and-linking.md)
 3. [Make Basics](make-basics.md)
-4. [Make Variables and Pattern Rules](make-variables-and-pattern-rules.md)
-5. [Native Linux Userspace Builds](native-linux-userspace-builds.md)
+4. [Native Linux Userspace Builds](native-linux-userspace-builds.md)
 
 Intermediate pages:
 
-1. [Cross-Compilation](cross-compilation.md)
-2. [Target Triples and Sysroots](target-triples-and-sysroots.md)
-3. [Target pkg-config](target-pkg-config.md)
-4. [Shared Libraries, ABI, and Runtime Linking](shared-libraries-abi-and-runtime-linking.md)
-5. [CMake Basics](cmake-basics.md)
-6. [CMake Toolchain Files](cmake-toolchain-files.md)
-7. [Ninja as a Generated Backend](ninja-generated-backend.md)
-8. [Install Rules and Staging](install-rules-and-staging.md)
-9. [CMake Package Discovery](cmake-package-discovery.md)
-10. [Autotools and Meson for Embedded Cross-Builds](autotools-and-meson-for-embedded-cross-builds.md)
-11. [Filesystem Image Basics](filesystem-image-basics.md)
-12. [Build Artifact Debugging](build-artifact-debugging.md)
-13. [Source Fetching and Patch Management](source-fetching-and-patch-management.md)
-14. [Patch Management for Embedded Builds](patch-management-for-embedded-builds.md)
-15. [Build Caching and Mirrors](build-caching-and-mirrors.md)
-16. [Build Quality Gates](build-quality-gates.md)
+1. [Make Variables and Pattern Rules](make-variables-and-pattern-rules.md)
+2. [Intermediate Make](make-intermediate.md)
+3. [Cross-Compilation](cross-compilation.md)
+4. [Target Triples and Sysroots](target-triples-and-sysroots.md)
+5. [Target pkg-config](target-pkg-config.md)
+6. [Shared Libraries, ABI, and Runtime Linking](shared-libraries-abi-and-runtime-linking.md)
+7. [CMake Basics](cmake-basics.md)
+8. [CMake Toolchain Files](cmake-toolchain-files.md)
+9. [Ninja as a Generated Backend](ninja-generated-backend.md)
+10. [Install Rules and Staging](install-rules-and-staging.md)
+11. [CMake Package Discovery](cmake-package-discovery.md)
+12. [Autotools and Meson for Embedded Cross-Builds](autotools-and-meson-for-embedded-cross-builds.md)
+13. [Filesystem Image Basics](filesystem-image-basics.md)
+14. [Build Artifact Debugging](build-artifact-debugging.md)
+15. [Source Fetching and Patch Management](source-fetching-and-patch-management.md)
+16. [Patch Management for Embedded Builds](patch-management-for-embedded-builds.md)
+17. [Build Caching and Mirrors](build-caching-and-mirrors.md)
+18. [Build Quality Gates](build-quality-gates.md)
 
 Advanced roadmaps:
 
@@ -100,8 +123,11 @@ Every Build Systems topic page should use the [Topic Page Template](../topic-pag
 
 Good Build Systems pages should include:
 
+- real command output, produced by a tool session under `examples/build-systems/` and checked by `scripts/validate-build-systems.sh`
+- the tool and release versions the output came from
+
 - a minimal command-line example
 - a realistic embedded Linux constraint
 - native and cross-build notes where relevant
 - debugging checks for toolchains, sysroots, and dependency discovery
-- references to primary manuals or project documentation
+- references to primary manuals or project documentation, with links

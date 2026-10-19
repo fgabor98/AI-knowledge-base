@@ -1,0 +1,5 @@
+# A vendor-style Makefile that hard-codes the compiler.
+CC = gcc
+
+hello: hello.c
+	$(CC) $(CFLAGS) $(LDFLAGS) $< -o $@

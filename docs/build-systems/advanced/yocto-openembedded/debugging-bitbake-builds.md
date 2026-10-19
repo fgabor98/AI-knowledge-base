@@ -80,56 +80,75 @@ flowchart TD
 
 ## Parse Failures
 
-Parse errors happen before task execution.
+Parse errors happen before any task runs, so no task log exists. The message names the file. Real examples from the reference build (`examples/build-systems/yocto/run.sh`):
 
-Check:
+A `file://` entry that is not in any `FILESPATH` directory. The list of searched paths is the most useful part: it shows every override directory BitBake tried, which is exactly where a machine- or distro-specific copy may live:
 
-- exact file and line
-- unmatched quotes
-- obsolete override syntax
-- missing `require` target
-- invalid Python expansion
-- missing layer dependency
+```text
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake -p 2>&1 | grep -E 'ERROR|searched|kb-qa-missing/' | sed 's/^Parsing recipes\.\.\.//' | head -n 4
+ERROR: ~/AI-knowledge-base/examples/build-systems/yocto/meta-kb-example/recipes-qa/kb-qa-demo/kb-qa-missing_1.0.bb: Unable to get checksum for kb-qa-missing SRC_URI entry not-in-the-layer.conf: file could not be found
+The following paths were searched:
+~/AI-knowledge-base/examples/build-systems/yocto/meta-kb-example/recipes-qa/kb-qa-demo/kb-qa-missing/poky/not-in-the-layer.conf
+```
 
-Use:
+The full list continues with one directory per active override (`am62xx-evm`, `am62xx`, `k3`, `ti-soc`, ...). With a multiconfig, the same recipe is parsed once per configuration, so the error can also be reported for the `k3r5` side, with `am62xx-evm-k3r5` in the paths.
+
+A recipe written for scarthgap, where `file://` sources unpacked into `WORKDIR`:
+
+```text
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake -p 2>&1 | grep -E '^ERROR' | head -n 1
+ERROR: ~/AI-knowledge-base/examples/build-systems/yocto/meta-kb-example/recipes-qa/kb-qa-demo/kb-qa-legacy-workdir_1.0.bb: Using S = ${WORKDIR} is no longer supported
+```
+
+One broken recipe stops the parse for the whole build, including unrelated targets. Other parse-time failures: a layer added before its `LAYERDEPENDS` ([Layers](layers.md#layer-dependencies)), an incompatible `LAYERSERIES_COMPAT`, an invalid `MACHINE` (on TI K3, also the derived `-k3r5` machine), obsolete override syntax (`_append` instead of `:append`), a missing `require` target, and Python errors in inline `${@...}` expressions.
+
+Not every legacy setting fails at parse time. `S = "${WORKDIR}/git"` parses, and fails when the source is unpacked:
+
+```text
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake kb-qa-legacy-git -c unpack 2>&1 | grep -E '^ERROR' | head -n 1
+ERROR: kb-qa-legacy-git-1.0-r0 do_unpack: Recipes that set S = "${WORKDIR}/git" or S = "${UNPACKDIR}/git" should remove that assignment, as S set by bitbake.conf in oe-core now works.
+```
+
+Useful commands:
 
 ```sh
+bitbake -p                     # parse only; fastest way to check metadata after an edit
 bitbake-layers show-layers
-bitbake-layers show-appends
+bitbake-layers show-appends <recipe>
 ```
 
 ## Inspecting Final Metadata
 
-```sh
-bitbake -e <recipe>
-```
-
-Filter variables:
+`bitbake-getvar` prints one variable after all files, overrides, and appends are applied, with the history of every operation that touched it:
 
 ```sh
-bitbake -e <recipe> | grep '^SRC_URI='
-bitbake -e <recipe> | grep '^DEPENDS='
-bitbake -e <recipe> | grep '^PACKAGECONFIG='
-bitbake -e <recipe> | grep '^WORKDIR='
+bitbake-getvar MACHINE                     # global value, with history
+bitbake-getvar -r <recipe> SRC_URI         # value inside one recipe
+bitbake-getvar -r <recipe> --value S       # value only, for scripts
+bitbake-getvar -r <recipe> -f vardeps --value do_compile   # a variable flag
 ```
 
-The variable history in `bitbake -e` can show which files and operations changed a value.
+The history answers "who set this?" directly; see the `S` example in [Tasks and Workdirs](tasks-and-workdirs.md#workdir-path) and the `MACHINE` example in [Build Directory and Configuration](build-directory-and-configuration.md#bblayersconf-and-fragments). `bitbake -e <recipe>` still prints the entire datastore (tens of thousands of lines) and is useful for searching when you do not know the variable name.
+
+`bitbake-getvar` reads the default configuration. For a multiconfig use `bitbake -e mc:<name>:<target>`.
 
 ## Provider Debugging
 
 ```sh
-bitbake-layers show-recipes <name>
-bitbake-layers show-recipes virtual/kernel
-bitbake -e virtual/kernel | grep -E '^(PN|PV|PREFERRED_PROVIDER|PREFERRED_VERSION)'
+bitbake-layers show-recipes '<pattern>'
+bitbake-getvar PREFERRED_PROVIDER_virtual/kernel
+bitbake-getvar --value PREFERRED_VERSION_<recipe>
 ```
+
+`show-recipes` prints every candidate and, for skipped ones, the reason, for example `skipped: PREFERRED_PROVIDER_virtual/kernel set to linux-ti-staging, not linux-ti-mainline` (full output in [Machines, Distros, and Image Targets](../ti-processor-sdk/machines-distros-and-image-targets.md#what-the-machine-selects-real-values)).
 
 Questions:
 
-- is provider layer active?
-- is recipe compatible with machine?
-- is version masked?
-- is a preference scoped incorrectly?
-- does the provider actually declare the capability?
+- is the provider's layer active?
+- is the recipe compatible with the machine (`COMPATIBLE_MACHINE`)?
+- is the version masked or not preferred?
+- is a preference scoped to the wrong override?
+- does the provider actually declare the capability (`PROVIDES`)?
 
 ## Fetch Failures
 
@@ -236,40 +255,49 @@ Use the image manifest from successful builds to compare composition.
 bitbake -g <target>
 ```
 
-Generated graph files can answer:
+Current BitBake writes `task-depends.dot` (every task and edge) and `pn-buildlist` (every recipe in the build). Filter them with `grep`; they are far too large to render. Example questions:
 
-- why is a recipe being built?
-- what depends on it?
-- which provider is selected?
-- why did a change trigger broad rebuilding?
+- why is a recipe being built? `grep '"<target>.do_' task-depends.dot | grep '<recipe>'`
+- what crosses into a multiconfig? `grep -o '"mc:<name>:[^"]*"' task-depends.dot`
 
-Large graphs need filtering or graph tools.
+The real TI example is in [Machines, Distros, and Image Targets](../ti-processor-sdk/machines-distros-and-image-targets.md#the-task-graph-crosses-into-the-k3r5-multiconfig).
 
 ## Signature Debugging
 
-When tasks rebuild unexpectedly or fail to rebuild, inspect task signatures and metadata inputs.
+Every task has a signature (hash) computed from the variables and functions it uses and the signatures of the tasks it depends on. A task reruns when its signature changes; it is restored from shared state when a matching signature exists. To ask *why* a task reran, compare its last two signatures:
 
-Tools and exact workflows vary by release, but concepts remain:
+```text
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake-diffsigs -t board-tool do_compile 2>&1 | head -n 12
+Hash for task dependency board-tool:do_configure changed from 1b9722a9aa54dec47d69647d7414fa49ce0c469d5ad1750a283064d83ad4ddf7 to 79a292ee19e34ce9911fbc324ea3d68cd76ca395774f9485ad18fb1c2db9017b
+    basehash changed from e7307533d1853e9d7aa03f608cea665d8fb24aec20566ce5658578bf8b4ec91f to a12ca07af70bfeef2eb9aecfa6df877960abf065658f26f5959540fd52bc05da
+    Variable EXTRA_OEMAKE value changed:
+    "VERSION=${PV} {+CFLAGS=-Os+}"
+```
 
-- compare signatures
-- identify differing variables/dependencies
-- verify metadata input participates in task hash
-- check sstate reuse
+The session had added `EXTRA_OEMAKE += "CFLAGS=-Os"` through a temporary `.bbappend`. `bitbake-diffsigs` walks back to the first task whose own inputs changed (`do_configure`) and prints the variable diff (`{+...+}` added, `[-...-]` removed). `bitbake-dumpsig -t <recipe> <task>` prints everything one signature contains.
 
-Avoid excluding variables from signatures merely to improve cache hits unless they truly cannot affect output.
+When the append was removed again, only one task reran:
+
+```text
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake board-tool 2>&1 | grep -E '^(Sstate summary|NOTE: Tasks Summary)'
+NOTE: Tasks Summary: Attempted 933 tasks of which 932 didn't need to be rerun and all succeeded.
+```
+
+The signatures were back to values whose output was already in shared state, so it was restored instead of rebuilt. Unexpected cache misses are diagnosed the same way: `bitbake-diffsigs` between the expected and actual signature names the variable that leaked into the hash (a timestamp, a host path, a changing `SRCREV`). Do not exclude variables from signatures (`vardepsexclude`) merely to improve cache hits unless they truly cannot affect output.
 
 ## Debugging Package Inclusion
 
-If a package is absent:
+If a file or package is missing from the image, walk the chain from file to image:
 
-1. Does recipe build?
-2. Which package owns required file?
-3. Is package requested by image/package group?
-4. Is it excluded or incompatible?
-5. Does image manifest include it?
-6. Is final rootfs/WIC current?
+```sh
+oe-pkgdata-util find-path /usr/bin/board-tool      # which package ships this file?
+oe-pkgdata-util lookup-recipe board-tool           # which recipe makes this package?
+oe-pkgdata-util list-pkgs -p board-tool            # all packages of a recipe
+oe-pkgdata-util list-pkg-files board-tool          # files in one package
+oe-pkgdata-util read-value RDEPENDS board-tool     # runtime dependencies, including automatic ones
+```
 
-Do not search only for recipe name.
+Real output for the example recipe is in [Packaging, QA, and Package Feeds](packaging-qa-and-feeds.md#shared-library-dependencies). Then check whether the image or a package group requests that package (`bitbake-getvar -r <image> --value IMAGE_INSTALL`), and compare the image manifest or `buildhistory/images/.../installed-package-names.txt` with what you expect. Do not search only for the recipe name: images install packages, not recipes.
 
 ## Deployment Debugging
 
@@ -338,10 +366,11 @@ Investigate upstream build commands and class/toolchain integration. Fix the bui
 
 ```sh
 bitbake -g product-image
-grep product-recipe pn-depends.dot
+grep -E '"product-image\.do_[a-z_]+" -> "product-recipe\.' task-depends.dot
+grep -E -e '-> "product-recipe\.do_' task-depends.dot | cut -d' ' -f1 | sort -u
 ```
 
-Use graph output to identify the dependency chain, then correct the owning package group/dependency rather than masking the recipe.
+The second command lists every task that pulls `product-recipe` in. Follow the chain back to the package group or dependency that owns it, then correct that, rather than masking the recipe.
 
 ## Common Mistakes
 

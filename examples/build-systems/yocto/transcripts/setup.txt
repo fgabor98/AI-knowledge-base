@@ -1,0 +1,80 @@
+
+== Create the setup from the pinned configuration
+$ ~/yocto/.kb-bitbake-setup/bin/bitbake-setup --setting default top-dir-prefix ~ --setting default top-dir-name yocto init --non-interactive --no-init-vscode ~/AI-knowledge-base/examples/build-systems/yocto/kb-wrynose.conf.json am62xx-evm 2>&1 | grep -Ev '^ *[0-9]+%|^ *$'
+NOTE: Bitbake-setup is using ~/yocto as top directory.
+NOTE: A site.conf file already exists. Please remove it if you would like to replace it with a default one
+NOTE: Reading configuration from local file
+    ~/AI-knowledge-base/examples/build-systems/yocto/kb-wrynose.conf.json
+NOTE: Run 'bitbake-setup init --non-interactive ~/AI-knowledge-base/examples/build-systems/yocto/kb-wrynose.conf.json am62xx-evm' to select this configuration non-interactively.
+Initializing a setup directory in
+    ~/yocto/kb-am62xx-wrynose
+Fetching layer/tool repositories into ~/yocto/kb-am62xx-wrynose/layers
+    bitbake
+    openembedded-core
+    meta-yocto
+    meta-arm
+    meta-ti
+Setting up bitbake configuration in
+    ~/yocto/kb-am62xx-wrynose/build
+This bitbake configuration provides:
+    Poky distro, TI AM62x EVM machine, example product layer
+Usage instructions and additional information are in
+     ~/yocto/kb-am62xx-wrynose/build/README
+To run builds, source the environment using
+    . ~/yocto/kb-am62xx-wrynose/build/init-build-env
+Run 'bitbake-config-build enable-fragment <fragment-name>' to enable additional fragments or replace built-in ones (e.g. machine/<name> or distro/<name> to change MACHINE or DISTRO).
+The bitbake configuration files (local.conf, bblayers.conf and more) can be found in
+    ~/yocto/kb-am62xx-wrynose/build/conf
+
+== What bitbake-setup generated
+$ ls ~/yocto/kb-am62xx-wrynose ~/yocto/kb-am62xx-wrynose/build/conf
+~/yocto/kb-am62xx-wrynose:
+build
+config
+layers
+
+~/yocto/kb-am62xx-wrynose/build/conf:
+bblayers.conf
+conf-notes.txt
+conf-summary.txt
+local.conf
+site.conf
+templateconf.cfg
+toolcfg.conf
+$ grep -v '^#' conf/bblayers.conf conf/toolcfg.conf
+conf/bblayers.conf:BBLAYERS ?= " \
+conf/bblayers.conf:  ~/yocto/kb-am62xx-wrynose/layers/openembedded-core/meta \
+conf/bblayers.conf:  ~/yocto/kb-am62xx-wrynose/layers/meta-yocto/meta-poky \
+conf/bblayers.conf:  ~/yocto/kb-am62xx-wrynose/layers/meta-arm/meta-arm-toolchain \
+conf/bblayers.conf:  ~/yocto/kb-am62xx-wrynose/layers/meta-arm/meta-arm \
+conf/bblayers.conf:  ~/yocto/kb-am62xx-wrynose/layers/meta-ti/meta-ti-bsp \
+conf/bblayers.conf:  ~/AI-knowledge-base/examples/build-systems/yocto/meta-kb-example \
+conf/bblayers.conf:  "
+conf/toolcfg.conf:
+conf/toolcfg.conf:OE_FRAGMENTS += "distro/poky machine/am62xx-evm"
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake-layers show-layers 2>&1 | sed 's/  */ /g'
+layer path priority
+========================================================================================================
+core ~/yocto/kb-am62xx-wrynose/layers/openembedded-core/meta 5
+yocto ~/yocto/kb-am62xx-wrynose/layers/meta-yocto/meta-poky 5
+arm-toolchain ~/yocto/kb-am62xx-wrynose/layers/meta-arm/meta-arm-toolchain 5
+meta-arm ~/yocto/kb-am62xx-wrynose/layers/meta-arm/meta-arm 5
+meta-ti-bsp ~/yocto/kb-am62xx-wrynose/layers/meta-ti/meta-ti-bsp 6
+kb-example ~/AI-knowledge-base/examples/build-systems/yocto/meta-kb-example 10
+
+== Fragments: what a fragment is, and switching MACHINE
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake-config-build list-fragments 2>&1 | grep -E 'machine/am62xx-evm|core/yocto/sstate-mirror-cdn|Available|Enabled' | head -n 8
+Available built-in fragments:
+Enabled built-in fragments:
+machine/am62xx-evm	Sets MACHINE = "am62xx-evm"
+Available fragments in core layer located in ~/yocto/kb-am62xx-wrynose/layers/openembedded-core/meta:
+core/yocto/sstate-mirror-cdn	Use prebuilt sstate artifacts for standard Yocto build configurations.
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake-getvar --quiet MACHINE | grep -v '^#$'
+# $MACHINE [2 operations]
+#   set ~/yocto/kb-am62xx-wrynose/build/conf/toolcfg.conf:6
+#     "am62xx-evm (OE_FRAGMENTS contains "machine/am62xx-evm")"
+#   set ~/yocto/kb-am62xx-wrynose/layers/openembedded-core/meta/conf/documentation.conf:272
+#     [doc] "Specifies the target device for which the image is built. You define MACHINE in the conf/local.conf file in the Build Directory."
+# pre-expansion value:
+#   "am62xx-evm"
+MACHINE="am62xx-evm"

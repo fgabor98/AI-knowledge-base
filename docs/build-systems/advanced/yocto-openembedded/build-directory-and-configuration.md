@@ -42,65 +42,154 @@ The build directory is an execution workspace. It should not be the sole home of
 
 ## Initializing The Environment
 
-A common Poky/OE workflow is:
+How a build directory is created depends on the release.
+
+**scarthgap (5.0) and older**, and most vendor SDKs based on them, use the combined `poky` repository:
 
 ```sh
-source oe-init-build-env build
+git clone -b scarthgap https://git.yoctoproject.org/poky
+source poky/oe-init-build-env build
 ```
 
-This normally:
+Sourcing the script changes into the build directory, puts BitBake on `PATH`, and creates `conf/local.conf` and `conf/bblayers.conf` from templates if they do not exist. Layers are then added with `bitbake-layers add-layer`, and `MACHINE`/`DISTRO` set in `local.conf`. The layer list and revisions live only in the developer's checkout unless the project adds a manifest tool (`repo`, `kas`, TI's `oe-layersetup`).
 
-- changes the current directory to the build directory
-- places BitBake and related tools on `PATH`
-- creates initial `conf/local.conf` and `conf/bblayers.conf` if absent
-- exports environment values needed by the build tools
+**wrynose (6.0)** has no `poky` repository. **`bitbake-setup`** reads a JSON configuration that pins every source repository, lists the layers, and selects configuration fragments, then creates the whole setup in one step. That makes the manifest a first-class, reviewable file.
 
-Vendor SDKs can wrap this command or provide their own setup scripts. Read the wrapper before assuming it only calls `oe-init-build-env`.
+Vendor SDKs can wrap either mechanism. Read the wrapper before assuming what it does.
+
+## A Product Configuration File
+
+The reference build for these pages is described by `examples/build-systems/yocto/kb-wrynose.conf.json`:
+
+```json
+--8<-- "examples/build-systems/yocto/kb-wrynose.conf.json"
+```
+
+- `sources` pins each repository to a branch **and** a commit (`rev`). Updating a layer is a reviewed one-line change to this file.
+- `bb-layers` lists layers inside the fetched repositories; `bb-layers-file-relative` adds a layer by a path relative to the JSON file, so the product layer can live in the same repository as the configuration.
+- `oe-fragments` selects `MACHINE` and `DISTRO` through built-in fragments instead of `local.conf` lines.
+
+`bitbake-setup init` turns it into a setup directory. Every setup under the same top directory shares one downloads directory and one shared-state cache, configured in the top directory's `site.conf`:
+
+```text
+$ ~/yocto/.kb-bitbake-setup/bin/bitbake-setup --setting default top-dir-prefix ~ --setting default top-dir-name yocto init --non-interactive --no-init-vscode ~/AI-knowledge-base/examples/build-systems/yocto/kb-wrynose.conf.json am62xx-evm 2>&1 | grep -Ev '^ *[0-9]+%|^ *$'
+NOTE: Bitbake-setup is using ~/yocto as top directory.
+NOTE: A site.conf file already exists. Please remove it if you would like to replace it with a default one
+NOTE: Reading configuration from local file
+    ~/AI-knowledge-base/examples/build-systems/yocto/kb-wrynose.conf.json
+NOTE: Run 'bitbake-setup init --non-interactive ~/AI-knowledge-base/examples/build-systems/yocto/kb-wrynose.conf.json am62xx-evm' to select this configuration non-interactively.
+Initializing a setup directory in
+    ~/yocto/kb-am62xx-wrynose
+Fetching layer/tool repositories into ~/yocto/kb-am62xx-wrynose/layers
+    bitbake
+    openembedded-core
+    meta-yocto
+    meta-arm
+    meta-ti
+Setting up bitbake configuration in
+    ~/yocto/kb-am62xx-wrynose/build
+This bitbake configuration provides:
+    Poky distro, TI AM62x EVM machine, example product layer
+Usage instructions and additional information are in
+     ~/yocto/kb-am62xx-wrynose/build/README
+To run builds, source the environment using
+    . ~/yocto/kb-am62xx-wrynose/build/init-build-env
+Run 'bitbake-config-build enable-fragment <fragment-name>' to enable additional fragments or replace built-in ones (e.g. machine/<name> or distro/<name> to change MACHINE or DISTRO).
+The bitbake configuration files (local.conf, bblayers.conf and more) can be found in
+    ~/yocto/kb-am62xx-wrynose/build/conf
+```
+
+The two `--setting` options choose the top directory (`~/yocto`) for this one invocation. The repositories are cloned at the pinned commits, and the `NOTE` about `site.conf` shows that this top directory already had shared downloads and shared state from an earlier setup, which the new setup reuses.
 
 ## Build Directory Layout
 
-Typical layout:
+What `bitbake-setup` generated (all transcripts on this page come from `examples/build-systems/yocto/run.sh`; paths are shown relative to `~/yocto`):
 
 ```text
-build/
-  conf/
-    local.conf
-    bblayers.conf
-  tmp/
-  cache/
-  downloads/        if DL_DIR points here
-  sstate-cache/     if SSTATE_DIR points here
+$ ls ~/yocto/kb-am62xx-wrynose ~/yocto/kb-am62xx-wrynose/build/conf
+~/yocto/kb-am62xx-wrynose:
+build
+config
+layers
+
+~/yocto/kb-am62xx-wrynose/build/conf:
+bblayers.conf
+conf-notes.txt
+conf-summary.txt
+local.conf
+site.conf
+templateconf.cfg
+toolcfg.conf
 ```
 
-Only `conf/` is configuration. `tmp/`, parse caches, workdirs, and deploy output are generated.
+| Path | Owner | Contents |
+| --- | --- | --- |
+| `layers/` | `bitbake-setup` | the pinned repository checkouts |
+| `config/` | `bitbake-setup` | the configuration used, and `sources-fixed-revisions.json` (the exact commits checked out) |
+| `build/conf/bblayers.conf` | `bitbake-setup` | active layers |
+| `build/conf/toolcfg.conf` | tools (`bitbake-config-build`) | enabled fragments; do not edit by hand |
+| `build/conf/site.conf` | `bitbake-setup` | shared `DL_DIR`, `SSTATE_DIR`, hash equivalence database |
+| `build/conf/local.conf` | you | host-specific tweaks only |
+| `build/tmp/`, `build/cache/` | BitBake | generated output; never edit |
 
-## `bblayers.conf`
+Only `conf/` is configuration. Everything under `tmp/` is generated and disposable.
 
-`bblayers.conf` identifies active metadata layers.
+## `bblayers.conf` And Fragments
 
-Conceptual example:
-
-```bitbake
-BBLAYERS = " \
-  ${TOPDIR}/../poky/meta \
-  ${TOPDIR}/../poky/meta-poky \
-  ${TOPDIR}/../meta-openembedded/meta-oe \
-  ${TOPDIR}/../meta-vendor \
-  ${TOPDIR}/../meta-product \
-"
+```text
+$ grep -v '^#' conf/bblayers.conf conf/toolcfg.conf
+conf/bblayers.conf:BBLAYERS ?= " \
+conf/bblayers.conf:  ~/yocto/kb-am62xx-wrynose/layers/openembedded-core/meta \
+conf/bblayers.conf:  ~/yocto/kb-am62xx-wrynose/layers/meta-yocto/meta-poky \
+conf/bblayers.conf:  ~/yocto/kb-am62xx-wrynose/layers/meta-arm/meta-arm-toolchain \
+conf/bblayers.conf:  ~/yocto/kb-am62xx-wrynose/layers/meta-arm/meta-arm \
+conf/bblayers.conf:  ~/yocto/kb-am62xx-wrynose/layers/meta-ti/meta-ti-bsp \
+conf/bblayers.conf:  ~/AI-knowledge-base/examples/build-systems/yocto/meta-kb-example \
+conf/bblayers.conf:  "
+conf/toolcfg.conf:
+conf/toolcfg.conf:OE_FRAGMENTS += "distro/poky machine/am62xx-evm"
 ```
 
-It answers:
-
-- which layers participate in parsing?
-- where do recipes and appends come from?
-- which product and BSP metadata is active?
-
-Inspect:
-
-```sh
-bitbake-layers show-layers
+```text
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake-layers show-layers 2>&1 | sed 's/  */ /g'
+layer path priority
+========================================================================================================
+core ~/yocto/kb-am62xx-wrynose/layers/openembedded-core/meta 5
+yocto ~/yocto/kb-am62xx-wrynose/layers/meta-yocto/meta-poky 5
+arm-toolchain ~/yocto/kb-am62xx-wrynose/layers/meta-arm/meta-arm-toolchain 5
+meta-arm ~/yocto/kb-am62xx-wrynose/layers/meta-arm/meta-arm 5
+meta-ti-bsp ~/yocto/kb-am62xx-wrynose/layers/meta-ti/meta-ti-bsp 6
+kb-example ~/AI-knowledge-base/examples/build-systems/yocto/meta-kb-example 10
 ```
+
+The first column is the layer's collection name, used in `LAYERDEPENDS` and error messages; the last is `BBFILE_PRIORITY`.
+
+A **configuration fragment** is a small named `.conf` file (`conf/fragments/<layer>/<name>.conf`) that a build can enable or disable without editing `local.conf`. Two are built in: `machine/<name>` sets `MACHINE`, `distro/<name>` sets `DISTRO`. Layers can ship their own:
+
+```text
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake-config-build list-fragments 2>&1 | grep -E 'machine/am62xx-evm|core/yocto/sstate-mirror-cdn|Available|Enabled' | head -n 8
+Available built-in fragments:
+Enabled built-in fragments:
+machine/am62xx-evm	Sets MACHINE = "am62xx-evm"
+Available fragments in core layer located in ~/yocto/kb-am62xx-wrynose/layers/openembedded-core/meta:
+core/yocto/sstate-mirror-cdn	Use prebuilt sstate artifacts for standard Yocto build configurations.
+```
+
+`bitbake-getvar` shows that `MACHINE` came from the fragment, not from `local.conf`:
+
+```text
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake-getvar --quiet MACHINE | grep -v '^#$'
+# $MACHINE [2 operations]
+#   set ~/yocto/kb-am62xx-wrynose/build/conf/toolcfg.conf:6
+#     "am62xx-evm (OE_FRAGMENTS contains "machine/am62xx-evm")"
+#   set ~/yocto/kb-am62xx-wrynose/layers/openembedded-core/meta/conf/documentation.conf:272
+#     [doc] "Specifies the target device for which the image is built. You define MACHINE in the conf/local.conf file in the Build Directory."
+# pre-expansion value:
+#   "am62xx-evm"
+MACHINE="am62xx-evm"
+```
+
+Switch machines with `bitbake-config-build enable-fragment machine/<other>`; the tool replaces the previous `machine/` fragment. The old way, `MACHINE = "..."` in `local.conf`, still works on wrynose, but then two places can set it and `bitbake-getvar` is the only reliable way to know which one won.
 
 ## `local.conf`
 
@@ -150,12 +239,7 @@ It can influence:
 
 Changing `MACHINE` is not a cosmetic switch. Use a separate build directory or deliberately audit all reused output.
 
-Inspect:
-
-```sh
-bitbake -e | grep '^MACHINE='
-bitbake -e virtual/kernel | grep '^MACHINE='
-```
+Inspect with `bitbake-getvar --quiet MACHINE` (history included), as shown above. Changing `MACHINE` on TI K3 also changes the R5 machine of the `k3r5` multiconfig; see [Multiconfig and Firmware Builds](multiconfig-and-firmware-builds.md#real-example-ti-k3-k3r5).
 
 ## `DISTRO`
 

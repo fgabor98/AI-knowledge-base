@@ -1,0 +1,6 @@
+LIBSENSOR_1.0 {
+    global:
+        sensor_read;
+    local:
+        *;
+};

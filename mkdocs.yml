@@ -271,6 +271,8 @@ nav:
           - Robust Scripts: bash/robust-scripts.md
           - Bash Vs POSIX Sh: bash/bash-vs-posix-sh.md
       - Intermediate:
+          - Make Variables And Pattern Rules: build-systems/make-variables-and-pattern-rules.md
+          - Intermediate Make: build-systems/make-intermediate.md
           - Redirection And Pipes: bash/redirection-and-pipes.md
           - Here Documents And Here Strings: bash/here-documents-and-here-strings.md
           - Command And Process Substitution: bash/command-and-process-substitution.md
@@ -317,7 +319,6 @@ nav:
           - Direct Compiler Invocation: build-systems/direct-compiler-invocation.md
           - Object Files And Linking: build-systems/object-files-and-linking.md
           - Make Basics: build-systems/make-basics.md
-          - Make Variables And Pattern Rules: build-systems/make-variables-and-pattern-rules.md
           - Native Linux Userspace Builds: build-systems/native-linux-userspace-builds.md
       - Intermediate:
           - Cross-Compilation: build-systems/cross-compilation.md

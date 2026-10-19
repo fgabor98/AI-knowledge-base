@@ -85,7 +85,7 @@ Later, the product workflow should look more like:
 
 ```text
 company manifest
--> poky/OE layers
+-> bitbake, OE-Core, meta-arm (poky on scarthgap)
 -> TI BSP layers
 -> company distro layer
 -> company product BSP layer

@@ -97,19 +97,63 @@ Forcing can taint dependent task state. Use it to investigate, not as a normal r
 
 ## Workdir Path
 
-Find the exact workdir:
+Query paths instead of memorizing them. For the example layer's `board-tool` recipe on wrynose (from `examples/build-systems/yocto/run.sh`):
 
-```sh
-bitbake -e <recipe> | grep '^WORKDIR='
+```text
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && for v in WORKDIR UNPACKDIR S B D; do printf '%-9s %s\n' $v "$(bitbake-getvar --quiet -r board-tool --value $v)"; done
+WORKDIR   ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0
+UNPACKDIR ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/sources
+S         ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/sources/make-project
+B         ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/sources/make-project
+D         ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/image
 ```
 
-The path commonly includes:
+The path encodes the package architecture (`aarch64-poky-linux`: a generic AArch64 package; a machine-specific recipe would use `am62xx_evm-poky-linux`), the recipe name, and the version. Both wrynose and scarthgap name the directory `<PV>`; releases before 4.3 (kirkstone, mickledore) used `<PV>-<PR>` (for example `1.0-r0`), which older guides still show. Everything fetched is unpacked under `sources/` (`UNPACKDIR`); `S` points into it. A plain Makefile project builds in its source tree, so `B` equals `S` here; CMake and Meson recipes default to a separate `B`.
 
-- target architecture/tune or machine
-- recipe name
-- epoch/version/revision information
+`bitbake-getvar -r <recipe> S` without `--value` shows which file set the value. Here the recipe overrides the default `${UNPACKDIR}/${BP}`:
 
-Do not memorize paths; query them.
+```text
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake-getvar --quiet -r board-tool S
+#
+# $S [3 operations]
+#   set ~/yocto/kb-am62xx-wrynose/layers/openembedded-core/meta/conf/bitbake.conf:421
+#     "${UNPACKDIR}/${BP}"
+#   set ~/yocto/kb-am62xx-wrynose/layers/openembedded-core/meta/conf/documentation.conf:360
+#     [doc] "The location in the Build Directory where unpacked package source code resides."
+#   set ~/AI-knowledge-base/examples/build-systems/yocto/meta-kb-example/recipes-apps/board-tool/board-tool_1.0.bb:10
+#     "${UNPACKDIR}/make-project"
+# pre-expansion value:
+#   "${UNPACKDIR}/make-project"
+S="~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/sources/make-project"
+```
+
+After a build the workdir contains:
+
+```text
+$ ls ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0
+board-tool.spec
+configure.sstate
+debugsources.list
+deploy-rpms
+deploy-source-date-epoch
+image
+license-destdir
+package
+packages-split
+pkgdata
+pkgdata-pdata-input
+pkgdata-sysroot
+pseudo
+recipe-sysroot
+recipe-sysroot-native
+source-date-epoch
+sources
+spdx
+sysroot-destdir
+temp
+```
+
+A workdir only exists for tasks that actually ran in this build directory. When a recipe is restored from shared state, BitBake installs task output directly and `image/`, `packages-split/`, and the task logs are absent; run the task you want to inspect (`bitbake <recipe> -c install`) to create them.
 
 ```mermaid
 flowchart TD
@@ -261,7 +305,7 @@ Extend an existing task:
 ```bitbake
 do_install:append() {
     install -d ${D}${sysconfdir}/product
-    install -m 0644 ${WORKDIR}/product.conf \
+    install -m 0644 ${UNPACKDIR}/product.conf \
         ${D}${sysconfdir}/product/product.conf
 }
 ```

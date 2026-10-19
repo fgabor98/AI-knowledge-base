@@ -90,9 +90,14 @@ BitBake is conceptually closer to a metadata-driven task scheduler than to GNU M
 
 ### Poky
 
-Poky is a reference integration of BitBake, OE-Core, reference layers, and configuration. It is useful for learning and as a known baseline.
+"Poky" names two things, and the difference matters since Yocto 5.3:
 
-Poky is not normally the final product distribution. Product builds usually add vendor BSP layers and one or more product layers.
+- **The Poky distro** (`DISTRO = "poky"`) is the Yocto Project's reference distribution policy. It lives in the `meta-poky` layer of the `meta-yocto` repository and still exists on every release.
+- **The `poky` repository** was a combined checkout of BitBake, OE-Core, and meta-yocto with `oe-init-build-env` at the top. It was published up to 5.2 "walnascar". Older guides, vendor SDKs, and products on scarthgap (5.0) still use it.
+
+From 5.3 on, the same pieces are separate repositories, assembled by **`bitbake-setup`** from a JSON configuration that pins each source. The reference build for these pages is created that way; see [Build Directory and Configuration](build-directory-and-configuration.md).
+
+Neither the Poky distro nor the old repository layout is normally the final product. Product builds add vendor BSP layers and one or more product layers, and usually a product distro.
 
 ## The Fundamental Mental Model
 
@@ -443,6 +448,8 @@ RDEPENDS:${PN} += "bash"
 ```
 
 Adding a build dependency does not automatically guarantee the corresponding runtime package is installed in the final image.
+
+The one automatic bridge is shared libraries: packaging scans every binary's `DT_NEEDED` entries and adds runtime dependencies on the packages that provide those libraries, so linking against `libfoo` usually pulls `libfoo` into the image without an `RDEPENDS` line. Anything loaded another way (`dlopen` plugins, scripts calling other programs, data files, firmware) still needs an explicit `RDEPENDS`. See [Packaging, QA, and Package Feeds](packaging-qa-and-feeds.md#shared-library-dependencies).
 
 ## Work Directory Mental Model
 

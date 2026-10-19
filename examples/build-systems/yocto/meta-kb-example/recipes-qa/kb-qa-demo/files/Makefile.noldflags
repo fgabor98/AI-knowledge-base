@@ -1,0 +1,3 @@
+# Respects CC and CFLAGS, but the link rule forgets LDFLAGS.
+hello: hello.c
+	$(CC) $(CFLAGS) $< -o $@
