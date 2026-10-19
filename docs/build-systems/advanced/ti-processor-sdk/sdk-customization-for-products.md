@@ -93,6 +93,11 @@ SRC_URI = " \
     file://company-agent.service \
 "
 
+# wrynose (SDK 12.x): file:// sources unpack into UNPACKDIR.
+# scarthgap (SDK 11.x) has no UNPACKDIR: omit this line and use ${WORKDIR}
+# instead of ${UNPACKDIR} in do_install.
+S = "${UNPACKDIR}"
+
 inherit systemd
 
 SYSTEMD_SERVICE:${PN} = "company-agent.service"
@@ -100,10 +105,10 @@ SYSTEMD_AUTO_ENABLE:${PN} = "enable"
 
 do_install() {
     install -d ${D}${bindir}
-    install -m 0755 ${WORKDIR}/company-agent ${D}${bindir}/company-agent
+    install -m 0755 ${UNPACKDIR}/company-agent ${D}${bindir}/company-agent
 
     install -d ${D}${systemd_system_unitdir}
-    install -m 0644 ${WORKDIR}/company-agent.service ${D}${systemd_system_unitdir}/
+    install -m 0644 ${UNPACKDIR}/company-agent.service ${D}${systemd_system_unitdir}/
 }
 ```
 

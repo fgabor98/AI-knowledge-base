@@ -15,6 +15,23 @@ TI Processor SDK Linux is TI's integrated Linux BSP and distribution delivery fo
 
 For a product engineer, the SDK is not only a set of downloads. It is the release boundary that defines which kernel, U-Boot, firmware, machine configuration, image recipe, toolchain, and documentation are expected to work together.
 
+## Release Baseline
+
+Every fact in this section is release-specific, so the pages name the release they describe. The reference is **TI Processor SDK Linux 12.x on Yocto 6.0 "wrynose"** with the **AM62x** (`am62xx-evm`) as the example SoC. Metadata excerpts and command output come from the pinned build in `examples/build-systems/yocto/` (see [Build Directory and Configuration](../yocto-openembedded/build-directory-and-configuration.md#a-product-configuration-file)).
+
+| | TI SDK 11.x | TI SDK 12.x |
+| --- | --- | --- |
+| Yocto release | 5.0 "scarthgap" (LTS) | 6.0 "wrynose" (LTS) |
+| meta-ti / meta-arago branch | `scarthgap` | `wrynose` |
+| Arago `DISTRO_VERSION` | `2025.01` | `2026.04` |
+| SDK image names | `tisdk-default-image`, `tisdk-base-image`, ... | `arago-default-image`, `arago-base-image`, ... |
+| Default `TI_PREFERRED_BSP` | `ti-6_12` on the current `scarthgap` branch: `linux-ti-staging` 6.12, `u-boot-ti-staging` 2025.01 (`ti-6_6` still selectable) | `ti-6_18`: `linux-ti-staging` 6.18, `u-boot-ti-staging` 2026.01 |
+| Build assembly without TI's tool | `poky` repository + `oe-init-build-env` | `bitbake-setup` + separate `bitbake`, `openembedded-core`, `meta-yocto` |
+| Local `file://` sources unpack into | `${WORKDIR}` | `${UNPACKDIR}` (`${WORKDIR}/sources`) |
+| `MACHINE`/`DISTRO` selection | `local.conf` / environment | configuration fragments in `conf/toolcfg.conf` (`local.conf` still works) |
+
+When you work on a scarthgap-based product, keep this table in mind while reading: the TI boot architecture (K3 boot chain, `k3r5` multiconfig, `tiboot3.bin`/`tispl.bin`/`u-boot.img`) is the same, while names, paths, and setup commands differ. [Release Engineering and SDK Upgrades](release-engineering-and-sdk-upgrades.md) covers moving a product from 11.x to 12.x.
+
 ## SDK Build System Vs TI Yocto Layers
 
 This distinction matters.
@@ -50,7 +67,9 @@ The practical rule is: start from the Processor SDK to establish a known-good ba
 - `oe-layertool-setup.sh`
 - `MACHINE`
 - `DISTRO`
-- `tisdk-default-image`
+- `arago-default-image` (SDK 12.x) / `tisdk-default-image` (SDK 11.x)
+- `k3r5` multiconfig
+- device types: GP, HS-FS, HS-SE
 - boot firmware
 - `tiboot3.bin`
 - `tispl.bin`

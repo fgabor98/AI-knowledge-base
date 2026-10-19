@@ -28,6 +28,23 @@ Many TI SoCs are heterogeneous systems. Linux may not be the only software runni
 
 Firmware version mismatches can look like driver bugs, remoteproc failures, bootloader failures, or missing peripherals.
 
+## Firmware Classes On K3
+
+On K3 devices the firmware falls into two groups that are built and loaded very differently:
+
+| Firmware | Runs on | Loaded by | Recipe (meta-ti-bsp) | Ends up in |
+| --- | --- | --- | --- | --- |
+| TIFS (security, clocks, power, resources) | security subsystem | boot ROM, packed in `tiboot3.bin` | `ti-sci-fw` (`ti-sysfw/ti-fs-firmware-*`) | `tiboot3.bin` |
+| DM (device management, TISCI server) | wakeup R5F after SPL | R5 SPL, packed in `tispl.bin` | `ti-dm-fw` (`ti-dm/<soc>/...`) | `tispl.bin` |
+| TF-A BL31, OP-TEE BL32 | A53, secure world | A53 SPL, packed in `tispl.bin` | `trusted-firmware-a`, `optee-os` (meta-arm) | `tispl.bin` |
+| M4F / R5F application firmware | MCU and main-domain cores | Linux remoteproc | `ti-rtos-fw`, `zephyr-fw`, product recipes | `/lib/firmware` in the rootfs |
+| PRU firmware | PRU-ICSS | Linux remoteproc / Ethernet drivers | `prueth-fw`, `pruhsr-fw`, ... | `/lib/firmware` |
+| GPU, video, Wi-Fi firmware | peripherals | Linux drivers | `ti-img-*`, `linux-firmware` | `/lib/firmware` |
+
+The first three are **boot firmware**: they are inputs to U-Boot's binman, so changing them means rebuilding U-Boot (both configurations) and reflashing the boot files. The TIFS, DM, and TISCI client in U-Boot and Linux must be compatible; take them from the same SDK release. Their versions are pinned in `meta-ti-bsp/recipes-bsp/ti-linux-fw/ti-linux-fw.inc` (`TI_SYSFW_VERSION`, `TI_DM_FW_VERSION`, `TI_LINUX_FW_SRCREV`). `ti-sci-fw`, `ti-dm-fw`, and most runtime firmware recipes (PRU, Ethernet, video, RTOS test firmware) fetch the same `ti-linux-firmware` repository at that one revision; TF-A and OP-TEE come from their own upstream sources through meta-arm.
+
+The rest are **runtime firmware**: packages in the root filesystem. They can usually be updated with the rootfs, but the device tree reserves their memory (`memory-region`) and mailboxes, so a firmware image built for different memory carve-outs fails at `remoteproc` start.
+
 ## Firmware In The Build
 
 Firmware can enter the image through:

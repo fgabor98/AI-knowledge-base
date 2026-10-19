@@ -31,27 +31,28 @@ Exact outputs depend on SoC family, boot flow, and SDK release.
 
 ## Provider Selection
 
-Inspect:
+The same `TI_PREFERRED_BSP` switch that selects the kernel selects U-Boot: `u-boot-ti-staging` 2026.01 for `ti-6_18` (2025.01 for `ti-6_12`), or `u-boot-ti-mainline` / `u-boot-ti-next`. One recipe is built **twice** on K3:
+
+| Configuration | `MACHINE` | `UBOOT_MACHINE` (AM62x EVM) | Main output |
+| --- | --- | --- | --- |
+| main (A53) | `am62xx-evm` | `am62x_evm_a53_defconfig` | `tispl.bin`, `u-boot.img` |
+| `k3r5` multiconfig (R5) | `am62xx-evm-k3r5` | `am62x_evm_r5_defconfig` | `tiboot3-*.bin` |
+
+Inspect both:
 
 ```bash
-bitbake-layers show-recipes virtual/bootloader
-bitbake -e virtual/bootloader | grep '^PREFERRED_PROVIDER_virtual/bootloader'
-bitbake -e virtual/bootloader | grep '^UBOOT_MACHINE'
+bitbake-getvar --quiet PREFERRED_PROVIDER_virtual/bootloader
+bitbake-getvar --quiet --value UBOOT_MACHINE
+bitbake -e mc:k3r5:virtual/bootloader | grep -E '^(PN|UBOOT_MACHINE|MACHINE)='
 ```
-
-Some TI releases use specific recipe names and variables. Always inspect final values instead of assuming from upstream U-Boot.
 
 ## SPL, TPL, And U-Boot Proper
 
-On many TI systems, bootloader work involves multiple stages:
+The K3 boot chain, the meaning of GP/HS-FS/HS-SE images, and how TF-A, OP-TEE, DM, and TIFS are packed into `tiboot3.bin` and `tispl.bin` are covered in [Boot Artifact Pipeline](boot-artifact-pipeline.md). From the U-Boot recipe's point of view:
 
-```mermaid
-flowchart LR
-    ROM[ROM] --> Early[Early boot firmware or SPL stage]
-    Early --> SPL[SPL / tispl.bin]
-    SPL --> Proper[U-Boot proper]
-    Proper --> Linux[Linux kernel + DTB + rootfs]
-```
+- the R5 build needs `ti-sci-fw` (TIFS) in its sysroot, and binman packs it with the R5 SPL into `tiboot3.bin`;
+- the A53 build needs `trusted-firmware-a`, `optee-os`, and `ti-dm-fw`, passed as `BL31=`, `TEE=`, and `TI_DM=` through `PACKAGECONFIG`;
+- both builds read firmware from `BINMAN_INDIRS`, the recipe sysroot's firmware directory.
 
 The job of each stage is constrained by SRAM size, boot media, security state, clocks, DDR initialization, and firmware handoff.
 
@@ -111,15 +112,19 @@ Questions:
 
 ## Rebuilding Only U-Boot
 
-Common commands:
+Rebuild both configurations; a mismatched R5 and A53 U-Boot is a common source of confusing boot hangs:
 
 ```bash
-bitbake virtual/bootloader
-bitbake virtual/bootloader -c clean
-bitbake virtual/bootloader -c compile -f
+bitbake virtual/bootloader mc:k3r5:virtual/bootloader
 ```
 
-Then inspect deploy output and make sure the boot media actually receives the new artifacts.
+After changing U-Boot sources in a `devtool` workspace or a patch, BitBake notices the change and reruns the needed tasks. To force a rebuild from one task onward without touching sources, use `-C` (it invalidates that task's stamp and continues):
+
+```bash
+bitbake -C compile virtual/bootloader
+```
+
+Avoid `-c compile -f` for this: it runs only `do_compile` and leaves `do_install` and `do_deploy` untouched until the next full build, so the deploy directory keeps old files in the meantime. Then inspect the deploy directory and make sure the boot media actually receives the new artifacts.
 
 ## Common Mistakes
 
