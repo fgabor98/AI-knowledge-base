@@ -1,0 +1,3 @@
+run -O0
+6 5 12 8
+compile

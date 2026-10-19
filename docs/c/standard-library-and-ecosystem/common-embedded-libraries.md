@@ -166,6 +166,9 @@ Embedded test stacks commonly combine host unit tests, fake HALs, hardware-in-th
 A useful test boundary:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 struct flash_port {
     int (*read)(void *context, uint32_t address,
                 void *buffer, size_t length);
@@ -200,6 +203,9 @@ A small library with a clear contract can be safer than a larger framework even 
 Wrap third-party dependencies at a project boundary:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 struct network_port {
     int (*send)(void *context, const uint8_t *data, size_t length);
     int (*receive)(void *context, uint8_t *data, size_t capacity,

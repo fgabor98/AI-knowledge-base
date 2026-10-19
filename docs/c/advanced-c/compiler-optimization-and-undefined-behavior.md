@@ -281,6 +281,9 @@ interrupt, or timing fault. A clean sanitizer run is evidence, not proof.
 - [Const, Volatile, And Restrict](../semantics-and-memory/qualifiers-const-volatile-restrict.md)
 - [Correctness, Quality, And Security](../correctness-quality-and-security/index.md)
 - [Compiler And Vendor Extensions](../platform-specific-c/compiler-and-vendor-extensions.md)
+- [Case study 01: NULL Check After Dereference](../failure-case-studies/01-null-check-after-dereference.md)
+- [Case study 03: Out-Of-Bounds Loop](../failure-case-studies/03-out-of-bounds-loop.md)
+- [Case study 15: Fast-Math NaN Check](../failure-case-studies/15-fast-math-nan-check.md)
 
 ## References
 

@@ -161,6 +161,12 @@ Private headers can share implementation details within a subsystem, but keep th
 Use source-file static functions and objects for details needed by only one translation unit:
 
 ~~~c
+#include <stddef.h>
+
+struct config {
+    unsigned int version;
+};
+
 static int validate_config(const struct config *config)
 {
     return config != NULL && config->version != 0u;
@@ -240,6 +246,8 @@ A useful convention is:
 4. standard library headers.
 
 The exact policy may differ, but including the own header first catches missing self-sufficiency and declaration mismatches:
+
+<!-- c-check: skip -- include-order illustration; board_gpio.h is a hypothetical board header -->
 
 ~~~c
 #include "sensor.h"

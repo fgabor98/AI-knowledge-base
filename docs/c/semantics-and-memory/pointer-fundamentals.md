@@ -100,6 +100,9 @@ A uint32_t pointer advances by the size of uint32_t, not one byte. Convert to an
 A pointer to const data prevents modification through that access path:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 void inspect_bytes(const uint8_t *data, size_t length);
 ~~~
 

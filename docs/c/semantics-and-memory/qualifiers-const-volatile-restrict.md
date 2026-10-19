@@ -182,7 +182,7 @@ Common patterns include:
 
 #define REG32(address) (*(volatile uint32_t *)(address))
 
-static inline void set_bits(uint32_t address, uint32_t mask)
+static inline void set_bits(uintptr_t address, uint32_t mask)
 {
     REG32(address) |= mask;
 }

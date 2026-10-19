@@ -127,8 +127,8 @@ Compute sizes without wrapping:
 
 bool array_bytes(size_t count, size_t element_size, size_t *result)
 {
-    if (result == NULL || element_size != 0u
-        && count > SIZE_MAX / element_size) {
+    if (result == NULL || (element_size != 0u
+                           && count > SIZE_MAX / element_size)) {
         return false;
     }
 

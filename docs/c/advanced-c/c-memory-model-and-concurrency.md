@@ -327,6 +327,7 @@ and compare observable behavior under the same operation stream.
 - [Const, Volatile, And Restrict](../semantics-and-memory/qualifiers-const-volatile-restrict.md)
 - [Multicore And Heterogeneous Systems](../platform-specific-c/multicore-and-heterogeneous-systems.md)
 - [Embedded C And Hardware](../embedded-c-and-hardware/index.md)
+- [Case study 11: Spin-Wait Data Race](../failure-case-studies/11-spin-wait-data-race.md)
 
 ## References
 

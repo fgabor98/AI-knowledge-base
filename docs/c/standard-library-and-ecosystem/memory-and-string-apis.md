@@ -260,6 +260,7 @@ A standard function can be correct in ISO C and still be inappropriate for a reg
 - [Semantics And Memory](../semantics-and-memory/index.md)
 - [I/O, Diagnostics, And Errors](./io-diagnostics-and-errors.md)
 - [C Programming](../index.md)
+- [Case study 07: snprintf() Accumulation](../failure-case-studies/07-snprintf-accumulation.md)
 
 ## References
 

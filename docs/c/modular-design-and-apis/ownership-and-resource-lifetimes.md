@@ -49,6 +49,11 @@ struct component {
     bool worker_started;
 };
 
+int enable_clock(void);
+int register_interrupt(void);
+int start_worker(void);
+void component_stop(struct component *component);
+
 int component_start(struct component *component)
 {
     if (component == NULL) {
@@ -84,6 +89,15 @@ The rollback function must tolerate partial state. Make cleanup idempotent so bo
 A single cleanup block makes error paths auditable:
 
 ~~~c
+#include <stddef.h>
+
+struct device;
+
+struct device *device_alloc(void);
+int device_configure(struct device *device);
+int device_start(struct device *device);
+void device_destroy(struct device *device);
+
 int open_device(struct device **result)
 {
     int status = -1;
@@ -220,6 +234,7 @@ Reference counting can manage shared lifetimes:
 
 ~~~c
 #include <stddef.h>
+#include <stdlib.h>
 
 struct shared_buffer {
     unsigned int references;

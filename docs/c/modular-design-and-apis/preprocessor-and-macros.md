@@ -61,6 +61,8 @@ BAD_SQUARE(a + b) expands into a + b * a + b. SQUARE groups the expression corre
 SQUARE(read_register()) can perform two hardware reads. Prefer a static inline function when the operation has a known type:
 
 ~~~c
+#include <stdint.h>
+
 static inline uint32_t square_u32(uint32_t value)
 {
     return value * value;
@@ -126,6 +128,8 @@ Keep generated identifiers predictable and document the naming convention.
 
 Conditional compilation chooses source before C parsing:
 
+<!-- c-check: expect-error -->
+
 ~~~c
 #if defined(BOARD_REV_B)
 #define STATUS_LED_PIN 7u
@@ -139,6 +143,8 @@ Conditional compilation chooses source before C parsing:
 Test every supported branch. An inactive branch can contain stale declarations or syntax errors that the normal build never sees.
 
 Prefer feature decisions that are visible in a generated configuration header:
+
+<!-- c-check: skip -- depends on a generated project_config.h -->
 
 ~~~c
 #include "project_config.h"

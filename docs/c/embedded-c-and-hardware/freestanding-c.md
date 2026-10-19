@@ -139,6 +139,8 @@ An output adapter should express partial progress and failure:
 ~~~c
 #include <stddef.h>
 
+int uart_try_put(unsigned char byte);
+
 int board_write(const unsigned char *data, size_t length, size_t *written)
 {
     if (data == NULL || written == NULL) {

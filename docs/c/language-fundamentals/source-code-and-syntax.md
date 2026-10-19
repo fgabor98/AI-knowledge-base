@@ -163,6 +163,22 @@ An unused branch can contain stale declarations or syntax errors that no normal 
 4. Create a macro that evaluates an argument twice, then replace it with an inline function.
 5. Introduce a missing brace and a missing semicolon. Record where each diagnostic points.
 
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 3: the values of 010, 10, and 0x10"
+    `010` is 8, `10` is 10, and `0x10` is 16. All three have type `int`.
+
+    An integer constant that starts with `0` is octal (C11 6.4.4.1). This is harmless in
+    `0` itself and dangerous in zero-padded tables: `{ 007, 010, 011 }` holds 7, 8, and 9, and
+    `08` does not compile (`invalid digit "8" in octal constant`). Leading zeros in permission
+    bits (`0644`) are the one idiom where octal is intended. Hexadecimal (`0x`) is the usual
+    choice for masks and register values, and C23 adds binary constants (`0b1010`), which
+    GCC already accepts as an extension.
+
+    The [Language Fundamentals test-out](./test-out.md#q1-literals) has a harder variant.
+
 ## Common Mistakes
 
 - Assuming the compiler sees only the .c file rather than the complete preprocessed translation unit.

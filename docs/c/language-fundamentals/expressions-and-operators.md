@@ -47,6 +47,8 @@ Precedence answers which operands belong to which operator. It does not answer w
 
 Small integer types are usually promoted to int or unsigned int before many arithmetic and comparison operations. Usual arithmetic conversions then bring two operands to a common type:
 
+<!-- c-check: expect-warning -->
+
 ~~~c
 #include <stdbool.h>
 #include <stdint.h>
@@ -65,6 +67,8 @@ uint32_t add_count(uint16_t left, uint16_t right)
 The first condition is always false for a uint8_t value after promotion. The explicit casts in add_count make the intended arithmetic domain visible, but the destination range must still be sufficient.
 
 Mixed signed and unsigned arithmetic can change a comparison:
+
+<!-- c-check: expect-warning -->
 
 ~~~c
 #include <stdbool.h>
@@ -107,6 +111,8 @@ Inspect compiler output before manually replacing division with shifts or recipr
 
 Relational and equality operators produce int values of zero or one:
 
+<!-- c-check: skip -- expression fragment -->
+
 ~~~c
 if (temperature_c > limit_c && !sensor_fault) {
     start_heater();
@@ -119,6 +125,8 @@ Logical and and logical or evaluate left to right and short-circuit:
 - a || b does not evaluate b when a is true.
 
 This can guard an access:
+
+<!-- c-check: skip -- expression fragment -->
 
 ~~~c
 if (count < capacity && data[count] == expected) {
@@ -315,6 +323,28 @@ sizeof(char) is one C byte; it is not necessarily one octet unless CHAR_BIT is e
 4. Refactor a dense expression containing three increments into simple statements.
 5. Find a cast in a driver and document the range, alignment, and ownership facts that make it safe.
 6. Parenthesize a mixed bitwise, equality, and logical expression, then test every branch.
+
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 1: predicting types and values"
+    With `uint8_t u8 = 200; int i = -1; unsigned int u = 1;` on a target with 32-bit `int`
+    (verified with GCC 13 on x86-64 using `_Generic` to print the types):
+
+    | Expression | Type | Value | Why |
+    | --- | --- | --- | --- |
+    | `u8 + u8` | `int` | 400 | both operands promote to `int`; no wraparound at 255 |
+    | `u8 * u8` | `int` | 40000 | fits in 32-bit `int`; with 16-bit `int` it overflows, which is undefined |
+    | `i + u` | `unsigned int` | 0 | `i` converts to `UINT_MAX`, and the sum wraps |
+    | `i < u` | `int` | 0 | the comparison happens in `unsigned int` |
+    | `~u8` | `int` | -201 | promotion first, then the complement of 0x000000C8 |
+    | `u8 << 24` | `int` | undefined | 200 × 2^24 does not fit in `int`; shifting into the sign bit is undefined |
+
+    Two patterns cover most surprises: narrow types are promoted *before* the operator runs,
+    and when a signed and an unsigned operand of the same rank meet, the signed one converts.
+    `-Wconversion` and `-Wsign-compare` report many of the risky cases; `~u8` comparisons are
+    caught by `-Wsign-compare` as well.
 
 ## Common Mistakes
 

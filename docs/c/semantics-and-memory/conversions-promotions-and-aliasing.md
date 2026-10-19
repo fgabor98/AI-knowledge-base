@@ -24,6 +24,8 @@ C performs many conversions implicitly. Some preserve a value, some change its r
 
 Integer types narrower than int are usually promoted before arithmetic, comparison, and many argument operations:
 
+<!-- c-check: expect-warning -->
+
 ~~~c
 #include <stdbool.h>
 #include <stddef.h>
@@ -47,6 +49,8 @@ The promotion rules depend on the implementation’s integer ranges. Do not infe
 ## Usual Arithmetic Conversions
 
 When two arithmetic operands meet, C converts them to a common type. Signedness and rank matter:
+
+<!-- c-check: expect-warning -->
 
 ~~~c
 #include <stdbool.h>
@@ -220,6 +224,28 @@ A policy should permit well-understood low-level code while requiring evidence f
 5. Search a driver for casts between integer and pointer types; classify each as representation, address, or bug.
 6. Enable conversion and strict-aliasing warnings and resolve every new diagnostic deliberately.
 
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 1: the same expressions with 32-bit and 16-bit int"
+    With `uint16_t a = 1; int32_t s = 1; uint32_t w = 1;`. The 32-bit column was checked with
+    GCC 13 on x86-64. The 16-bit column follows from the rules, for a target where `int` is
+    16 bits and `int32_t` is `long`, as on MSP430:
+
+    | Expression | 32-bit `int` | 16-bit `int` |
+    | --- | --- | --- |
+    | `a + a` | `int` | `unsigned int` |
+    | `s + a` | `int` | `long` (it can represent every 16-bit `unsigned int`) |
+    | `-1 < a` | 1 (`int` comparison) | 0 (`-1` converts to 65535) |
+    | `w * a` | `unsigned int` | `unsigned long` |
+
+    Integer promotion converts `uint16_t` to `int` only when `int` can represent all of its
+    values (C11 6.3.1.1p2), which is true for 32-bit `int` and false for 16-bit `int`. The
+    usual arithmetic conversions then decide between signed and unsigned (6.3.1.8p1). Code
+    shared between an MCU and a host test therefore needs explicit types in comparisons and
+    arithmetic. See also [test-out Q2](./test-out.md#q2-comparing-signed-and-unsigned).
+
 ## Common Mistakes
 
 - Assuming a small integer stays small during arithmetic.
@@ -251,6 +277,9 @@ A policy should permit well-understood low-level code while requiring evidence f
 - [Const, Volatile, And Restrict](./qualifiers-const-volatile-restrict.md)
 - [Object Representation, Alignment, And Padding](./object-representation-alignment-and-padding.md)
 - [C Programming](../index.md)
+- [Case study 05: Unsigned Short Promotion](../failure-case-studies/05-unsigned-short-promotion.md)
+- [Case study 06: read() Error Passes A Length Check](../failure-case-studies/06-read-error-passes-length-check.md)
+- [Case study 08: Strict Aliasing Type Pun](../failure-case-studies/08-strict-aliasing-type-pun.md)
 
 ## References
 

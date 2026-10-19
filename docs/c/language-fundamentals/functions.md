@@ -60,6 +60,8 @@ int initialize(void);
 
 Every parameter receives a value. Passing a pointer copies the pointer value; it does not make the pointer itself an alias to the caller’s pointer variable.
 
+<!-- c-check: expect-warning -->
+
 ~~~c
 #include <stddef.h>
 
@@ -92,8 +94,12 @@ Put the length in the interface and validate it.
 Use the return value for the primary result when there is one. Use an output parameter when a function needs to return a status and a separate result:
 
 ~~~c
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+bool sensor_has_sample(void);
+int16_t sensor_read_temperature(void);
 
 enum read_status {
     READ_OK,
@@ -118,6 +124,8 @@ enum read_status read_temperature(int16_t *temperature)
 The contract should say whether an output is written on failure. A safe convention is that outputs are unchanged unless success is returned.
 
 Never return a pointer to an automatic object:
+
+<!-- c-check: expect-warning -->
 
 ~~~c
 const char *bad_name(void)

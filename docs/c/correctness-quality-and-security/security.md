@@ -76,6 +76,8 @@ Use `SIZE_MAX` from `<stdint.h>` or a project size limit in production rather th
 
 This is unsafe when `input` is attacker-controlled:
 
+<!-- c-check: skip -- deliberately unsafe statement fragment -->
+
 ~~~c
 printf(input);
 ~~~

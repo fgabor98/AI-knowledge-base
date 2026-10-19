@@ -26,6 +26,7 @@ Embedded systems need error policies for invalid input, unavailable hardware, ti
 A status type should communicate the operation’s result:
 
 ~~~c
+/* sensor_status.h */
 enum sensor_status {
     SENSOR_OK = 0,
     SENSOR_BAD_ARGUMENT,
@@ -46,6 +47,13 @@ Reserve one success value and make failure values distinguishable. Do not overlo
 Return the primary status and write outputs only under a documented rule:
 
 ~~~c
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include "sensor_status.h"
+
+bool hardware_read(int16_t *value);
+
 enum sensor_status sensor_read(int16_t *temperature)
 {
     int16_t temporary;
@@ -69,6 +77,8 @@ For multiple outputs, use a result structure with validity rules rather than sev
 ## Error Propagation
 
 Propagate errors at the layer that can make a decision:
+
+<!-- c-check: skip -- application-layer excerpt; enum app_status and the sensor API are not defined on this page -->
 
 ~~~c
 enum app_status application_start(void)
@@ -103,6 +113,8 @@ Read or save errno immediately when an interface requires it:
 #include <fcntl.h>
 #include <unistd.h>
 
+void log_open_failure(const char *path, int error);
+
 int open_read_only(const char *path)
 {
     int fd = open(path, O_RDONLY);
@@ -122,6 +134,9 @@ Do not use errno for a driver API merely because it is familiar. A typed status 
 Retries need a bounded policy:
 
 ~~~c
+int device_read_once(void);
+void wait_backoff(unsigned int attempt);
+
 enum io_status {
     IO_OK,
     IO_TIMEOUT,
@@ -165,6 +180,12 @@ The policy belongs to the layer with system context. A low-level driver should r
 A recovery path should define what state is discarded and what remains:
 
 ~~~c
+void link_stop(void);
+void link_flush_queues(void);
+void link_reset_peripheral(void);
+int link_configure(void);
+int link_start(void);
+
 enum recovery_result {
     RECOVERY_OK,
     RECOVERY_FAILED
@@ -213,6 +234,8 @@ Do not use an assertion as the only defense against external input, hardware fau
 ## Error Context
 
 When translating errors, preserve cause and context:
+
+<!-- c-check: skip -- application-layer excerpt; enum app_status and the sensor API are not defined on this page -->
 
 ~~~c
 struct error_info {

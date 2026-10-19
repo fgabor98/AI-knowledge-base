@@ -181,6 +181,53 @@ Suppressions and no-sanitize attributes should be narrow, justified, and reviewe
 5. Add checked arithmetic helpers for packet length and allocation size.
 6. Build a project rule that treats selected undefined-behavior warnings as errors.
 
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 3: why volatile does not fix a race"
+    `volatile` makes every access to the object actually happen, in program order relative to
+    other `volatile` accesses. It does not make an access atomic, and it does not order
+    ordinary memory accesses. `counter++` on a `volatile` is still a separate load, add, and
+    store, and another thread can store in between:
+
+    ```c
+    #include <pthread.h>
+    #include <stdio.h>
+
+    static volatile long counter;
+
+    static void *work(void *arg)
+    {
+        (void)arg;
+        for (int i = 0; i < 1000000; i++) {
+            counter++;
+        }
+        return NULL;
+    }
+
+    int main(void)
+    {
+        pthread_t a;
+        pthread_t b;
+
+        pthread_create(&a, NULL, work, NULL);
+        pthread_create(&b, NULL, work, NULL);
+        pthread_join(a, NULL);
+        pthread_join(b, NULL);
+        printf("%ld\n", counter);
+        return 0;
+    }
+    ```
+
+    Three runs at `-O2` on an x86-64 machine printed 1252054, 1000000, and 1393969, and never
+    the expected 2000000. In C11 terms, two unsynchronized accesses to the same non-atomic
+    object, at least one of them a write, are a data race and undefined behavior (5.1.2.4p25).
+    `volatile` does not change that. Fix it with `_Atomic long counter` (`counter++` is then an
+    atomic read-modify-write), with a mutex, or by giving each thread its own counter and
+    summing them at the end. For a flag that publishes data, see
+    [case study 11](../failure-case-studies/11-spin-wait-data-race.md).
+
 ## Common Mistakes
 
 - Saying undefined behavior means “the hardware will wrap.”
@@ -211,6 +258,10 @@ Suppressions and no-sanitize attributes should be narrow, justified, and reviewe
 - [Memory Safety And Lifetime](./memory-safety-and-lifetime.md)
 - [Correctness, Quality, And Security](../correctness-quality-and-security/index.md)
 - [C Programming](../index.md)
+- [Case study 01: NULL Check After Dereference](../failure-case-studies/01-null-check-after-dereference.md)
+- [Case study 02: Signed Overflow Check](../failure-case-studies/02-signed-overflow-check.md)
+- [Case study 03: Out-Of-Bounds Loop](../failure-case-studies/03-out-of-bounds-loop.md)
+- [Case study 04: Shift Count Equal To Width](../failure-case-studies/04-shift-count-width.md)
 
 ## References
 

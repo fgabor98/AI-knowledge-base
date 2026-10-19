@@ -25,11 +25,15 @@ Learning to parse declarations mechanically is more useful than memorizing isola
 
 Start with declaration specifiers:
 
+<!-- c-check: skip -- partial declaration, read piece by piece -->
+
 ~~~c
 static const unsigned long
 ~~~
 
 Then read the declarator:
+
+<!-- c-check: skip -- partial declaration, read piece by piece -->
 
 ~~~c
 *volatile register_pointer
@@ -40,6 +44,8 @@ Together, at file scope, this declares register_pointer as an internally linked 
 A simpler set:
 
 ~~~c
+#include <stdint.h>
+
 const uint32_t *read_only_data;
 uint32_t *const fixed_address = (uint32_t *)0x40000000u;
 const uint32_t *const fixed_read_only_address =
@@ -97,6 +103,9 @@ Typedefs create aliases, not new runtime types. Use them when they clarify opaqu
 A function prototype specifies parameter types:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 int send_frame(const uint8_t *data, size_t length);
 int reset_device(void);
 ~~~
@@ -104,6 +113,9 @@ int reset_device(void);
 Parameter names are useful in headers:
 
 ~~~c
+#include <stddef.h>
+#include <stdint.h>
+
 int copy_frame(uint8_t *destination,
                size_t destination_capacity,
                const uint8_t *source,
@@ -189,12 +201,16 @@ struct device {
 Pointers to incomplete types are useful for opaque modules. You cannot define an object of incomplete type or apply sizeof until the type is complete. An array can also be incomplete until a bound is supplied:
 
 ~~~c
+#include <stdint.h>
+
 extern uint8_t receive_buffer[];
 ~~~
 
 ## Compatible Types And Redeclarations
 
 Declarations in different translation units must be compatible. Compatibility includes parameter types, qualifiers in relevant positions, tags, and return types.
+
+<!-- c-check: expect-error -->
 
 ~~~c
 int read_value(void);
@@ -233,6 +249,33 @@ The opaque struct keeps representation private. The API documentation must still
 4. Change a writable-data parameter to pointer-to-const and identify safer call sites.
 5. Put a global definition in a header in a two-file program, observe the link failure, then use extern plus one definition.
 6. Register callbacks and deliberately introduce an incompatible callback to see the warning.
+
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 1: worked examples"
+    Start at the identifier, then read right while you can (`[]` and `()`), and left when you
+    must (`*` and qualifiers), with parentheses overriding the order:
+
+    | Declaration | In words |
+    | --- | --- |
+    | `int *p[4];` | `p` is an array of 4 pointers to `int` |
+    | `int (*p)[4];` | `p` is a pointer to an array of 4 `int` |
+    | `int (*f)(void);` | `f` is a pointer to a function taking no arguments and returning `int` |
+    | `int *(*table[8])(const char *);` | `table` is an array of 8 pointers to functions taking `const char *` and returning a pointer to `int` |
+    | `volatile uint32_t *const reg;` | `reg` is a `const` pointer to a `volatile uint32_t` |
+    | `const char *const names[];` | `names` is an array of `const` pointers to `const char` |
+
+    Typedefs make the long ones readable:
+
+    ```c
+    typedef int *lookup_function(const char *key);
+
+    lookup_function *table[8];
+    ```
+
+    See also [test-out Q10](./test-out.md#q10-reading-a-declaration).
 
 ## Common Mistakes
 

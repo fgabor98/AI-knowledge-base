@@ -38,6 +38,8 @@ Example contract:
 ~~~c
 #include <stddef.h>
 
+struct frame;
+
 /*
  * Decode one complete frame.
  *

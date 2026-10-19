@@ -12,6 +12,11 @@ This chapter builds the working language model needed to read, write, review, an
 
 The examples use mostly C17-compatible syntax because that is still a practical baseline for many embedded toolchains. C23 is the current ISO C edition, but a production project should choose its language version deliberately and make the choice visible in the build.
 
+!!! tip "Already fluent in C?"
+    Take the [Language Fundamentals test-out](./test-out.md) first. It has twelve
+    questions, each mapped to one page of this chapter, and tells you which pages you
+    can skip.
+
 ## What This Chapter Teaches
 
 C becomes predictable when five questions are answered for every piece of code:

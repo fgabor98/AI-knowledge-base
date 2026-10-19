@@ -195,6 +195,36 @@ A hardware address range may be contiguous numerically without being an ordinary
 5. Add overflow checks to a two-dimensional byte-offset calculation.
 6. Review a driver for pointer arithmetic over MMIO and compare every access with the reference manual.
 
+### Model Answers
+
+Answers for the exercises that have one correct explanation. Try the exercise first.
+
+??? note "Exercise 3: subtracting pointers"
+    Pointer subtraction is defined only when both pointers point into, or one past the end
+    of, the same array object (C11 6.5.6p9). The result is the difference in *elements*,
+    with type `ptrdiff_t`:
+
+    ```c
+    #include <stddef.h>
+
+    ptrdiff_t elements_between(void)
+    {
+        int samples[16];
+        int *first = &samples[2];
+        int *last = &samples[10];
+
+        return last - first;        /* 8, not 32: counted in elements */
+    }
+    ```
+
+    Subtracting pointers to two separate arrays is undefined, even though both are
+    addresses and the machine instruction would produce a number. The standard does not
+    define a relationship between separate objects: they may be in different segments,
+    memory banks, or address spaces, and the optimizer may assume the pointers belong to
+    the same object. To measure the distance between unrelated objects, for example in a
+    memory map, convert to `uintptr_t` first. That is implementation-defined, but it states
+    clearly that you are doing address arithmetic rather than array arithmetic.
+
 ## Common Mistakes
 
 - Dereferencing the one-past pointer.

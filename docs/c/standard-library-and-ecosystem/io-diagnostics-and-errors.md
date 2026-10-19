@@ -66,7 +66,11 @@ Use the correct format macros for fixed-width integers, size_t, pointers, and fl
 
 Keep format strings constant or validate them. Never treat user-controlled input as the format string:
 
+<!-- c-check: expect-warning -->
+
 ~~~c
+#include <stdio.h>
+
 void unsafe_log(const char *message)
 {
     printf(message);
@@ -162,6 +166,9 @@ A production logger should define:
 Use numeric or static event identifiers when flash and timing matter:
 
 ~~~c
+/* log_record.h */
+#include <stdint.h>
+
 enum log_event {
     LOG_SENSOR_TIMEOUT = 1u,
     LOG_DMA_ERROR = 2u,
@@ -182,7 +189,14 @@ A binary record can be stored in a ring buffer and formatted later in a host too
 An ISR logger should normally enqueue a small preformatted or structured record into preallocated storage:
 
 ~~~c
-bool log_from_isr(uint16_t event, uint32_t value)
+#include <stdbool.h>
+#include <stdint.h>
+#include "log_record.h"
+
+uint32_t timer_ticks(void);
+bool log_ring_try_push(const struct log_record *record);
+
+bool log_from_isr(uint16_t event, int16_t value)
 {
     struct log_record record = {
         .timestamp = timer_ticks(),
@@ -218,6 +232,10 @@ Do not assume the logger, heap, clocks, or filesystem are operational after a se
 A common embedded design is:
 
 ~~~c
+#include <stddef.h>
+
+int uart_putc(unsigned char byte);
+
 int board_write(const char *data, size_t length)
 {
     for (size_t i = 0u; i < length; ++i) {

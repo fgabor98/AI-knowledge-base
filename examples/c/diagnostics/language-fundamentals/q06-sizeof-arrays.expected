@@ -1,0 +1,3 @@
+run -O0
+7 6 8
+warn .sizeof. on array function parameter .buffer. will return size of .char \*.

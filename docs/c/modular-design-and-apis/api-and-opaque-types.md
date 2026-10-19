@@ -26,6 +26,7 @@ Opaque types are one of C’s strongest techniques for keeping representation pr
 A public header should expose only what callers need:
 
 ~~~c
+/* sensor.h */
 #ifndef SENSOR_H
 #define SENSOR_H
 
@@ -95,6 +96,8 @@ Define the lifecycle as a state machine:
 Initialization should be explicit about repeated calls:
 
 ~~~c
+#include "sensor.h"
+
 enum sensor_result sensor_init(struct sensor *sensor);
 enum sensor_result sensor_start(struct sensor *sensor);
 enum sensor_result sensor_stop(struct sensor *sensor);
@@ -106,6 +109,8 @@ State checks should reject invalid transitions rather than relying on callers to
 ## Pointer And Length Contracts
 
 Make bounds and mutability visible:
+
+<!-- c-check: skip -- declaration excerpt; struct packet and enum packet_result belong to a packet module not shown -->
 
 ~~~c
 enum packet_result packet_parse(const uint8_t *data,
@@ -149,6 +154,8 @@ For a public ABI, also define packing, alignment, byte order, calling convention
 Document context restrictions next to declarations:
 
 ~~~c
+#include "sensor.h"
+
 /* May block; task context only; not safe from an ISR. */
 enum sensor_result sensor_read_blocking(struct sensor *sensor,
                                         int16_t *temperature);
@@ -165,6 +172,11 @@ Comments are not a substitute for implementation, but they make review and stati
 A function should define whether outputs are written on failure. This convention is easy to test:
 
 ~~~c
+#include <stdbool.h>
+#include "sensor.h"
+
+bool hardware_read(struct sensor *sensor, int16_t *temperature);
+
 enum sensor_result sensor_read(struct sensor *sensor, int16_t *temperature)
 {
     int16_t temporary;
@@ -205,6 +217,8 @@ Do not expose standard-library types, compiler-specific structures, or ownership
 An API is easier to test when it separates policy from mechanisms:
 
 ~~~c
+#include "sensor.h"
+
 struct sensor_io {
     int (*read_raw)(void *context, uint16_t *value);
     uint32_t (*now_ticks)(void *context);

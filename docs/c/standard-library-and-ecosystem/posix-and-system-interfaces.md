@@ -149,6 +149,11 @@ POSIX pthreads provide thread creation, synchronization, attributes, and cancell
 
 ~~~c
 #include <pthread.h>
+#include <stddef.h>
+
+struct worker_state;
+
+void process_work(struct worker_state *state);
 
 static void *worker(void *context)
 {

@@ -81,6 +81,8 @@ Use float-specific functions when the data is float to avoid unnecessary double 
 
 fenv.h exposes floating environment controls on implementations that support them:
 
+<!-- c-check: expect-warning -->
+
 ~~~c
 #include <fenv.h>
 

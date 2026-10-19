@@ -6,6 +6,8 @@ Use this checklist before changing a page from `status: draft` to `status: revie
 - The page explains what problem the topic solves.
 - Core concepts are accurate.
 - Examples are concrete and runnable or clearly marked as illustrative.
+- C code blocks pass `scripts/check-c-snippets.py`, or carry a `c-check` marker with a
+  reason (see the README).
 - Commands include expected context and privileges where relevant.
 - Common mistakes are specific and useful.
 - Debugging steps are actionable.

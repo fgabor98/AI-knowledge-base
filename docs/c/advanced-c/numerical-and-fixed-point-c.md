@@ -276,6 +276,7 @@ version. Bit-for-bit reproducibility requires more than using the same source co
 - [Performance And Code Size](./performance-and-code-size.md)
 - [Compiler And Vendor Extensions](../platform-specific-c/compiler-and-vendor-extensions.md)
 - [Advanced Data Structures](./advanced-data-structures.md)
+- [Case study 15: Fast-Math NaN Check](../failure-case-studies/15-fast-math-nan-check.md)
 
 ## References
 
