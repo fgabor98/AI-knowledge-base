@@ -38,12 +38,12 @@ words once is not enough.
 
 Official tracker: [Compiler, Linker, And Build Graph Foundations](01-compiler-linker-and-build-graph.md)
 
-- [ ] [Build Systems](../index.md)
+- [x] [Build Systems](../index.md)
 - [ ] [Build Systems for Embedded Linux](../embedded-linux-roadmap.md)
 - [ ] [Advanced Build Systems](../advanced/index.md)
-- [ ] [Direct Compiler Invocation](../direct-compiler-invocation.md)
-- [ ] [Object Files and Linking](../object-files-and-linking.md)
-- [ ] [Make Basics](../make-basics.md)
+- [x] [Direct Compiler Invocation](../direct-compiler-invocation.md)
+- [x] [Object Files and Linking](../object-files-and-linking.md)
+- [x] [Make Basics](../make-basics.md)
 - [ ] [Make Variables and Pattern Rules](../make-variables-and-pattern-rules.md)
 - [ ] [Native Linux Userspace Builds](../native-linux-userspace-builds.md)
 
