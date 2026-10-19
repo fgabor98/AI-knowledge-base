@@ -1,0 +1,76 @@
+
+== Build the Makefile-based recipe (its shared state removed first, so every task runs)
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake -c cleansstate board-tool >/dev/null 2>&1; bitbake board-tool 2>&1 | grep -E '^(NOTE: Tasks Summary|Summary|ERROR|WARNING)'
+NOTE: Tasks Summary: Attempted 933 tasks of which 914 didn't need to be rerun and all succeeded.
+$ ls ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0
+board-tool.spec
+configure.sstate
+debugsources.list
+deploy-rpms
+deploy-source-date-epoch
+image
+license-destdir
+package
+packages-split
+pkgdata
+pkgdata-pdata-input
+pkgdata-sysroot
+pseudo
+recipe-sysroot
+recipe-sysroot-native
+source-date-epoch
+sources
+spdx
+sysroot-destdir
+temp
+$ ls ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/sources
+make-project
+$ grep -E 'NOTE: make|gcc ' ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/temp/log.do_compile | head -n 3 | cut -c1-400
+NOTE: make -j 6 VERSION=1.0
+aarch64-poky-linux-gcc  -mbranch-protection=standard -fstack-protector-strong  -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Werror=format-security --sysroot=~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/recipe-sysroot -Iinclude  -std=c17 -Wall -Wextra  -O2 -g -fca
+aarch64-poky-linux-gcc  -mbranch-protection=standard -fstack-protector-strong  -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -Werror=format-security --sysroot=~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/recipe-sysroot -Iinclude  -std=c17 -Wall -Wextra  -O2 -g -fca
+$ file ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/image/usr/bin/board-tool | sed 's/, BuildID.*//'
+~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/image/usr/bin/board-tool: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1
+$ find ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/board-tool/1.0/packages-split -type f | sed 's|.*/packages-split/||' | sort
+board-tool-dbg/usr/bin/.debug/board-tool
+board-tool.shlibdeps
+board-tool-src/usr/src/debug/board-tool/1.0/include/gpio.h
+board-tool-src/usr/src/debug/board-tool/1.0/src/gpio.c
+board-tool-src/usr/src/debug/board-tool/1.0/src/main.c
+board-tool-src/usr/src/debug/board-tool/1.0/src/version.c
+board-tool/usr/bin/board-tool
+
+== What packaging recorded: files, automatic runtime dependencies
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && oe-pkgdata-util list-pkgs -p board-tool
+board-tool
+board-tool-dbg
+board-tool-dev
+board-tool-src
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && oe-pkgdata-util list-pkg-files board-tool
+board-tool:
+	/usr/bin/board-tool
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && oe-pkgdata-util read-value RDEPENDS board-tool
+glibc (>= 2.43+git0+562cd7badd)
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && oe-pkgdata-util find-path /usr/bin/board-tool
+board-tool: /usr/bin/board-tool
+
+== Buildhistory keeps a reviewable record of every package
+$ cat buildhistory/packages/*/board-tool/board-tool/latest
+PV = 1.0
+PR = r0
+RPROVIDES =
+RDEPENDS = glibc (>= 2.43+git0+562cd7badd)
+RRECOMMENDS =
+PKGSIZE = 67672
+FILES = /usr/bin/* /usr/sbin/* /usr/libexec/* /usr/lib/lib*.so.* /etc /com /var /bin/* /sbin/* /lib/*.so.* /lib/udev /usr/lib/udev /lib/udev /usr/lib/udev /usr/share/board-tool /usr/lib/board-tool/* /usr/share/pixmaps /usr/share/applications /usr/share/idl /usr/share/omf /usr/share/sounds /usr/lib/bonobo/servers
+FILELIST = /usr/bin/board-tool
+
+== The bbappend in action
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake base-files 2>&1 | grep -E '^(NOTE: Tasks Summary|ERROR)'
+NOTE: Tasks Summary: Attempted 753 tasks of which 752 didn't need to be rerun and all succeeded.
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake base-files -c install 2>&1 | grep -E '^(NOTE: Tasks Summary|ERROR)' && cat $(bitbake-getvar --quiet -r base-files --value D)/etc/issue
+NOTE: Tasks Summary: Attempted 149 tasks of which 142 didn't need to be rerun and all succeeded.
+KB example board \n \l
+
+Poky (Yocto Project Reference Distro) 6.0.4 \n \l
+

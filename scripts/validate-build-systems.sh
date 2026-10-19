@@ -13,7 +13,8 @@ if ! command -v "$mkdocs_cmd" >/dev/null 2>&1 && [[ -x .venv/bin/mkdocs ]]; then
 fi
 
 printf 'Linting session scripts...\n'
-shellcheck -x -P SCRIPTDIR examples/build-systems/tool-sessions/*/run.sh
+shellcheck -x -P SCRIPTDIR examples/build-systems/tool-sessions/*/run.sh \
+    examples/build-systems/yocto/run.sh
 
 printf 'Running tool sessions...\n'
 for session in examples/build-systems/tool-sessions/*/run.sh; do

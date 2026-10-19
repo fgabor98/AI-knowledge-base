@@ -1,0 +1,25 @@
+
+== QA: a Makefile that hard-codes CC = gcc
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake kb-qa-hostcc 2>&1 | grep -E '^ERROR' | head -n 3 | cut -c1-400
+ERROR: kb-qa-hostcc-1.0-r0 do_package: Fatal errors occurred in subprocesses:
+ERROR: Logfile of failure stored in: ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/kb-qa-hostcc/1.0/temp/log.do_package
+ERROR: Task (~/AI-knowledge-base/examples/build-systems/yocto/meta-kb-example/recipes-qa/kb-qa-demo/kb-qa-hostcc_1.0.bb:do_package) failed with exit code '1'
+$ grep -h 'Unable to recognise' tmp/work/*/kb-qa-hostcc/*/temp/log.do_package | tail -n 1 | cut -c1-300
+Subprocess output:aarch64-poky-linux-objcopy: Unable to recognise the architecture of the input file `~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/kb-qa-hostcc/1.0/package/usr/bin/kb-qa
+$ file tmp/work/*/kb-qa-hostcc/*/image/usr/bin/kb-qa-hostcc | sed 's/, BuildID.*//'
+tmp/work/aarch64-poky-linux/kb-qa-hostcc/1.0/image/usr/bin/kb-qa-hostcc: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2
+
+== QA: a link rule that drops LDFLAGS
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake kb-qa-noldflags 2>&1 | grep -E '^ERROR' | head -n 3 | cut -c1-400
+ERROR: kb-qa-noldflags-1.0-r0 do_package_qa: QA Issue: File /usr/bin/kb-qa-noldflags in package kb-qa-noldflags doesn't have GNU_HASH (didn't pass LDFLAGS?) [ldflags]
+ERROR: kb-qa-noldflags-1.0-r0 do_package_qa: Fatal QA errors were found, failing task.
+ERROR: Logfile of failure stored in: ~/yocto/kb-am62xx-wrynose/build/tmp/work/aarch64-poky-linux/kb-qa-noldflags/1.0/temp/log.do_package_qa
+
+== QA: a file installed but not packaged
+$ . ~/yocto/kb-am62xx-wrynose/build/init-build-env >/dev/null && bitbake kb-qa-unshipped 2>&1 | sed -n '/installed but not shipped/,/installed-vs-shipped/p' | cut -c1-400
+ERROR: kb-qa-unshipped-1.0-r0 do_package: QA Issue: kb-qa-unshipped: Files/directories were installed but not shipped in any package:
+  /opt
+  /opt/kb
+  /opt/kb/kb-qa-demo.conf
+Please set FILES such that these items are packaged. Alternatively if they are unneeded, avoid installing them or delete them within do_install.
+kb-qa-unshipped: 3 installed and not shipped files. [installed-vs-shipped]
