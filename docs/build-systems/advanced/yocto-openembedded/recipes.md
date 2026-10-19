@@ -38,12 +38,12 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=<checksum>"
 SRC_URI = "git://example.invalid/example.git;branch=main;protocol=https"
 SRCREV = "<fixed-commit>"
 
-S = "${WORKDIR}/git"
-
 inherit cmake
 ```
 
 Production recipes should pin source revisions rather than following moving branch heads.
+
+There is no `S` line. On wrynose the git fetcher unpacks into `${UNPACKDIR}/${BP}`, which is the default `S`. Recipes written for scarthgap and older set `S = "${WORKDIR}/git"`; on wrynose that line is a fatal QA error and must be deleted (see [Release Baseline](index.md#release-baseline)).
 
 ## Recipe Filename
 
@@ -123,16 +123,22 @@ Pin a commit:
 
 ```bitbake
 SRCREV = "0123456789abcdef..."
-PV = "1.2+git${SRCPV}"
+PV = "1.2+git"
 ```
+
+Because `PV` contains `+`, packaging appends the short revision to the package version automatically (`1.2+git0+0123456789`). Older recipes write `PV = "1.2+git${SRCPV}"`; `SRCPV` is no longer needed since Yocto 4.3 and is defined as empty on wrynose, so the suffix is harmless but redundant.
 
 Avoid floating revisions in release builds. Network state must not silently change source inputs.
 
 ## Source And Build Directories
 
+### `${UNPACKDIR}`
+
+Where `do_unpack` puts everything from `SRC_URI`: `${WORKDIR}/sources` on wrynose. Local `file://` files are here, not in `${WORKDIR}` as on scarthgap.
+
 ### `${S}`
 
-Source directory.
+Source directory. Default: `${UNPACKDIR}/${BP}` (for example `sources/board-tool-1.0`), which matches release tarballs and git checkouts. Set it only when the source unpacks somewhere else.
 
 ### `${B}`
 
@@ -143,7 +149,7 @@ For CMake, out-of-tree builds are common. For some upstream projects, `${B}` may
 Inspect:
 
 ```sh
-bitbake -e example-app | grep -E '^(WORKDIR|S|B)='
+for v in WORKDIR UNPACKDIR S B D; do printf '%-9s %s\n' "$v" "$(bitbake-getvar --quiet -r example-app --value "$v")"; done
 ```
 
 ## Inheritance
@@ -204,7 +210,7 @@ Install into `${D}` using target path variables:
 ```bitbake
 do_install:append() {
     install -d ${D}${sysconfdir}/example
-    install -m 0644 ${WORKDIR}/example.conf \
+    install -m 0644 ${UNPACKDIR}/example.conf \
         ${D}${sysconfdir}/example/example.conf
 }
 ```
@@ -243,7 +249,7 @@ SYSTEMD_AUTO_ENABLE:${PN} = "enable"
 
 do_install:append() {
     install -d ${D}${systemd_system_unitdir}
-    install -m 0644 ${WORKDIR}/example.service \
+    install -m 0644 ${UNPACKDIR}/example.service \
         ${D}${systemd_system_unitdir}/example.service
 }
 
@@ -320,6 +326,27 @@ bitbake -c compile example-app
 bitbake -c install example-app
 ```
 
+## Makefile-Based Software
+
+Many embedded components (vendor tools, small daemons, BusyBox-style projects) have only a plain Makefile. There is no build class for that; the recipe calls `oe_runmake` itself. The example layer builds the project from [Intermediate Make](../../make-intermediate.md):
+
+```bitbake
+--8<-- "examples/build-systems/yocto/meta-kb-example/recipes-apps/board-tool/board-tool_1.0.bb"
+```
+
+How the pieces connect:
+
+- `oe_runmake` runs `make ${PARALLEL_MAKE} ${EXTRA_OEMAKE} "$@"` and fails the task on error. Use it instead of calling `make` directly.
+- BitBake **exports** the toolchain in the task environment: `CC` (with `--sysroot` and tuning flags), `CFLAGS`, `CPPFLAGS`, `LDFLAGS` (including `-Wl,--as-needed` and hash-style flags), `AR`, and so on. `EXTRA_OEMAKE` is empty by default.
+- So the Makefile **must accept `CC` and flags from the environment**. A Makefile that writes `CC = gcc` or `CC := $(CROSS_COMPILE)gcc` replaces the cross compiler with the host compiler, and one that drops `$(LDFLAGS)` loses the distro's linker flags. Both fail package QA; the real errors are shown in [Packaging, QA, and Package Feeds](packaging-qa-and-feeds.md#real-qa-failures-from-makefile-mistakes).
+- Install with `DESTDIR=${D}` and the path variables (`${prefix}`, `${bindir}`), never with absolute host paths.
+
+If you cannot change a vendor Makefile, fix it from the recipe, in this order of preference:
+
+1. Pass the variables on the make command line, which beats any assignment in the Makefile: `EXTRA_OEMAKE = "CC='${CC}' CFLAGS='${CFLAGS}' LDFLAGS='${LDFLAGS}'"`.
+2. Use `EXTRA_OEMAKE = "-e"` to let environment variables override Makefile assignments. This is a blunt instrument: every exported variable then wins.
+3. Patch the Makefile and send the fix upstream.
+
 ## Worked Example: CMake Application With pkg-config
 
 ```bitbake
@@ -329,8 +356,6 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=<checksum>"
 
 SRC_URI = "git://example.invalid/telemetry.git;branch=main;protocol=https"
 SRCREV = "<fixed-commit>"
-S = "${WORKDIR}/git"
-
 DEPENDS = "libcurl"
 
 inherit cmake pkgconfig
@@ -347,7 +372,7 @@ If a file must be regenerated or writable at runtime, do not overwrite persisten
 ```bitbake
 do_install:append() {
     install -d ${D}${datadir}/product/defaults
-    install -m 0644 ${WORKDIR}/agent.conf \
+    install -m 0644 ${UNPACKDIR}/agent.conf \
         ${D}${datadir}/product/defaults/agent.conf
 }
 ```

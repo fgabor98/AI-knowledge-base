@@ -107,12 +107,12 @@ SRC_URI:append:product-board = " file://board.conf"
 
 do_install() {
     install -d ${D}${sysconfdir}/example
-    install -m 0644 ${WORKDIR}/common.conf \
+    install -m 0644 ${UNPACKDIR}/common.conf \
         ${D}${sysconfdir}/example/common.conf
 }
 
 do_install:append:product-board() {
-    install -m 0644 ${WORKDIR}/board.conf \
+    install -m 0644 ${UNPACKDIR}/board.conf \
         ${D}${sysconfdir}/example/board.conf
 }
 ```

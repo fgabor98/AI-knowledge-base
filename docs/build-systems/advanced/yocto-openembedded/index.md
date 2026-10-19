@@ -47,6 +47,30 @@ layers and configuration
 
 BitBake executes tasks based on metadata. The main skill is learning where metadata belongs and how to inspect the final expanded state.
 
+## Release Baseline
+
+Yocto behavior changes between releases, so these pages name the release they describe. The reference is **Yocto Project 6.0 "wrynose"** (LTS, April 2026; BitBake 2.18, OE-Core `wrynose`), the base of TI Processor SDK 12.x. Notes call out **5.0 "scarthgap"** (LTS, the base of TI SDK 11.x and many products in maintenance) where it differs.
+
+| Topic | scarthgap (5.0) | wrynose (6.0) | Since |
+| --- | --- | --- | --- |
+| Getting the metadata | `poky` repository (bitbake + OE-Core + meta-yocto combined) | `bitbake-setup` and separate `bitbake`, `openembedded-core`, `meta-yocto` repositories | `poky` repository last released for 5.2 |
+| Selecting `MACHINE`/`DISTRO` | `local.conf` | configuration fragments in `conf/toolcfg.conf` (`bitbake-config-build enable-fragment machine/<name>`); `local.conf` still works | 5.2 (fragments), 5.3 (`bitbake-setup`) |
+| Where `file://` sources unpack | `${WORKDIR}` | `${UNPACKDIR}` (`${WORKDIR}/sources`) | 5.1 |
+| `S` for git recipes | `S = "${WORKDIR}/git"` required | default `S = "${UNPACKDIR}/${BP}"` is correct; setting `S` to `${WORKDIR}/git` is a fatal error | 5.3 |
+| `SRCPV` in `PV` | `PV = "1.0+git${SRCPV}"` | `PV = "1.0+git"`; the revision is appended to the package version automatically | 4.3 |
+
+The "Since" column is the release where the change first appeared, from the Yocto Project release notes and migration guides. Both releases have `bitbake-getvar` (added in 4.2), which these pages use instead of `bitbake -e | grep`.
+
+## Hands-On Environment
+
+Commands and output on these pages come from a real build, recorded by `examples/build-systems/yocto/run.sh`:
+
+- `examples/build-systems/yocto/kb-wrynose.conf.json`: a `bitbake-setup` configuration that pins bitbake, OE-Core, meta-yocto, meta-arm, and meta-ti, selects `distro/poky` and `machine/am62xx-evm`, and adds the example layer;
+- `examples/build-systems/yocto/meta-kb-example`: a small product layer with a Makefile-based application recipe, a `.bbappend`, a package group, an image, a product machine pair, and deliberately broken recipes that trigger real QA errors;
+- `examples/build-systems/yocto/transcripts/`: the recorded output, which the documentation checks compare against.
+
+To reproduce it, run `examples/build-systems/yocto/run.sh ~/yocto` on a supported Linux host. The first run builds a cross toolchain (about two hours on 12 cores, 50 GB of disk).
+
 ## Learning Materials
 
 1. [Yocto, OpenEmbedded, and BitBake Mental Model](mental-model.md)
