@@ -96,11 +96,10 @@ aarch64-linux-gnu-gcc main.c -o app
 Make is common in embedded Linux because it is used by the Linux kernel, U-Boot, BusyBox, Buildroot, and many vendor SDKs.
 
 ```make
-CC ?= gcc
 CFLAGS ?= -Wall -Wextra -O2
 
 app: main.o util.o
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -116,12 +115,16 @@ For cross-compilation:
 make CC=arm-linux-gnueabihf-gcc
 ```
 
-or:
+or, inside the Makefile, pick a prefixed default only when no caller provided `CC`:
 
 ```make
-CROSS_COMPILE ?= arm-linux-gnueabihf-
+CROSS_COMPILE ?=
+ifeq ($(origin CC),default)
 CC := $(CROSS_COMPILE)gcc
+endif
 ```
+
+Do not write `CC ?= gcc` (make predefines `CC`, so it never assigns) or an unconditional `CC := $(CROSS_COMPILE)gcc` (it replaces a compiler exported by a Yocto SDK or recipe). See [Make Variables and Pattern Rules](make-variables-and-pattern-rules.md#the-cc-gcc-trap).
 
 ### CMake
 
@@ -288,11 +291,10 @@ gcc main.o util.o -o app
 Equivalent Makefile:
 
 ```make
-CC ?= gcc
 CFLAGS ?= -Wall -Wextra -O2
 
 app: main.o util.o
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 clean:
 	rm -f app *.o

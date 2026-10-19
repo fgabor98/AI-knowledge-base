@@ -95,7 +95,6 @@ APP := hello
 PREFIX ?= /usr
 DESTDIR ?=
 
-CC ?= gcc
 CFLAGS ?= -Wall -Wextra -O2
 
 $(APP): hello.c

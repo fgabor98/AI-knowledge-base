@@ -125,7 +125,6 @@ OBJS := hello.o
 PREFIX ?= /usr/local
 DESTDIR ?=
 
-CC ?= gcc
 CFLAGS ?= -Wall -Wextra -O2
 LDFLAGS ?=
 LDLIBS ?=
