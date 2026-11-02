@@ -27,12 +27,12 @@ When a page is added, it prints the line to add here.
 
 ## Orientation
 
-- [ ] [Overview](orientation/index.md)
-- [ ] [Origins And History](orientation/origins-and-history.md)
-- [ ] [Standards And Conformance](orientation/standards-and-conformance.md)
-- [ ] [Use Cases And Environments](orientation/use-cases-and-environments.md)
-- [ ] [Hosted And Freestanding C](orientation/hosted-and-freestanding.md)
-- [ ] [Learning Workflow And Tooling](orientation/learning-workflow-and-tooling.md)
+- [x] [Overview](orientation/index.md)
+- [x] [Origins And History](orientation/origins-and-history.md)
+- [x] [Standards And Conformance](orientation/standards-and-conformance.md)
+- [x] [Use Cases And Environments](orientation/use-cases-and-environments.md)
+- [x] [Hosted And Freestanding C](orientation/hosted-and-freestanding.md)
+- [x] [Learning Workflow And Tooling](orientation/learning-workflow-and-tooling.md)
 
 ## Language Fundamentals
 
