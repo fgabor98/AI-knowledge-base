@@ -30,11 +30,9 @@ markdown_extensions:
 extra_javascript:
   - javascripts/mermaid.min.js
   - javascripts/mermaid.js
-  - javascripts/c-progress.js
 extra_css:
   - stylesheets/layout.css
   - stylesheets/mermaid.css
-  - stylesheets/c-progress.css
 nav:
   - Home: index.md
   - Topic Map: topic-map.md

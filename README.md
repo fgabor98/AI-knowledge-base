@@ -70,9 +70,10 @@ above the fence:
 Use `skip` only for fragments, and always give a reason. Use `expect-warning` for
 deliberately bad examples; the check then fails if the example stops warning.
 
-`docs/c/progress.md` (the C progress checklist) is generated from the C section of
-`mkdocs.yml`. After adding or renaming a C page, run `scripts/generate-c-progress.py`;
-`scripts/validate-c.sh` fails while the checklist is out of date.
+`docs/c/progress.md` is a plain-text checklist of every C page: tick `- [x]` and commit
+it to record progress. `scripts/check-c-progress.py` (part of `scripts/validate-c.sh`)
+fails when a C page is missing from it, listed twice, or no longer in the navigation,
+and prints the line to add.
 
 Run the build systems documentation and example checks:
 

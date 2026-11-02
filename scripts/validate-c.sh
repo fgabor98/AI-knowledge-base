@@ -5,7 +5,7 @@
 # - test-out diagnostic answer keys (examples/c/diagnostics/check.py);
 # - failure case studies (scripts/validate-c-case-studies.sh);
 # - tool sessions quoted in the docs still produce the quoted output;
-# - the C progress checklist matches the nav (scripts/generate-c-progress.py);
+# - the C progress checklist lists every C page once (scripts/check-c-progress.py);
 # - documentation build.
 set -euo pipefail
 
@@ -17,8 +17,8 @@ fi
 printf 'Building and running C examples...\n'
 make --no-print-directory -C examples/c check sanitize tsan
 
-printf 'Checking the progress checklist is in sync with the nav...\n'
-"${PYTHON:-python3}" scripts/generate-c-progress.py --check
+printf 'Checking the progress checklist covers every C page...\n'
+python3 scripts/check-c-progress.py
 
 printf 'Compiling C snippets in the documentation...\n'
 python3 scripts/check-c-snippets.py docs/c

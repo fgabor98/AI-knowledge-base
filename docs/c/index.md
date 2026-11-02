@@ -12,8 +12,8 @@ A comprehensive C roadmap for systems and embedded engineering, from language fu
 
 ## How To Use This Section
 
-Track what you have covered on the [progress checklist](./progress.md): tick topics
-as you learn them, and see which pages you have visited but not finished.
+Track what you have covered on the [progress checklist](./progress.md): a plain-text
+list of every page that you tick off and commit as you go.
 
 If you already write C professionally, do not start at page one:
 
