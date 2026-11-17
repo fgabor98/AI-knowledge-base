@@ -36,17 +36,17 @@ When a page is added, it prints the line to add here.
 
 ## Language Fundamentals
 
-- [ ] [Overview](language-fundamentals/index.md)
+- [x] [Overview](language-fundamentals/index.md)
 - [ ] [Test-Out Diagnostic](language-fundamentals/test-out.md)
-- [ ] [Source Code And Syntax](language-fundamentals/source-code-and-syntax.md)
-- [ ] [Types, Values, And Objects](language-fundamentals/types-values-and-objects.md)
-- [ ] [Expressions And Operators](language-fundamentals/expressions-and-operators.md)
-- [ ] [Control Flow](language-fundamentals/control-flow.md)
-- [ ] [Functions](language-fundamentals/functions.md)
-- [ ] [Arrays, Strings, And Buffers](language-fundamentals/arrays-strings-and-buffers.md)
-- [ ] [Structures, Unions, And Enumerations](language-fundamentals/structures-unions-and-enums.md)
-- [ ] [Declarations And Declarators](language-fundamentals/declarations-and-declarators.md)
-- [ ] [Initialization](language-fundamentals/initialization.md)
+- [x] [Source Code And Syntax](language-fundamentals/source-code-and-syntax.md)
+- [x] [Types, Values, And Objects](language-fundamentals/types-values-and-objects.md)
+- [x] [Expressions And Operators](language-fundamentals/expressions-and-operators.md)
+- [x] [Control Flow](language-fundamentals/control-flow.md)
+- [x] [Functions](language-fundamentals/functions.md)
+- [x] [Arrays, Strings, And Buffers](language-fundamentals/arrays-strings-and-buffers.md)
+- [x] [Structures, Unions, And Enumerations](language-fundamentals/structures-unions-and-enums.md)
+- [x] [Declarations And Declarators](language-fundamentals/declarations-and-declarators.md)
+- [x] [Initialization](language-fundamentals/initialization.md)
 
 ## Semantics And Memory
 
