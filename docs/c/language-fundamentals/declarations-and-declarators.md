@@ -252,7 +252,8 @@ The opaque struct keeps representation private. The API documentation must still
 
 ### Model Answers
 
-Answers for the exercises that have one correct explanation. Try the exercise first.
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
 
 ??? note "Exercise 1: worked examples"
     Start at the identifier, then read right while you can (`[]` and `()`), and left when you
@@ -276,6 +277,268 @@ Answers for the exercises that have one correct explanation. Try the exercise fi
     ```
 
     See also [test-out Q10](./test-out.md#q10-reading-a-declaration).
+
+??? note "Exercise 2: typedefs for pointer and array declarators"
+    ```c
+    #include <stddef.h>
+
+    typedef int *int_pointer;       /* "pointer to int" */
+    typedef int sample_row[4];      /* "array of 4 int" */
+
+    int_pointer channels[4];        /* same type as: int *channels[4];   */
+    sample_row *current_row;        /* same type as: int (*current_row)[4]; */
+
+    int row_sum(const sample_row *row)
+    {
+        int sum = 0;
+
+        for (size_t i = 0; i < sizeof *row / sizeof (*row)[0]; i++) {
+            sum += (*row)[i];
+        }
+        return sum;
+    }
+    ```
+
+    The typedef names the inner part, so the outer declaration reads left to right. A
+    pointer to a whole row also keeps the row length in the type: `sizeof *row` is 16 here,
+    not the size of a pointer.
+
+    Be careful with typedefs that hide a pointer. `const int_pointer p` declares
+    `int *const p`, a constant *pointer* to a modifiable `int`, not a pointer to `const int`.
+    GCC rejects `p = &other;` with `assignment of read-only variable 'p'` but accepts
+    `*p = 1;`. That is why style guides such as the Linux kernel's avoid pointer typedefs
+    for ordinary objects. Function-pointer typedefs are the common exception.
+
+??? note "Exercise 3: an opaque driver handle"
+    ```c
+    /* adc.h */
+    #ifndef ADC_H
+    #define ADC_H
+
+    #include <stdint.h>
+
+    struct adc;                                   /* incomplete type: callers see a name only */
+
+    enum adc_status { ADC_OK, ADC_BUSY, ADC_INVALID, ADC_NO_RESOURCE };
+
+    struct adc *adc_create(unsigned int channel);
+    void adc_destroy(struct adc *adc);            /* accepts NULL */
+    enum adc_status adc_read(struct adc *adc, uint16_t *value);
+
+    #endif
+    ```
+
+    ```c
+    /* adc.c */
+    #include <stddef.h>
+    #include "adc.h"
+
+    #define ADC_INSTANCES 4u
+
+    struct adc {
+        unsigned int channel;
+        int in_use;
+    };
+
+    static struct adc instances[ADC_INSTANCES];   /* no heap: a fixed pool */
+
+    struct adc *adc_create(unsigned int channel)
+    {
+        for (size_t i = 0; i < ADC_INSTANCES; i++) {
+            if (!instances[i].in_use) {
+                instances[i].in_use = 1;
+                instances[i].channel = channel;
+                return &instances[i];
+            }
+        }
+        return NULL;
+    }
+
+    void adc_destroy(struct adc *adc)
+    {
+        if (adc != NULL) {
+            adc->in_use = 0;
+        }
+    }
+
+    enum adc_status adc_read(struct adc *adc, uint16_t *value)
+    {
+        if (adc == NULL || value == NULL || !adc->in_use) {
+            return ADC_INVALID;
+        }
+        *value = (uint16_t)(adc->channel * 100u);    /* stands in for the hardware read */
+        return ADC_OK;
+    }
+    ```
+
+    - Callers can hold and pass a `struct adc *`, but cannot declare a `struct adc`, read its
+      fields, or take its `sizeof`. The layout can change without recompiling callers.
+    - `adc_create` reports exhaustion with `NULL` instead of failing silently.
+    - `adc_destroy(NULL)` is allowed, like `free(NULL)`, which simplifies cleanup paths.
+    - A fixed pool keeps the API heap-free. Swapping in `malloc` later does not change the
+      header, which is the point of the opaque type.
+
+??? note "Exercise 4: const-correct parameters and safer call sites"
+    Before: the parameter is writable, although the function only reads.
+
+    ```c
+    #include <stddef.h>
+    #include <stdint.h>
+
+    uint8_t checksum(uint8_t *data, size_t length);
+
+    static const uint8_t calibration[4] = { 1, 2, 3, 4 };
+
+    uint8_t check_calibration(void)
+    {
+        return checksum((uint8_t *)calibration, sizeof calibration);   /* cast needed */
+    }
+    ```
+
+    Without the cast, GCC 13 warns:
+    `passing argument 1 of 'checksum' discards 'const' qualifier from pointer target type`.
+    The cast silences that, and also removes the compiler's protection: if `checksum` ever
+    writes through the pointer, it writes to a `const` object, which is undefined and may
+    fault in flash.
+
+    After: the parameter says the data is read-only.
+
+    ```c
+    #include <stddef.h>
+    #include <stdint.h>
+
+    uint8_t checksum(const uint8_t *data, size_t length)
+    {
+        uint8_t sum = 0;
+
+        for (size_t i = 0; i < length; i++) {
+            sum = (uint8_t)(sum + data[i]);
+        }
+        return sum;
+    }
+
+    static const uint8_t calibration[4] = { 1, 2, 3, 4 };
+
+    uint8_t check_calibration(void)
+    {
+        return checksum(calibration, sizeof calibration);           /* no cast */
+    }
+    ```
+
+    The call sites that become safer are the ones that needed a cast: `const` tables, string
+    literals, and data received through a `const` pointer. Every call that passed writable
+    data still compiles unchanged, because adding `const` is an implicit conversion. Inside
+    the function, an accidental `data[i] = 0;` is now a compile error instead of a silent
+    write.
+
+??? note "Exercise 5: a definition in a header"
+    A header that *defines* an object, included by two source files:
+
+    <!-- c-check: skip -- header from a two-file example; it compiles alone but fails at link time -->
+
+    ```c
+    /* config.h */
+    #ifndef CONFIG_H
+    #define CONFIG_H
+
+    int retry_limit = 3;    /* a definition in a header */
+
+    int get_retry_limit(void);
+
+    #endif
+    ```
+
+    `config.c` and `main.c` both include it. Each compiles, and the link fails:
+
+    ```text
+    $ gcc -std=c17 -c config.c
+    $ gcc -std=c17 -c main.c
+    $ gcc config.o main.o -o app
+    /usr/bin/ld: main.o:(.data+0x0): multiple definition of `retry_limit'; config.o:(.data+0x0): first defined here
+    collect2: error: ld returned 1 exit status
+    ```
+
+    The include guard does not help: it prevents a second inclusion *within one*
+    translation unit, and here each `.c` file is a separate translation unit with its own
+    copy of the definition. The fix is one declaration in the header and one definition in
+    one source file:
+
+    ```c
+    /* config.h */
+    #ifndef CONFIG_H
+    #define CONFIG_H
+
+    extern int retry_limit;     /* declaration only */
+
+    int get_retry_limit(void);
+
+    #endif
+    ```
+
+    ```c
+    /* config.c */
+    #include "config.h"
+
+    int retry_limit = 3;        /* the one definition */
+
+    int get_retry_limit(void)
+    {
+        return retry_limit;
+    }
+    ```
+
+    With the initializer removed (`int retry_limit;` in the header), GCC 10 and later still
+    report `multiple definition`, but older compilers and `-fcommon` merge the copies
+    silently. [Case study 14](../failure-case-studies/14-common-symbol-merge.md) shows how
+    that goes wrong.
+
+??? note "Exercise 6: an incompatible callback"
+    <!-- c-check: expect-warning -->
+
+    ```c
+    #include <stdint.h>
+
+    typedef void (*event_callback)(void *context, uint32_t event);
+
+    int register_callback(event_callback callback, void *context);
+
+    struct uart;
+
+    /* Wrong: the first parameter is struct uart *, not void *. */
+    static void on_uart_event(struct uart *uart, uint32_t event)
+    {
+        (void)uart;
+        (void)event;
+    }
+
+    /* Right: matches event_callback exactly and converts inside. */
+    static void on_uart_event_adapter(void *context, uint32_t event)
+    {
+        struct uart *uart = context;
+
+        (void)uart;
+        (void)event;
+    }
+
+    void setup(struct uart *uart)
+    {
+        register_callback(on_uart_event, uart);
+        register_callback(on_uart_event_adapter, uart);
+    }
+    ```
+
+    GCC 13 warns about the first registration:
+
+    ```text
+    warning: passing argument 1 of ‘register_callback’ from incompatible pointer type [-Wincompatible-pointer-types]
+    note: expected ‘event_callback’ {aka ‘void (*)(void *, unsigned int)’} but argument is of type ‘void (*)(struct uart *, uint32_t)’ {aka ‘void (*)(struct uart *, unsigned int)’}
+    ```
+
+    GCC 14 makes this an error by default. Calling a function through a pointer of an
+    incompatible type is undefined behavior (C11 6.3.2.3p8), even when `void *` and
+    `struct uart *` happen to have the same representation. Do not silence it with a cast
+    such as `(event_callback)on_uart_event`. Write the adapter, which has the exact
+    signature and converts the `void *` back to the real type inside.
 
 ## Common Mistakes
 

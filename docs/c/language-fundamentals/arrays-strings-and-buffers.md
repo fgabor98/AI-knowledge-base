@@ -280,7 +280,217 @@ For structures with padding, memcmp may report inequality even when named member
 
 ### Model Answers
 
-Answers for the exercises that have one correct explanation. Try the exercise first.
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
+
+??? note "Exercise 1: a bounded append with edge-case tests"
+    ```c
+    #include <assert.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+    #include <string.h>
+
+    struct byte_buffer {
+        uint8_t *data;
+        size_t capacity;
+        size_t length;
+    };
+
+    /* All or nothing: appends every byte, or leaves the buffer unchanged. */
+    bool buffer_append(struct byte_buffer *buffer, const uint8_t *bytes, size_t count)
+    {
+        if (count > buffer->capacity - buffer->length) {   /* cannot overflow: length <= capacity */
+            return false;
+        }
+        memcpy(buffer->data + buffer->length, bytes, count);
+        buffer->length += count;
+        return true;
+    }
+
+    int main(void)
+    {
+        uint8_t storage[4];
+        struct byte_buffer buffer = { storage, sizeof storage, 0 };
+        const uint8_t two[2] = { 1, 2 };
+        const uint8_t one[1] = { 3 };
+
+        assert(buffer_append(&buffer, two, 0));          /* empty append on an empty buffer */
+        assert(buffer.length == 0);
+        assert(buffer_append(&buffer, two, 2));
+        assert(buffer_append(&buffer, one, 1));          /* now exactly one byte free */
+        assert(!buffer_append(&buffer, two, 2));         /* one free, two needed: rejected */
+        assert(buffer.length == 3);                      /* ...and nothing was written */
+        assert(buffer_append(&buffer, one, 1));          /* fills the last byte */
+        assert(buffer.length == buffer.capacity);
+        assert(!buffer_append(&buffer, one, 1));         /* full */
+        assert(buffer_append(&buffer, one, 0));          /* zero bytes still fit when full */
+        return 0;
+    }
+    ```
+
+    The check `count > capacity - length` cannot overflow, because `length <= capacity` is
+    the buffer's invariant. The tempting `length + count > capacity` can wrap when `count`
+    comes from untrusted input. The tests cover the three named cases and the edges around
+    them: zero bytes, exactly one byte free, a request one byte too large, and full.
+
+??? note "Exercise 2: a length-prefixed frame parser"
+    Frame format: one length byte, then that many payload bytes, at most 16.
+
+    ```c
+    #include <assert.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    #define PAYLOAD_MAX 16u
+
+    enum parse_result { PARSE_OK, PARSE_TRUNCATED, PARSE_TOO_LONG, PARSE_EMPTY };
+
+    struct frame {
+        const uint8_t *payload;        /* points into the input buffer */
+        size_t length;
+    };
+
+    enum parse_result parse_frame(const uint8_t *input, size_t available,
+                                  struct frame *frame, size_t *consumed)
+    {
+        if (available == 0) {
+            return PARSE_EMPTY;
+        }
+        size_t length = input[0];
+        if (length > PAYLOAD_MAX) {
+            return PARSE_TOO_LONG;           /* reject before reading the payload */
+        }
+        if (length > available - 1) {        /* available >= 1 here, so no underflow */
+            return PARSE_TRUNCATED;
+        }
+        frame->payload = input + 1;
+        frame->length = length;
+        *consumed = 1 + length;
+        return PARSE_OK;
+    }
+
+    int main(void)
+    {
+        struct frame frame;
+        size_t consumed;
+        const uint8_t good[] = { 3, 'a', 'b', 'c', 9 };
+        const uint8_t truncated[] = { 4, 'a', 'b' };
+        const uint8_t too_long[] = { 17, 0 };
+        const uint8_t zero_length[] = { 0 };
+
+        assert(parse_frame(good, sizeof good, &frame, &consumed) == PARSE_OK);
+        assert(frame.length == 3 && frame.payload[0] == 'a' && consumed == 4);
+        assert(parse_frame(truncated, sizeof truncated, &frame, &consumed) == PARSE_TRUNCATED);
+        assert(parse_frame(too_long, sizeof too_long, &frame, &consumed) == PARSE_TOO_LONG);
+        assert(parse_frame(zero_length, sizeof zero_length, &frame, &consumed) == PARSE_OK);
+        assert(frame.length == 0 && consumed == 1);
+        assert(parse_frame(good, 0, &frame, &consumed) == PARSE_EMPTY);
+        return 0;
+    }
+    ```
+
+    - The declared length is checked against the protocol maximum *and* against the bytes
+      actually available, before any payload byte is read.
+    - `TRUNCATED` and `TOO_LONG` are different results on purpose. A stream reader waits for
+      more bytes after `TRUNCATED`, but must resynchronize or drop the connection after
+      `TOO_LONG`, because waiting cannot fix it.
+    - The payload is returned as a view into the input, so its lifetime is the caller's
+      buffer. The function never copies or allocates.
+    - Run the tests under ASan and UBSan. A fuzzer is the next step for any real parser.
+
+??? note "Exercise 3: a two-dimensional sample buffer"
+    ```c
+    #include <assert.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    #define CHANNELS 3
+    #define SAMPLES 4
+
+    int main(void)
+    {
+        int16_t samples[CHANNELS][SAMPLES];
+
+        for (size_t channel = 0; channel < CHANNELS; channel++) {
+            for (size_t i = 0; i < SAMPLES; i++) {
+                samples[channel][i] = (int16_t)(channel * 100 + i);
+            }
+        }
+
+        /* Row-major: the last index varies fastest, and rows are contiguous.
+           Byte offsets within the whole array object are always well defined. */
+        const unsigned char *base = (const unsigned char *)samples;
+        for (size_t channel = 0; channel < CHANNELS; channel++) {
+            for (size_t i = 0; i < SAMPLES; i++) {
+                size_t offset = (channel * SAMPLES + i) * sizeof(int16_t);
+                assert((const unsigned char *)&samples[channel][i] == base + offset);
+            }
+        }
+        assert(sizeof samples == CHANNELS * SAMPLES * sizeof(int16_t));
+        assert(sizeof samples[0] == SAMPLES * sizeof(int16_t));   /* one row */
+        return 0;
+    }
+    ```
+
+    `samples[channel][i]` is element `channel * SAMPLES + i` of one contiguous block, and
+    `samples[channel]` is a whole row of `SAMPLES` elements. Loop with the last index
+    innermost, as here, so memory is accessed sequentially. Swapping the loops strides
+    through memory by a whole row on every step.
+
+    The check compares byte offsets through `unsigned char *`, because any object may be
+    inspected as bytes. A shortcut such as `const int16_t *flat = &samples[0][0];` followed
+    by `flat[channel * SAMPLES + i]` is how much code treats a 2-D array, and compilers
+    accept it. Strictly, though, `flat` points into the first row, and the standard defines
+    its arithmetic only within that row of `SAMPLES` elements.
+
+??? note "Exercise 4: a terminating string copy that reports truncation"
+    ```c
+    #define _POSIX_C_SOURCE 200809L   /* for strnlen before C23 */
+    #include <assert.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <string.h>
+
+    /* Copies src into dst (capacity bytes). Returns false if the result was truncated.
+       dst is always terminated when capacity > 0. */
+    bool copy_string(char *dst, size_t capacity, const char *src)
+    {
+        if (capacity == 0) {
+            return src[0] == '\0';
+        }
+        size_t length = strnlen(src, capacity);   /* stops at capacity: src may be long */
+        if (length == capacity) {
+            memcpy(dst, src, capacity - 1);
+            dst[capacity - 1] = '\0';
+            return false;
+        }
+        memcpy(dst, src, length + 1);             /* includes the terminator */
+        return true;
+    }
+
+    int main(void)
+    {
+        char name[6];
+
+        assert(copy_string(name, sizeof name, "adc0") && strcmp(name, "adc0") == 0);
+        assert(copy_string(name, sizeof name, "adc01") && strcmp(name, "adc01") == 0);  /* exactly fits */
+        assert(!copy_string(name, sizeof name, "adc012") && strcmp(name, "adc01") == 0); /* one too long */
+        assert(copy_string(name, sizeof name, "") && name[0] == '\0');
+        assert(!copy_string(name, 0, "x"));
+        return 0;
+    }
+    ```
+
+    - `strncpy` is the wrong tool: it does not terminate when the source is too long, and it
+      pads short copies with zeros.
+    - `strnlen` keeps the function from reading past `capacity` bytes of a long or
+      unterminated source. It is POSIX, so before C23 it needs the `_POSIX_C_SOURCE`
+      feature-test macro under `-std=c17`; C23 adds it to the standard library.
+    - The boundary tests are the ones that matter: a string that fits exactly (5 characters
+      plus terminator in 6 bytes), and one that is one character too long.
+    - Reporting truncation lets the caller decide. For a file path, truncation is an error.
+      For a log message, it is usually acceptable.
 
 ??? note "Exercise 5: sizeof on a local array versus an array parameter"
     Inside the function that defines it, an array keeps its type, so `sizeof` gives the size
@@ -316,6 +526,54 @@ Answers for the exercises that have one correct explanation. Try the exercise fi
     `ARRAY_SIZE` itself gives the wrong answer if it is applied to a pointer, which is why it
     belongs only where the array is declared. See also
     [test-out Q7](./test-out.md#q7-sizes-of-strings).
+
+??? note "Exercise 6: a DMA-buffer contract"
+    An example contract for a UART receive buffer filled by DMA, on a core with a data cache
+    and 32-byte cache lines:
+
+    | Item | Contract |
+    | --- | --- |
+    | Producer | the DMA controller writes received bytes |
+    | Consumer | the UART driver's task-level code, after the transfer-complete interrupt |
+    | Ownership | `CPU` → `DEVICE` when the driver starts a transfer; `DEVICE` → `CPU` only when the transfer-complete interrupt fires, or after the driver has stopped the channel and waited for it to go idle. The CPU must not read or write the buffer while the device owns it. |
+    | Size | 256 bytes, a multiple of the cache-line size |
+    | Alignment | 32 bytes, so no other object shares its cache lines |
+    | Placement | the `.dma_buffers` section, in RAM that the DMA controller can reach |
+    | Cache, before the transfer | *invalidate* the buffer's lines, so no dirty line is written back over DMA data later |
+    | Cache, after the transfer | *invalidate* again before reading, so the CPU does not see stale cached bytes |
+    | Cancellation | stop the channel, wait until it reports idle, then take ownership back |
+    | Error path | a DMA error interrupt returns ownership to the CPU and marks the data invalid |
+
+    ```c
+    #include <stdalign.h>
+    #include <stdint.h>
+
+    #define CACHE_LINE 32u
+    #define RX_DMA_SIZE 256u
+
+    _Static_assert(RX_DMA_SIZE % CACHE_LINE == 0, "DMA buffer must be whole cache lines");
+
+    void cache_invalidate(void *address, uint32_t length);
+    void dma_start_rx(uint8_t *buffer, uint32_t length);
+
+    /* Owned by the UART driver; see the contract table. */
+    __attribute__((section(".dma_buffers")))
+    static alignas(CACHE_LINE) uint8_t rx_dma_buffer[RX_DMA_SIZE];
+
+    /* CPU -> DEVICE: discard cached lines, then hand the buffer to the DMA engine. */
+    void uart_rx_start(void)
+    {
+        cache_invalidate(rx_dma_buffer, RX_DMA_SIZE);
+        dma_start_rx(rx_dma_buffer, RX_DMA_SIZE);
+    }
+    ```
+
+    The alignment and size rules exist because cache maintenance works on whole lines. If an
+    unrelated variable shared the buffer's last line, invalidating that line would discard
+    the variable's latest value. Writing the contract down also answers the review questions
+    for every function that touches the buffer: which state must it be in, and who moves it to
+    the next one? [DMA, Cache, And Memory Barriers](../embedded-c-and-hardware/dma-cache-and-memory-barriers.md)
+    covers the mechanisms in detail.
 
 ## Common Mistakes
 
