@@ -307,7 +307,154 @@ Make reset behavior explicit:
 
 ### Model Answers
 
-Answers for the exercises that have one correct explanation. Try the exercise first.
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
+
+??? note "Exercise 1: assigned before use versus read before assignment"
+    <!-- c-check: skip -- deliberate uninitialized reads; GCC reports them only when it generates code, which the syntax-only check does not do -->
+
+    ```c
+    #include <stdbool.h>
+
+    int read_sensor(void);
+
+    int assigned_first(void)
+    {
+        int value;
+
+        value = read_sensor();          /* assigned before any read */
+        return value + 1;
+    }
+
+    int read_first(void)
+    {
+        int value;
+
+        return value + 1;               /* read before any assignment */
+    }
+
+    int assigned_on_one_path(bool ready)
+    {
+        int value;
+
+        if (ready) {
+            value = read_sensor();
+        }
+        return value;                   /* indeterminate when ready is false */
+    }
+    ```
+
+    ```text
+    $ gcc -std=c17 -O0 -Wall -c uninit.c
+    uninit.c:17:18: warning: ‘value’ is used uninitialized [-Wuninitialized]
+    $ gcc -std=c17 -O2 -Wall -c uninit.c
+    uninit.c:17:18: warning: ‘value’ is used uninitialized [-Wuninitialized]
+    uninit.c:27:12: warning: ‘value’ may be used uninitialized [-Wmaybe-uninitialized]
+    ```
+
+    - `assigned_first` is fine: an automatic object needs no initializer if every path
+      assigns it before reading.
+    - `read_first` reads an indeterminate value. Because `value`'s address is never taken,
+      the read is undefined behavior (C11 6.3.2.1p2), not merely "some garbage value".
+    - `assigned_on_one_path` is the realistic bug, and GCC 13 reports it only at `-O2`: the
+      `may be used uninitialized` analysis runs as part of optimization. A debug-only
+      warnings build misses it. Initialize at the declaration (`int value = 0;`) when no
+      better value exists, or restructure so every path assigns.
+
+??? note "Exercise 2: a sparse lookup table"
+    ```c
+    #include <stddef.h>
+    #include <stdint.h>
+    #include <stdio.h>
+
+    enum command { CMD_PING = 0x01, CMD_RESET = 0x05, CMD_READ = 0x10, CMD_WRITE = 0x11, CMD_LIMIT = 0x20 };
+
+    typedef int (*command_handler)(const uint8_t *payload, size_t length);
+
+    static int handle_ping(const uint8_t *payload, size_t length) { (void)payload; (void)length; return 0; }
+    static int handle_reset(const uint8_t *payload, size_t length) { (void)payload; (void)length; return 0; }
+    static int handle_read(const uint8_t *payload, size_t length) { (void)payload; (void)length; return 0; }
+
+    static const command_handler handlers[CMD_LIMIT] = {
+        [CMD_PING] = handle_ping,
+        [CMD_RESET] = handle_reset,
+        [CMD_READ] = handle_read,
+        /* CMD_WRITE intentionally missing to show the check */
+    };
+
+    int main(void)
+    {
+        const enum command expected[] = { CMD_PING, CMD_RESET, CMD_READ, CMD_WRITE };
+        size_t present = 0;
+
+        for (size_t i = 0; i < CMD_LIMIT; i++) {
+            present += handlers[i] != NULL;
+        }
+        printf("%zu of %d slots have a handler; the rest are null pointers\n", present, CMD_LIMIT);
+        for (size_t i = 0; i < sizeof expected / sizeof expected[0]; i++) {
+            if (handlers[expected[i]] == NULL) {
+                printf("missing handler for command 0x%02x\n", (unsigned)expected[i]);
+            }
+        }
+        return 0;
+    }
+    ```
+
+    ```text
+    3 of 32 slots have a handler; the rest are null pointers
+    missing handler for command 0x11
+    ```
+
+    Every element without a designator is initialized as if it had static storage duration:
+    null for pointers, zero for numbers (C11 6.7.9p10, p21). So the table is well defined,
+    and dispatch code must treat a null entry as "unknown command". The check that matters
+    is the second loop: a test that every command the protocol defines has a handler. A
+    missing designator compiles silently.
+
+??? note "Exercise 3: a configuration structure with a safe default"
+    ```c
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    struct sensor_config {
+        uint32_t sample_period_ms;
+        uint16_t alarm_threshold;
+        uint8_t channel;
+        bool filter_enabled;
+    };
+
+    /* The one place the defaults are written down. */
+    static const struct sensor_config sensor_config_default = {
+        .sample_period_ms = 100u,
+        .alarm_threshold = 800u,
+        .channel = 0u,
+        .filter_enabled = true,
+    };
+
+    static bool sensor_config_valid(const struct sensor_config *config)
+    {
+        return config->sample_period_ms >= 10u && config->sample_period_ms <= 60000u
+            && config->alarm_threshold <= 1023u
+            && config->channel < 4u;
+    }
+
+    /* Use stored settings only if they are valid; otherwise fall back as a whole. */
+    struct sensor_config sensor_config_load(const struct sensor_config *stored)
+    {
+        if (stored != NULL && sensor_config_valid(stored)) {
+            return *stored;
+        }
+        return sensor_config_default;
+    }
+    ```
+
+    - Designated initializers name every field, so reordering the struct cannot shift values
+      into the wrong members, and a new field defaults to zero until it is added here.
+    - Validation checks ranges, not just "non-zero": a period of 0 or 4 million ms, or a
+      channel the hardware does not have, are rejected.
+    - An invalid configuration is replaced *as a whole*. Fixing fields one by one can mix
+      stored and default values into a combination nobody tested.
 
 ??? note "Exercise 4: an exactly sized character array"
     In `char id[4] = "ABCD";` the literal has five characters including its terminator, and
@@ -324,6 +471,146 @@ Answers for the exercises that have one correct explanation. Try the exercise fi
     The unterminated form is right for fixed-width fields in file and protocol formats, as
     long as the code treats them as byte arrays with a known length (`memcpy`, `%.4s`) and
     never as strings. See [test-out Q8](./test-out.md#q8-an-exactly-sized-string).
+
+??? note "Exercise 5: memset versus a designated initializer"
+    Before:
+
+    ```c
+    #include <string.h>
+
+    struct link_settings {
+        const char *name;
+        double timeout_s;
+        unsigned int retries;
+        unsigned int baud;
+    };
+
+    void link_defaults_memset(struct link_settings *settings)
+    {
+        memset(settings, 0, sizeof *settings);
+        settings->retries = 3u;
+        settings->baud = 115200u;
+    }
+    ```
+
+    After:
+
+    ```c
+    struct link_settings {
+        const char *name;
+        double timeout_s;
+        unsigned int retries;
+        unsigned int baud;
+    };
+
+    void link_defaults(struct link_settings *settings)
+    {
+        *settings = (struct link_settings){
+            .retries = 3u,
+            .baud = 115200u,
+        };
+    }
+    ```
+
+    | | `memset` to 0, then assign | compound literal with designators |
+    | --- | --- | --- |
+    | unnamed members | all bits zero | zero *values*: null pointer, `0.0`, 0 |
+    | null pointers and `0.0` | correct only where all-bits-zero means null and `0.0` (every mainstream ABI, but not guaranteed by C) | guaranteed |
+    | padding bytes | zeroed | unspecified |
+    | defaults visible in one place | no: zero first, values later | yes |
+    | a new member | silently 0 | silently 0 |
+
+    Prefer the designated initializer for typed structures. Keep `memset` (or both) where the
+    padding bytes matter, for example before copying a structure to the network or to user
+    space, because only `memset` zeroes padding
+    (see [case study 10](../failure-case-studies/10-struct-padding-leak.md)).
+
+??? note "Exercise 6: tracing data copying and bss clearing"
+    The [linker-script session](../compilation-linking-and-abi/linker-scripts-and-memory-layout.md#link-it-and-look)
+    does this on a host-built firmware image, so it can be followed without a board. The
+    evidence chain:
+
+    1. **The map file** gives `.data` two addresses: it runs in RAM and is stored in flash.
+
+        ```text
+        $ grep -A1 -E '^\.data ' firmware.map
+        .data           0x0000000020000000        0x4 load address 0x000000000800010c
+        ```
+
+    2. **The symbols** give the startup code its bounds:
+
+        ```text
+        $ nm -n firmware.elf | grep -E '__data|__bss'
+        000000000800010c A __data_load_start__
+        0000000020000000 D __data_start__
+        0000000020000004 D __data_end__
+        0000000020000020 B __bss_start__
+        0000000020001020 B __bss_end__
+        ```
+
+    3. **The startup code** copies 4 bytes from `0x0800010c` to `0x20000000` (the initial
+       value of `boot_count`), then zeroes `0x20000020` up to `0x20001020` (`sample_buffer`).
+       The loops are in the page's
+       [linker-defined symbols](../compilation-linking-and-abi/linker-scripts-and-memory-layout.md#linker-defined-symbols-in-c)
+       section.
+
+    On a board, confirm the same thing with a debugger: break at the first instruction of
+    `main`, then check that an initialized global holds its initializer and that a byte in
+    the middle of `.bss` reads 0. If a global is wrong at `main`, the startup copy or clear,
+    or the `AT>` placement in the linker script, is where to look.
+
+??? note "Exercise 7: an explicit initialization order"
+    ```c
+    #include <stddef.h>
+
+    int clock_init(void);
+    void clock_deinit(void);
+    int gpio_init(void);
+    void gpio_deinit(void);
+    int uart_init(void);
+    void uart_deinit(void);
+    int sensor_init(void);
+    void sensor_deinit(void);
+
+    struct init_step {
+        const char *name;
+        int (*init)(void);
+        void (*deinit)(void);
+    };
+
+    /* Each step depends only on the steps above it. */
+    static const struct init_step init_steps[] = {
+        { "clock",  clock_init,  clock_deinit  },  /* bus and peripheral clocks first */
+        { "gpio",   gpio_init,   gpio_deinit   },  /* pins need a clocked GPIO block */
+        { "uart",   uart_init,   uart_deinit   },  /* needs clocks and its pins */
+        { "sensor", sensor_init, sensor_deinit },  /* talks over the UART */
+    };
+
+    /* Returns NULL on success, or the name of the step that failed. */
+    const char *system_init(void)
+    {
+        const size_t count = sizeof init_steps / sizeof init_steps[0];
+
+        for (size_t i = 0; i < count; i++) {
+            if (init_steps[i].init() != 0) {
+                const char *failed = init_steps[i].name;
+
+                while (i-- > 0) {                  /* undo completed steps, newest first */
+                    init_steps[i].deinit();
+                }
+                return failed;
+            }
+        }
+        return NULL;
+    }
+    ```
+
+    - The order is data, in one table, with the dependency written next to each step. Adding
+      a subsystem means choosing its position deliberately.
+    - A failure unwinds the completed steps in reverse order, so the system is never left
+      with a sensor powered and its UART half configured.
+    - No step relies on the link order of modules or on constructors running in some
+      order, which C does not define across translation units.
 
 ## Common Mistakes
 

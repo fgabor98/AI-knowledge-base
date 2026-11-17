@@ -385,7 +385,8 @@ Keep transition policy separate from hardware actions when possible. The state f
 
 ### Model Answers
 
-Answers for the exercises that have one correct explanation. Try the exercise first.
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
 
 ??? note "Exercise 1: which if does the else bind to?"
     An `else` binds to the nearest unmatched `if` in the same block (C11 6.8.4.1p3), whatever
@@ -429,6 +430,310 @@ Answers for the exercises that have one correct explanation. Try the exercise fi
 
     GCC reports the ambiguous form (`-Wdangling-else`, part of `-Wall`). Braces on every branch
     remove the question. See [test-out Q5](./test-out.md#q5-nested-conditions).
+
+??? note "Exercise 2: a switch with a defensive default"
+    ```c
+    enum link_state { LINK_DOWN, LINK_TRAINING, LINK_UP, LINK_ERROR };
+
+    void link_power_off(void);
+    void link_continue_training(void);
+    void link_service(void);
+    void link_recover(void);
+
+    void link_step(enum link_state state)
+    {
+        switch (state) {
+        case LINK_DOWN:
+            link_power_off();
+            break;
+        case LINK_TRAINING:
+            link_continue_training();
+            break;
+        case LINK_UP:
+            link_service();
+            break;
+        case LINK_ERROR:
+            link_recover();
+            break;
+        default:
+            /* Not a valid enumerator: corrupted memory or a bad cast from an int. */
+            link_recover();
+            break;
+        }
+    }
+    ```
+
+    Every expected state has its own `case`, and `default` handles only values that should
+    be impossible. Two details make this pattern safe:
+
+    - An `enum` variable can hold any value of its underlying integer type, so `default` is
+      reachable in practice, for example after `(enum link_state)raw_byte`.
+    - `default` silences `-Wall`'s `-Wswitch` check. With a `default` and no `case` for
+      `LINK_ERROR`, GCC 13 says nothing at `-Wall`. Only `-Wswitch-enum` still reports
+      `enumeration value 'LINK_ERROR' not handled in switch`. Enable `-Wswitch-enum` when
+      you use defensive defaults, so adding an enumerator breaks the build until every
+      switch handles it.
+
+??? note "Exercise 3: a polling function with three outcomes"
+    ```c
+    #include <stdbool.h>
+    #include <stdint.h>
+
+    #define STATUS_READY 0x01u
+    #define STATUS_FAULT 0x80u
+
+    enum poll_result { POLL_READY, POLL_TIMEOUT, POLL_FAULT };
+
+    uint32_t read_status(void);
+    uint32_t now_ticks(void);
+
+    enum poll_result wait_ready(uint32_t timeout_ticks)
+    {
+        uint32_t start = now_ticks();
+
+        for (;;) {
+            uint32_t status = read_status();     /* read once per iteration */
+
+            if ((status & STATUS_FAULT) != 0u) {
+                return POLL_FAULT;
+            }
+            if ((status & STATUS_READY) != 0u) {
+                return POLL_READY;
+            }
+            if ((uint32_t)(now_ticks() - start) >= timeout_ticks) {
+                /* One last look: the task may have been preempted past the deadline
+                   while the device became ready. */
+                status = read_status();
+                if ((status & STATUS_FAULT) != 0u) {
+                    return POLL_FAULT;
+                }
+                return (status & STATUS_READY) != 0u ? POLL_READY : POLL_TIMEOUT;
+            }
+        }
+    }
+    ```
+
+    - The status register is read once per iteration and both bits are tested on that
+      value. Reading it twice can see two different states, and on some devices reading
+      clears the fault bit.
+    - Fault is checked before ready, so a device that reports both is not treated as
+      successful.
+    - `now_ticks() - start` is computed in `uint32_t`, so it stays correct when the tick
+      counter wraps. `now_ticks() > start + timeout_ticks` would not.
+    - The final read after the deadline avoids a false timeout when the caller was
+      preempted for longer than the timeout.
+
+??? note "Exercise 4: one forward cleanup block"
+    Before: each failure path repeats the cleanup of everything acquired so far.
+
+    ```c
+    int clock_enable(void);
+    void clock_disable(void);
+    int dma_claim(void);
+    void dma_release(void);
+    int irq_request(void);
+    void irq_free(void);
+    int device_start(void);
+
+    int open_duplicated(void)
+    {
+        if (clock_enable() != 0) {
+            return -1;
+        }
+        if (dma_claim() != 0) {
+            clock_disable();
+            return -1;
+        }
+        if (irq_request() != 0) {
+            dma_release();
+            clock_disable();
+            return -1;
+        }
+        if (device_start() != 0) {
+            irq_free();
+            dma_release();
+            clock_disable();
+            return -1;
+        }
+        return 0;
+    }
+    ```
+
+    After: one exit path, with labels in reverse order of acquisition.
+
+    ```c
+    int clock_enable(void);
+    void clock_disable(void);
+    int dma_claim(void);
+    void dma_release(void);
+    int irq_request(void);
+    void irq_free(void);
+    int device_start(void);
+
+    int open_device(void)
+    {
+        if (clock_enable() != 0) {
+            goto fail;
+        }
+        if (dma_claim() != 0) {
+            goto fail_clock;
+        }
+        if (irq_request() != 0) {
+            goto fail_dma;
+        }
+        if (device_start() != 0) {
+            goto fail_irq;
+        }
+        return 0;
+
+    fail_irq:
+        irq_free();
+    fail_dma:
+        dma_release();
+    fail_clock:
+        clock_disable();
+    fail:
+        return -1;
+    }
+    ```
+
+    Each label undoes exactly one acquisition and falls through to the earlier ones, so
+    the reverse order is visible in one place. Adding a fifth resource means one new label,
+    instead of editing every later failure path, which is where the duplicated version
+    eventually leaks a resource. The page's `update_device` example shows the other
+    common style: one `out:` label plus a flag per resource.
+
+??? note "Exercise 5: a UART receiver state machine"
+    Frames start with `STX` (0x02), end with `ETX` (0x03), and carry at most 32 bytes:
+
+    ```c
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    #define STX 0x02u
+    #define ETX 0x03u
+    #define FRAME_MAX 32u
+
+    enum rx_state { RX_IDLE, RX_RECEIVING, RX_FRAME_READY, RX_ERROR };
+
+    struct uart_rx {
+        enum rx_state state;
+        uint8_t frame[FRAME_MAX];
+        size_t length;
+    };
+
+    /* Called for every received byte, or with line_error set on overrun/framing errors. */
+    void uart_rx_byte(struct uart_rx *rx, uint8_t byte, bool line_error)
+    {
+        if (line_error) {
+            rx->state = RX_ERROR;
+            return;
+        }
+        switch (rx->state) {
+        case RX_IDLE:
+            if (byte == STX) {
+                rx->length = 0;
+                rx->state = RX_RECEIVING;
+            }
+            break;                          /* noise between frames is ignored */
+        case RX_RECEIVING:
+            if (byte == ETX) {
+                rx->state = RX_FRAME_READY;
+            } else if (rx->length < FRAME_MAX) {
+                rx->frame[rx->length++] = byte;
+            } else {
+                rx->state = RX_ERROR;       /* overlong frame */
+            }
+            break;
+        case RX_FRAME_READY:
+            break;                          /* consumer has not taken the frame yet: drop */
+        case RX_ERROR:
+            if (byte == STX) {              /* resynchronize on the next start byte */
+                rx->length = 0;
+                rx->state = RX_RECEIVING;
+            }
+            break;
+        default:
+            rx->state = RX_ERROR;
+            break;
+        }
+    }
+
+    /* Consumer side: take a complete frame and return to idle. */
+    bool uart_rx_take(struct uart_rx *rx, const uint8_t **frame, size_t *length)
+    {
+        if (rx->state != RX_FRAME_READY) {
+            return false;
+        }
+        *frame = rx->frame;
+        *length = rx->length;
+        rx->state = RX_IDLE;
+        return true;
+    }
+    ```
+
+    The decisions worth checking in any receiver design are visible in the code:
+
+    - what happens to bytes between frames (ignored in `IDLE`);
+    - what happens to an overlong frame (error, with no write past the buffer);
+    - what happens to bytes that arrive before the consumer takes the frame (dropped here;
+      a double buffer would keep them);
+    - how the receiver recovers from errors (it waits for the next `STX`).
+
+    If `uart_rx_byte` runs in an interrupt and `uart_rx_take` in a task, `state` and the
+    buffer are shared between contexts. Hand the frame over with an atomic state change or
+    a short critical section (see
+    [case study 11](../failure-case-studies/11-spin-wait-data-race.md)).
+
+??? note "Exercise 6: invariants and iteration bounds"
+    A small transmit path from a UART driver, with each loop's invariant and bound:
+
+    ```c
+    #include <stddef.h>
+    #include <stdint.h>
+
+    #define TX_FIFO_DEPTH 16u
+    #define TX_TIMEOUT_TICKS 1000u
+
+    int uart_tx_fifo_full(void);
+    void uart_tx_put(uint8_t byte);
+    uint32_t now_ticks(void);
+
+    size_t uart_write(const uint8_t *data, size_t length)
+    {
+        size_t written = 0;
+        uint32_t start = now_ticks();
+
+        /* Loop 1 */
+        while (written < length) {
+            /* Loop 2 */
+            while (uart_tx_fifo_full()) {
+                if ((uint32_t)(now_ticks() - start) >= TX_TIMEOUT_TICKS) {
+                    return written;
+                }
+            }
+            uart_tx_put(data[written]);
+            written++;
+        }
+        return written;
+    }
+    ```
+
+    | Loop | Invariant | Maximum iterations |
+    | --- | --- | --- |
+    | 1 | bytes `data[0]` to `data[written - 1]` have been handed to the FIFO, and `written <= length` | `length`, because `written` increases by one each pass |
+    | 2 | the FIFO was full at the last check, and less than `TX_TIMEOUT_TICKS` have passed since `start` | bounded by time, not by count: at most `TX_TIMEOUT_TICKS` ticks for the whole call |
+
+    The useful questions this answers:
+
+    - Loop 1 terminates because `written` increases every pass and is bounded by `length`.
+    - Loop 2 does *not* terminate by its own condition if the hardware is stuck. The
+      timeout is what bounds it, which is why every wait on hardware needs one.
+    - The timeout covers the whole call, not each byte, so the total blocking time has a
+      known upper limit. A per-byte timeout would allow `length × TX_TIMEOUT_TICKS`.
+
+    Write these down as comments for every loop that touches hardware or untrusted data.
 
 ## Common Mistakes
 

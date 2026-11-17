@@ -165,7 +165,94 @@ An unused branch can contain stale declarations or syntax errors that no normal 
 
 ### Model Answers
 
-Answers for the exercises that have one correct explanation. Try the exercise first.
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
+
+??? note "Exercise 1: identify each role"
+    ```c
+    #include <stdio.h>                  /* preprocessing directive */
+
+    int sample_count = 0;               /* object definition: file scope, external linkage */
+
+    int scale(int raw);                 /* prototype: declares scale, defines nothing */
+
+    int scale(int raw)                  /* function definition: declaration plus body */
+    {
+        return raw * 10;                /* statement containing an expression */
+    }
+
+    int main(void)                      /* function definition */
+    {
+        sample_count = scale(4);        /* expression statement containing a call */
+        printf("%d\n", sample_count);
+        return 0;
+    }
+    ```
+
+    - `int sample_count = 0;` is a *definition*: it creates the object and reserves storage.
+      At file scope, `int sample_count;` without an initializer would be a *tentative*
+      definition (see [case study 14](../failure-case-studies/14-common-symbol-merge.md)).
+    - `int scale(int raw);` is a *declaration* only. It tells the compiler the parameter and
+      return types, so later calls are checked. In a real project it belongs in a header.
+    - The second `scale` is a *definition*: a declaration with a body. Every definition is
+      also a declaration, but not the other way round.
+    - `scale(4)` is a *call*, an expression. With `;` it becomes an expression statement.
+
+??? note "Exercise 2: the declaration the compiler actually sees"
+    A header with a guard and a conditional declaration:
+
+    ```c
+    /* sensor.h */
+    #ifndef SENSOR_H
+    #define SENSOR_H
+
+    #if defined(SENSOR_WIDE)
+    long sensor_read(void);
+    #else
+    int sensor_read(void);
+    #endif
+
+    #endif
+    ```
+
+    ```c
+    /* app.c */
+    #include "sensor.h"
+    #include "sensor.h"   /* second include: the guard makes it empty */
+
+    int sample(void)
+    {
+        return (int)sensor_read();
+    }
+    ```
+
+    `-E` stops after preprocessing, and `-P` drops the line markers. The output is exactly
+    what the compiler proper receives:
+
+    ```text
+    $ gcc -E -P app.c
+    int sensor_read(void);
+    int sample(void)
+    {
+        return (int)sensor_read();
+    }
+    $ gcc -E -P -DSENSOR_WIDE app.c
+    long sensor_read(void);
+    int sample(void)
+    {
+        return (int)sensor_read();
+    }
+    ```
+
+    - The second `#include` contributes nothing: `SENSOR_H` is already defined, so the
+      whole header is skipped.
+    - Only one branch of the `#if` survives, chosen by the `-D` option. A build that
+      forgets `-DSENSOR_WIDE` in one translation unit gets a different declaration there,
+      and nothing warns about it.
+
+    Without `-P`, the output contains line markers such as `# 1 "sensor.h" 1`. They show
+    which file every line came from, which helps when an unexpected declaration arrives
+    through an indirect include.
 
 ??? note "Exercise 3: the values of 010, 10, and 0x10"
     `010` is 8, `10` is 10, and `0x10` is 16. All three have type `int`.
@@ -178,6 +265,109 @@ Answers for the exercises that have one correct explanation. Try the exercise fi
     GCC already accepts as an extension.
 
     The [Language Fundamentals test-out](./test-out.md#q1-literals) has a harder variant.
+
+??? note "Exercise 4: a macro that evaluates its argument twice"
+    ```c
+    #include <stdio.h>
+
+    #define SQUARE(x) ((x) * (x))
+
+    static int reads;
+
+    static int read_register(void)
+    {
+        return ++reads;
+    }
+
+    static inline int square(int x)
+    {
+        return x * x;
+    }
+
+    int main(void)
+    {
+        int a = SQUARE(read_register());
+        printf("macro:  value %d, register read %d times\n", a, reads);
+        reads = 0;
+        int b = square(read_register());
+        printf("inline: value %d, register read %d times\n", b, reads);
+        return 0;
+    }
+    ```
+
+    ```text
+    macro:  value 2, register read 2 times
+    inline: value 1, register read 1 times
+    ```
+
+    The macro expands to `((read_register()) * (read_register()))`: two calls, two register
+    reads, and the product of two *different* values. This is not undefined behavior, because
+    function calls are indeterminately sequenced, but it is wrong, and on real hardware the
+    second read can clear a status flag or consume a FIFO entry. The `static inline` function
+    evaluates its argument exactly once, has a type, and compiles to the same code once
+    inlined. Keep macros for things functions cannot do, such as stringification, token
+    pasting, and `sizeof`-based helpers.
+
+??? note "Exercise 5: where the diagnostics point"
+    A missing semicolon in two places:
+
+    <!-- c-check: expect-error -->
+
+    ```c
+    struct reading {
+        int value;
+        int channel;
+    }
+
+    int sum(int a, int b)
+    {
+        int total = a + b
+        return total;
+    }
+    ```
+
+    ```text
+    semicolon.c:6:1: error: expected ‘;’, identifier or ‘(’ before ‘int’
+    semicolon.c:9:5: error: expected ‘,’ or ‘;’ before ‘return’
+    ```
+
+    A missing closing brace:
+
+    <!-- c-check: expect-error -->
+
+    ```c
+    int clamp(int value, int limit)
+    {
+        if (value > limit) {
+            value = limit;
+
+        return value;
+    }
+
+    int twice(int value)
+    {
+        return value * 2;
+    }
+    ```
+
+    ```text
+    $ gcc -std=c17 -c brace.c
+    brace.c:12:1: error: expected declaration or statement at end of input
+    $ gcc -std=c17 -Wpedantic -c brace.c
+    brace.c:9:1: warning: ISO C forbids nested functions [-Wpedantic]
+    brace.c:12:1: error: expected declaration or statement at end of input
+    ```
+
+    - A missing semicolon is reported at the *next* token: line 6 (the `int` after the
+      struct), and line 9 (the `return`). Look at the end of the previous line.
+    - A missing brace is reported at the end of the file, far from the mistake. The `}`
+      meant for `clamp` closed the `if`, so GCC read `twice` as a function nested inside
+      `clamp`, a GNU extension it accepts silently. Only `-Wpedantic` flags line 9, which is
+      close to the real problem. In a long file, an "end of input" error means: search
+      upwards for the block that never closed. An editor's brace matching or `clang-format`
+      finds it faster than reading.
+
+    (Output from GCC 13.)
 
 ## Common Mistakes
 

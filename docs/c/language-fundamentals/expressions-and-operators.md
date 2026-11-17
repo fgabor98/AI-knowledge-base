@@ -326,7 +326,8 @@ sizeof(char) is one C byte; it is not necessarily one octet unless CHAR_BIT is e
 
 ### Model Answers
 
-Answers for the exercises that have one correct explanation. Try the exercise first.
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
 
 ??? note "Exercise 1: predicting types and values"
     With `uint8_t u8 = 200; int i = -1; unsigned int u = 1;` on a target with 32-bit `int`
@@ -345,6 +346,233 @@ Answers for the exercises that have one correct explanation. Try the exercise fi
     and when a signed and an unsigned operand of the same rank meet, the signed one converts.
     `-Wconversion` and `-Wsign-compare` report many of the risky cases; `~u8` comparisons are
     caught by `-Wsign-compare` as well.
+
+??? note "Exercise 2: flag-word operations"
+    ```c
+    #include <stdbool.h>
+    #include <stdint.h>
+
+    static inline uint32_t flag_bit(unsigned int bit)
+    {
+        return UINT32_C(1) << (bit & 31u);    /* bit must be 0..31 */
+    }
+
+    static inline void flag_set(uint32_t *flags, unsigned int bit)
+    {
+        *flags |= flag_bit(bit);
+    }
+
+    static inline void flag_clear(uint32_t *flags, unsigned int bit)
+    {
+        *flags &= ~flag_bit(bit);
+    }
+
+    static inline void flag_toggle(uint32_t *flags, unsigned int bit)
+    {
+        *flags ^= flag_bit(bit);
+    }
+
+    static inline bool flag_test(uint32_t flags, unsigned int bit)
+    {
+        return (flags & flag_bit(bit)) != 0u;
+    }
+    ```
+
+    - `UINT32_C(1)` makes the shift unsigned and 32 bits wide. `1 << 31` with a plain `int`
+      shifts into the sign bit, which is undefined.
+    - `~flag_bit(bit)` is computed in `uint32_t`, so clearing bit 31 leaves the other 31 bits
+      intact. With a narrower type, the complement would be promoted to `int` first.
+    - Masking the bit number (`& 31u`) keeps the shift defined if a caller passes 32 or more.
+      Many projects prefer an assertion instead, so the bad call is found rather than wrapped.
+    - `flag_test` returns `bool`, so any set bit becomes `true`. Returning `flags & mask`
+      through a narrower type such as `uint8_t` would drop bits 8 to 31: testing bit 9
+      would return 0 even when the bit is set.
+    - These read-modify-write operations are not atomic. If an interrupt or another thread
+      changes the same word, use `atomic_fetch_or`/`atomic_fetch_and` or a critical section.
+
+??? note "Exercise 3: a wraparound-safe timeout test"
+    ```c
+    #include <stdbool.h>
+    #include <stdint.h>
+    #include <stdio.h>
+
+    static bool expired(uint32_t now, uint32_t start, uint32_t timeout)
+    {
+        return (uint32_t)(now - start) >= timeout;
+    }
+
+    static bool expired_naive(uint32_t now, uint32_t start, uint32_t timeout)
+    {
+        return now >= start + timeout;
+    }
+
+    int main(void)
+    {
+        const uint32_t start = UINT32_MAX - 5u;   /* 6 ticks before the counter wraps */
+        const uint32_t timeout = 10u;
+        const uint32_t samples[] = { start, start + 5u, start + 6u, start + 9u, start + 10u, start + 11u };
+
+        for (size_t i = 0; i < sizeof samples / sizeof samples[0]; i++) {
+            uint32_t now = samples[i];
+            printf("now=0x%08x elapsed=%2u  expired=%d  naive=%d\n", (unsigned)now,
+                   (unsigned)(uint32_t)(now - start), expired(now, start, timeout),
+                   expired_naive(now, start, timeout));
+        }
+        return 0;
+    }
+    ```
+
+    ```text
+    now=0xfffffffa elapsed= 0  expired=0  naive=1
+    now=0xffffffff elapsed= 5  expired=0  naive=1
+    now=0x00000000 elapsed= 6  expired=0  naive=0
+    now=0x00000003 elapsed= 9  expired=0  naive=0
+    now=0x00000004 elapsed=10  expired=1  naive=1
+    now=0x00000005 elapsed=11  expired=1  naive=1
+    ```
+
+    `expired` is correct across the wrap: unsigned subtraction gives the elapsed ticks modulo
+    2^32, which is right as long as the real elapsed time is below 2^32 ticks. The naive
+    version computes `start + timeout`, which wraps to 4, so it reports *expired* at the very
+    start. The boundary samples (0, timeout − 1, timeout, timeout + 1) and a start just below
+    `UINT32_MAX` are the cases worth keeping as a regression test.
+
+??? note "Exercise 4: an expression with three increments"
+    <!-- c-check: expect-warning -->
+
+    ```c
+    #include <stddef.h>
+    #include <stdint.h>
+
+    size_t pack(uint16_t *out, const uint8_t *data, size_t count)
+    {
+        size_t i = 0, n = 0;
+        while (i + 1 < count) {
+            out[n++] = (uint16_t)(data[i++] << 8 | data[i++]);
+        }
+        return n;
+    }
+    ```
+
+    GCC 13: `warning: operation on 'i' may be undefined [-Wsequence-point]`. It is not only
+    "may be": `i` is modified twice in one expression with no sequence point between the
+    modifications, which is undefined behavior (C11 6.5p2). There is also no rule saying
+    which `data[i++]` is evaluated first, so even a compiler that does "something sensible"
+    can swap the bytes. Refactored:
+
+    ```c
+    #include <stddef.h>
+    #include <stdint.h>
+
+    size_t pack(uint16_t *out, const uint8_t *data, size_t count)
+    {
+        size_t n = 0;
+
+        for (size_t i = 0; i + 1 < count; i += 2) {
+            uint16_t high = data[i];
+            uint16_t low = data[i + 1];
+
+            out[n] = (uint16_t)(high << 8 | low);
+            n++;
+        }
+        return n;
+    }
+    ```
+
+    Each statement now has one side effect, the byte order is explicit, and the loop header
+    says how far `i` advances.
+
+??? note "Exercise 5: documenting a cast"
+    A typical register-access cast in a driver, with the facts that make it valid written
+    next to it:
+
+    ```c
+    #include <stdint.h>
+
+    #define UART0_BASE     0x40011000u   /* reference manual, memory map table */
+    #define UART_DR_OFFSET 0x04u         /* data register, 32-bit, word-aligned */
+
+    static inline volatile uint32_t *uart0_dr(void)
+    {
+        /*
+         * Range:     UART0_BASE + UART_DR_OFFSET lies inside the UART0 peripheral window
+         *            (0x40011000-0x400113FF), so the address is a device register.
+         * Alignment: the manual requires 32-bit, word-aligned access; 0x40011004 is
+         *            4-byte aligned, and the pointer type makes the compiler use
+         *            32-bit loads and stores.
+         * Ownership: the register exists for the program's lifetime and is accessed only
+         *            by this driver; interrupt handlers go through uart0_dr() as well.
+         * Conversion: integer-to-pointer conversion is implementation-defined (C11
+         *            6.3.2.3p5); GCC on this target maps the integer to the same address.
+         */
+        return (volatile uint32_t *)(uintptr_t)(UART0_BASE + UART_DR_OFFSET);
+    }
+    ```
+
+    The addresses here are illustrative; the point is the four facts. A cast that cannot be
+    documented this way is usually a bug. For example,
+    `(struct packet *)rx_buffer` usually fails the alignment question and the effective-type
+    rules (see [case study 08](../failure-case-studies/08-strict-aliasing-type-pun.md)).
+
+??? note "Exercise 6: parenthesize and test every branch"
+    <!-- c-check: expect-warning -->
+
+    ```c
+    #include <stdbool.h>
+    #include <stdio.h>
+
+    #define READY_MASK 0x6u
+
+    static bool should_send_dense(unsigned int flags, int pending, bool force)
+    {
+        return flags & READY_MASK == READY_MASK && pending > 0 || force;
+    }
+
+    static bool should_send(unsigned int flags, int pending, bool force)
+    {
+        return (((flags & READY_MASK) == READY_MASK) && (pending > 0)) || force;
+    }
+
+    int main(void)
+    {
+        const unsigned int flag_values[] = { 0x0u, 0x6u, 0x7u };
+        for (size_t f = 0; f < 3; f++) {
+            for (int pending = 0; pending <= 1; pending++) {
+                for (int force = 0; force <= 1; force++) {
+                    bool a = should_send_dense(flag_values[f], pending, force);
+                    bool b = should_send(flag_values[f], pending, force);
+                    printf("flags=0x%x pending=%d force=%d  dense=%d intended=%d%s\n",
+                           flag_values[f], pending, force, a, b, a != b ? "  <- differs" : "");
+                }
+            }
+        }
+        return 0;
+    }
+    ```
+
+    GCC warns twice (`suggest parentheses around comparison in operand of '&'` and
+    `suggest parentheses around '&&' within '||'`). The table of all twelve combinations:
+
+    ```text
+    flags=0x0 pending=0 force=0  dense=0 intended=0
+    flags=0x0 pending=0 force=1  dense=1 intended=1
+    flags=0x0 pending=1 force=0  dense=0 intended=0
+    flags=0x0 pending=1 force=1  dense=1 intended=1
+    flags=0x6 pending=0 force=0  dense=0 intended=0
+    flags=0x6 pending=0 force=1  dense=1 intended=1
+    flags=0x6 pending=1 force=0  dense=0 intended=1  <- differs
+    flags=0x6 pending=1 force=1  dense=1 intended=1
+    flags=0x7 pending=0 force=0  dense=0 intended=0
+    flags=0x7 pending=0 force=1  dense=1 intended=1
+    flags=0x7 pending=1 force=0  dense=1 intended=1
+    flags=0x7 pending=1 force=1  dense=1 intended=1
+    ```
+
+    The dense version parses as `((flags & (READY_MASK == READY_MASK)) && (pending > 0)) || force`,
+    so it tests bit 0 instead of the ready mask. Only one of the twelve rows exposes that, and
+    a test that used `0x7` as its "ready" value would pass. Testing every branch means
+    choosing inputs where each condition alone decides the result, including values where
+    the mask matches but unrelated bits are clear.
 
 ## Common Mistakes
 
