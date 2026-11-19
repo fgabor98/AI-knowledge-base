@@ -238,6 +238,235 @@ Prefer vendor headers or a reviewed hardware abstraction. Keep target-specific a
 5. Compare object-pointer and function-pointer diagnostics by attempting an invalid conversion.
 6. Inspect a vendor register declaration and document every assumption beyond the C pointer type.
 
+### Model Answers
+
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
+
+??? note "Exercise 1: an output parameter left unchanged on failure"
+    ```c
+    #include <assert.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    /* Parses a decimal 0..65535. On failure *value is not written. */
+    bool parse_u16(const char *text, uint16_t *value)
+    {
+        uint32_t result = 0;
+
+        if (text == NULL || value == NULL || *text == '\0') {
+            return false;
+        }
+        for (; *text != '\0'; text++) {
+            if (*text < '0' || *text > '9') {
+                return false;
+            }
+            result = result * 10u + (uint32_t)(*text - '0');
+            if (result > UINT16_MAX) {
+                return false;
+            }
+        }
+        *value = (uint16_t)result;          /* the only write, after every check */
+        return true;
+    }
+
+    int main(void)
+    {
+        uint16_t value = 1234;
+
+        assert(parse_u16("65535", &value) && value == 65535);
+        assert(!parse_u16("65536", &value) && value == 65535);
+        assert(!parse_u16("12x", &value) && value == 65535);
+        assert(!parse_u16("", &value) && value == 65535);
+        return 0;
+    }
+    ```
+
+    The result is built in a local and written through the pointer once, at the end. Every
+    failure test checks that the old value survived. Writing `*value` digit by digit would
+    leave half a number behind on `"12x"`.
+
+??? note "Exercise 2: a documented borrowed-buffer API"
+    ```c
+    #include <stddef.h>
+    #include <stdint.h>
+
+    /*
+     * Computes a CRC over data[0..length).
+     *
+     * data:      read-only, borrowed for the duration of the call only; not retained.
+     *            May be NULL only when length == 0.
+     * length:    number of bytes; 0 is valid and returns the initial value.
+     * Lifetime:  the caller may free or reuse data as soon as the call returns.
+     * Context:   reentrant; no shared state; safe from interrupts.
+     */
+    uint16_t crc16_compute(const uint8_t *data, size_t length);
+
+    /*
+     * Starts an asynchronous transmit.
+     *
+     * data:      read-only for this module, but BORROWED UNTIL COMPLETION: the caller
+     *            must keep it alive and unmodified until on_done runs.
+     * length:    1..UART_TX_MAX bytes.
+     * Returns 0 if started; the buffer is then owned by the driver until on_done.
+     */
+    int uart_send_async(const uint8_t *data, size_t length, void (*on_done)(void *), void *context);
+    ```
+
+    The two declarations look alike, but their lifetime contracts differ completely. Only the
+    comment says that `uart_send_async` keeps the pointer after it returns. `const` says the
+    module will not write the buffer. It does not say how long the borrow lasts.
+
+??? note "Exercise 3: linked-list insertion with a pointer to a pointer"
+    ```c
+    #include <assert.h>
+    #include <stddef.h>
+
+    struct node {
+        int key;
+        struct node *next;
+    };
+
+    /* Inserts node in ascending key order, after any equal keys.
+       The list head needs no special case. */
+    void list_insert_sorted(struct node **link, struct node *node)
+    {
+        while (*link != NULL && (*link)->key <= node->key) {
+            link = &(*link)->next;              /* the pointer that will point at node */
+        }
+        node->next = *link;
+        *link = node;
+    }
+
+    int main(void)
+    {
+        struct node a = { 2, NULL }, b = { 1, NULL }, c = { 3, NULL }, d = { 2, NULL };
+        struct node *head = NULL;
+
+        list_insert_sorted(&head, &a);          /* empty list */
+        assert(head == &a && a.next == NULL);
+        list_insert_sorted(&head, &b);          /* new head */
+        list_insert_sorted(&head, &c);          /* new tail */
+        list_insert_sorted(&head, &d);          /* middle; equal keys keep insertion order */
+        assert(head == &b && b.next == &a && a.next == &d && d.next == &c && c.next == NULL);
+        return 0;
+    }
+    ```
+
+    `link` always points at the pointer to change: `head` itself, or some node's `next`.
+    Inserting at the head is therefore the same operation as inserting anywhere else. With a
+    plain `struct node *` the function would need a separate "is it the first node?"
+    branch and would have to return the new head.
+
+??? note "Exercise 4: callback lifetime during shutdown"
+    [Functions exercise 3](../language-fundamentals/functions.md#model-answers) builds the
+    fake driver and shows ASan catching a dead context. During shutdown, the order of
+    teardown is what matters:
+
+    ```c
+    #include <stdlib.h>
+
+    typedef void (*timer_callback)(void *context);
+
+    int timer_register(timer_callback callback, void *context);
+    void timer_unregister(void);    /* returns only after any running callback finished */
+
+    struct sampler {
+        unsigned int samples;
+    };
+
+    static void sampler_tick(void *context)
+    {
+        struct sampler *sampler = context;
+
+        sampler->samples++;
+    }
+
+    void sampler_stop(struct sampler *sampler)
+    {
+        timer_unregister();         /* 1: no new calls, and none still running */
+        free(sampler);              /* 2: only now may the context die */
+    }
+    ```
+
+    The test: register a heap context, call `sampler_stop`, fire the timer, and check under
+    ASan that nothing touches the freed context. A single-threaded test cannot show why the
+    order matters. Freeing first is only wrong when the callback runs *between* the two
+    lines, from an interrupt or another thread. So the real requirement is in
+    `timer_unregister`: it must disable the source and wait for an in-flight call before it
+    returns. Test that with a thread that fires the timer continuously while another thread
+    stops the sampler, under TSan and ASan.
+
+??? note "Exercise 5: object-pointer and function-pointer diagnostics"
+    <!-- c-check: expect-warning -->
+
+    ```c
+    #include <stdint.h>
+
+    typedef void (*event_handler)(void *context, uint32_t event);
+
+    void on_event(void *context, uint32_t event);
+    static uint32_t counter;
+
+    void conversions(void)
+    {
+        void *object = on_event;                     /* function -> object pointer */
+        event_handler handler = &counter;            /* object -> function pointer */
+        uint32_t *words = on_event;                  /* function -> unrelated object type */
+        (void)object; (void)handler; (void)words;
+    }
+    ```
+
+    GCC 13 with `-Wall -Wextra` (types after `aka` trimmed):
+
+    ```text
+    fp.c:11:29: warning: initialization of 'event_handler' from incompatible pointer type 'uint32_t *' [-Wincompatible-pointer-types]
+    fp.c:12:23: warning: initialization of 'uint32_t *' from incompatible pointer type 'void (*)(void *, uint32_t)' [-Wincompatible-pointer-types]
+    ```
+
+    Line 10, a function pointer stored in `void *`, gets **no warning** at `-Wall -Wextra`.
+    Only `-Wpedantic` reports it: `ISO C forbids initialization between function pointer
+    and 'void *'`. ISO C does not define converting between function and object pointers.
+    POSIX requires it to work (`dlsym` depends on it), and on Harvard-architecture targets
+    such as AVR, code and data pointers are not interchangeable. Add `-Wpedantic`, or
+    store callbacks in a function-pointer type such as `void (*)(void)`, which can be
+    converted to and from any other function-pointer type.
+
+??? note "Exercise 6: assumptions behind a vendor register declaration"
+    A typical vendor (CMSIS-style) declaration:
+
+    ```c
+    #include <stdint.h>
+
+    #define __IO volatile
+
+    typedef struct {
+        __IO uint32_t CR1;     /* 0x00 */
+        __IO uint32_t CR2;     /* 0x04 */
+        __IO uint32_t SR;      /* 0x08 */
+        __IO uint32_t DR;      /* 0x0C */
+    } UART_TypeDef;
+
+    #define UART1_BASE 0x40011000u
+    #define UART1 ((UART_TypeDef *)UART1_BASE)
+    ```
+
+    What the C type does not say, and what to write down:
+
+    | Assumption | Where it comes from |
+    | --- | --- |
+    | The structure has no padding, so `DR` is at offset 0x0C | the ABI: four `uint32_t` are never padded; add `_Static_assert(offsetof(UART_TypeDef, DR) == 0x0C)` |
+    | Every access is a 32-bit load or store | `volatile uint32_t` makes GCC emit word accesses, but the standard does not promise it |
+    | `UART1_BASE` is the right address for this part number | the reference manual's memory map |
+    | Reading `SR` or `DR` has side effects (clears flags, pops the FIFO) | the register description; `volatile` only keeps the read from being removed |
+    | Bits marked reserved must be written back as read | the register description; plain `UART1->CR1 = x` breaks it |
+    | The peripheral clock is enabled before the first access | the clock-tree chapter; otherwise accesses may fault or read 0 |
+    | Ordering with DMA or other bus masters needs barriers | the core's memory model; `volatile` orders only volatile accesses |
+
+    The pointer type covers the first two rows at best. The remaining rows are the reasons
+    driver code still needs review against the manual.
+
 ## Common Mistakes
 
 - Dereferencing without checking lifetime, alignment, bounds, and access permission.

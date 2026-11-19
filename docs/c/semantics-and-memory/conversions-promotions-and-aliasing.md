@@ -226,7 +226,8 @@ A policy should permit well-understood low-level code while requiring evidence f
 
 ### Model Answers
 
-Answers for the exercises that have one correct explanation. Try the exercise first.
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
 
 ??? note "Exercise 1: the same expressions with 32-bit and 16-bit int"
     With `uint16_t a = 1; int32_t s = 1; uint32_t w = 1;`. The 32-bit column was checked with
@@ -245,6 +246,234 @@ Answers for the exercises that have one correct explanation. Try the exercise fi
     usual arithmetic conversions then decide between signed and unsigned (6.3.1.8p1). Code
     shared between an MCU and a host test therefore needs explicit types in comparisons and
     arithmetic. See also [test-out Q2](./test-out.md#q2-comparing-signed-and-unsigned).
+
+??? note "Exercise 2: a checked conversion library"
+    ```c
+    #include <assert.h>
+    #include <stdbool.h>
+    #include <stdint.h>
+
+    /* Each returns false and leaves *out unchanged if the value does not fit. */
+    bool i32_to_u16(int32_t value, uint16_t *out)
+    {
+        if (value < 0 || value > UINT16_MAX) {
+            return false;
+        }
+        *out = (uint16_t)value;
+        return true;
+    }
+
+    bool u32_to_i32(uint32_t value, int32_t *out)
+    {
+        if (value > (uint32_t)INT32_MAX) {
+            return false;
+        }
+        *out = (int32_t)value;
+        return true;
+    }
+
+    bool i64_to_i16(int64_t value, int16_t *out)
+    {
+        if (value < INT16_MIN || value > INT16_MAX) {
+            return false;
+        }
+        *out = (int16_t)value;
+        return true;
+    }
+
+    int main(void)
+    {
+        uint16_t u16 = 7;
+        int32_t i32 = 7;
+        int16_t i16 = 7;
+
+        assert(i32_to_u16(0, &u16) && u16 == 0);
+        assert(i32_to_u16(UINT16_MAX, &u16) && u16 == UINT16_MAX);
+        assert(!i32_to_u16(-1, &u16) && u16 == UINT16_MAX);        /* unchanged */
+        assert(!i32_to_u16(UINT16_MAX + 1, &u16));
+        assert(u32_to_i32((uint32_t)INT32_MAX, &i32) && i32 == INT32_MAX);
+        assert(!u32_to_i32((uint32_t)INT32_MAX + 1u, &i32));
+        assert(i64_to_i16(INT16_MIN, &i16) && i16 == INT16_MIN);
+        assert(!i64_to_i16(INT16_MIN - 1, &i16) && i16 == INT16_MIN);
+        return 0;
+    }
+    ```
+
+    Every check compares against the *destination* limits in a type where both operands are
+    exact. In `value > (uint32_t)INT32_MAX` both sides are unsigned. In the signed cases both
+    sides are signed, so no comparison changes sign. Tests sit exactly at each limit and one
+    past it.
+
+??? note "Exercise 3: type punning by cast versus memcpy"
+    ```c
+    #include <stdint.h>
+    #include <string.h>
+
+    uint32_t float_bits_cast(float value)
+    {
+        return *(uint32_t *)&value;              /* invalid: float object read as uint32_t */
+    }
+
+    uint32_t float_bits_copy(float value)
+    {
+        uint32_t bits;
+
+        _Static_assert(sizeof bits == sizeof value, "float must be 32 bits");
+        memcpy(&bits, &value, sizeof bits);      /* copies the representation */
+        return bits;
+    }
+    ```
+
+    At `-O2`, GCC 13 warns about the first function:
+    `dereferencing type-punned pointer will break strict-aliasing rules [-Wstrict-aliasing]`.
+    There is no warning at `-O0`, because the check runs only with `-fstrict-aliasing`.
+    The cast reads a `float` object through a `uint32_t` lvalue, which the effective-type
+    rules forbid. The `memcpy` version is defined, and it costs nothing:
+
+    ```text
+    float_bits_copy:
+    	movd	%xmm0, %eax
+    	ret
+    ```
+
+    The copy only moves bytes. Whether those bytes are IEEE 754 binary32 is still a
+    property of the target, so a portable decoder documents that assumption.
+
+??? note "Exercise 4: restrict with a checked precondition"
+    ```c
+    #include <assert.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    /* Compares addresses as integers: comparing pointers into different objects with <
+       is undefined, but uintptr_t comparison is well behaved on flat-memory targets. */
+    static bool ranges_overlap(const void *a, size_t a_size, const void *b, size_t b_size)
+    {
+        uintptr_t a_start = (uintptr_t)a;
+        uintptr_t b_start = (uintptr_t)b;
+
+        return a_start < b_start + b_size && b_start < a_start + a_size;
+    }
+
+    /* Precondition: destination and source do not overlap. */
+    void scale_into(int32_t *restrict destination, const int32_t *restrict source,
+                    size_t count, int32_t factor)
+    {
+        assert(!ranges_overlap(destination, count * sizeof *destination,
+                               source, count * sizeof *source));
+        for (size_t i = 0; i < count; i++) {
+            destination[i] = source[i] * factor;
+        }
+    }
+
+    int main(void)
+    {
+        int32_t a[4] = { 1, 2, 3, 4 };
+        int32_t b[4];
+
+        assert(!ranges_overlap(a, sizeof a, b, sizeof b));
+        assert(ranges_overlap(a, sizeof a, a + 3, sizeof a[0]));       /* last element shared */
+        assert(!ranges_overlap(a, 2 * sizeof a[0], a + 2, 2 * sizeof a[0]));  /* adjacent */
+        scale_into(b, a, 4, 10);
+        assert(b[3] == 40);
+        return 0;
+    }
+    ```
+
+    The compiler never checks `restrict`. It trusts the promise and optimizes on it, so a
+    violation is silent undefined behavior. The debug assertion turns the promise into a
+    checked precondition. `ranges_overlap` is tested directly, because an assertion failure
+    aborts the test. Calling `scale_into(a + 1, a, 3, 10)` in a debug build fails the
+    assertion. In release builds the assertion is compiled out, and so is the protection.
+
+??? note "Exercise 5: classifying integer-pointer casts"
+    Find the casts with two searches: integer casts of pointers,
+    `grep -nE '\((u?intptr_t|u?int(32|64)_t|unsigned( long)?)\)' drivers/foo/*.c`,
+    and pointer casts of integers, `grep -nE '\*\)\s*\(?(0x|[A-Z_]+_BASE|\(u?intptr_t\))' drivers/foo/*.c`,
+    then classify each hit:
+
+    | Cast in the driver | Class | Verdict |
+    | --- | --- | --- |
+    | `(volatile uint32_t *)(UART0_BASE + 0x04)` | address: a documented MMIO register | valid; write the four facts next to it (see Expressions exercise 5) |
+    | `((uintptr_t)buffer & 31u) == 0` | representation: inspects address bits | valid on flat-memory targets; uses `uintptr_t`, not `uint32_t` |
+    | `dma->src = (uint32_t)buffer;` | address handed to hardware | valid only on a 32-bit target, and only if the CPU and DMA see the same address; needs `_Static_assert(sizeof(void *) == 4)` or a translation function |
+    | `register_callback(cb, (void *)(intptr_t)channel)` | representation: a small integer smuggled through `void *` | implementation-defined but common; prefer a pointer to a real context |
+    | `struct ctx *c = (struct ctx *)(uint32_t)arg;` | bug | truncates a 64-bit pointer in host tests; keep it as `void *` |
+
+    The bug class usually shows up when the driver is first built for a 64-bit host:
+    `-Wpointer-to-int-cast` and `-Wint-to-pointer-cast` (both in GCC's defaults) flag
+    casts between pointers and narrower integers.
+
+??? note "Exercise 6: resolving conversion warnings deliberately"
+    <!-- c-check: expect-warning -->
+
+    ```c
+    #include <stddef.h>
+    #include <stdint.h>
+
+    uint8_t average(const uint8_t *samples, size_t count)
+    {
+        unsigned int sum = 0;
+
+        for (int i = 0; i < count; i++) {
+            sum += samples[i];
+        }
+        return sum / count;
+    }
+
+    int16_t to_centi(int32_t milli)
+    {
+        return milli / 10;
+    }
+    ```
+
+    ```text
+    $ gcc -std=c17 -Wall -Wextra -Wconversion -Wsign-conversion -c conv.c   # aka types trimmed
+    conv.c:8:23: warning: comparison of integer expressions of different signedness: 'int' and 'size_t' [-Wsign-compare]
+    conv.c:11:16: warning: conversion from 'size_t' to 'uint8_t' may change value [-Wconversion]
+    conv.c:16:18: warning: conversion from 'int' to 'int16_t' may change value [-Wconversion]
+    ```
+
+    Each warning gets a decision rather than a cast:
+
+    ```c
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    /* count must be > 0; the average of uint8_t values always fits in uint8_t. */
+    uint8_t average(const uint8_t *samples, size_t count)
+    {
+        uint32_t sum = 0;
+
+        for (size_t i = 0; i < count; i++) {     /* index type matches the bound */
+            sum += samples[i];
+        }
+        return (uint8_t)(sum / count);           /* cast after a proven range */
+    }
+
+    /* Fails for values outside int16_t, instead of silently wrapping. */
+    bool to_centi(int32_t milli, int16_t *centi)
+    {
+        int32_t value = milli / 10;
+
+        if (value < INT16_MIN || value > INT16_MAX) {
+            return false;
+        }
+        *centi = (int16_t)value;
+        return true;
+    }
+    ```
+
+    - Line 8: the index was the wrong type. Changing it removes the warning and the bug.
+    - Line 11: the value provably fits, so the cast is correct, and the comment says why.
+      (`sum` would overflow only past about 16 million samples.)
+    - Line 16: the value does not always fit, so the interface changes to report failure.
+
+    `-Wstrict-aliasing` is on in `-Wall` and needs `-O2` (or `-fstrict-aliasing`) to run.
+    Fix those warnings with `memcpy` (exercise 3), never with `-fno-strict-aliasing`,
+    unless the whole project has decided to build that way.
 
 ## Common Mistakes
 

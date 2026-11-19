@@ -183,7 +183,127 @@ Suppressions and no-sanitize attributes should be narrow, justified, and reviewe
 
 ### Model Answers
 
-Answers for the exercises that have one correct explanation. Try the exercise first.
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
+
+??? note "Exercise 1: boundary tests for undefined operations"
+    ```c
+    #include <assert.h>
+    #include <limits.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    bool add_int(int a, int b, int *out)
+    {
+        if ((b > 0 && a > INT_MAX - b) || (b < 0 && a < INT_MIN - b)) {
+            return false;
+        }
+        *out = a + b;
+        return true;
+    }
+
+    bool div_int(int a, int b, int *out)
+    {
+        if (b == 0 || (a == INT_MIN && b == -1)) {     /* both are undefined */
+            return false;
+        }
+        *out = a / b;
+        return true;
+    }
+
+    bool shl_u32(uint32_t value, unsigned int count, uint32_t *out)
+    {
+        if (count >= 32u) {
+            return false;
+        }
+        *out = value << count;
+        return true;
+    }
+
+    bool first_byte(const uint8_t *data, size_t length, uint8_t *out)
+    {
+        if (length == 0) {
+            return false;
+        }
+        *out = data[0];
+        return true;
+    }
+
+    int main(void)
+    {
+        int i;
+        uint32_t u;
+        uint8_t b;
+
+        assert(add_int(INT_MAX - 1, 1, &i) && i == INT_MAX);
+        assert(!add_int(INT_MAX, 1, &i) && !add_int(INT_MIN, -1, &i));
+        assert(!div_int(1, 0, &i) && !div_int(INT_MIN, -1, &i));
+        assert(div_int(INT_MIN, 1, &i) && i == INT_MIN);
+        assert(shl_u32(1u, 31u, &u) && u == 0x80000000u);
+        assert(!shl_u32(1u, 32u, &u));
+        assert(!first_byte(NULL, 0, &b));
+        return 0;
+    }
+    ```
+
+    Each test sits on the boundary that makes the operation undefined, and on the last
+    valid value next to it. The easily forgotten case is `INT_MIN / -1`: the mathematical
+    result does not fit in `int`, so it is undefined like division by zero, and on x86 it
+    traps. Run these tests under `-fsanitize=undefined`, so a guard that is off by one is
+    reported instead of silently passing.
+
+??? note "Exercise 2: sanitizers on a faulty parser"
+    ```c
+    #include <stddef.h>
+    #include <stdint.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
+
+    /* Record: 1 length byte, then that many value bytes, packed big-endian into an int. */
+    int parse_value(const uint8_t *input, size_t available)
+    {
+        int value = 0;
+        size_t length = input[0];               /* bug 1: no check that length fits */
+
+        for (size_t i = 1; i <= length; i++) {
+            value = value << 8 | input[i];      /* bug 2: shifts into the sign bit */
+        }
+        (void)available;
+        return value;
+    }
+
+    int main(int argc, char **argv)
+    {
+        (void)argv;
+        const uint8_t record[] = { 4, 0x80, 0x00, 0x00, 0x01 };
+        size_t size = argc > 1 ? 3 : sizeof record;          /* a truncated record */
+        uint8_t *input = malloc(size);
+
+        memcpy(input, record, size);
+        printf("%d\n", parse_value(input, size));
+        free(input);
+        return 0;
+    }
+    ```
+
+    ```text
+    $ gcc -std=c17 -g -O1 -fsanitize=address,undefined faulty.c -o faulty
+    $ ./faulty
+    faulty.c:14:23: runtime error: left shift of 8388608 by 8 places cannot be represented in type 'int'
+    -2147483647
+    $ ./faulty truncated
+    ==696855==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x502000000013 ...
+    READ of size 1 at 0x502000000013 thread T0
+        #0 ... in parse_value faulty.c:14
+    0x502000000013 is located 0 bytes after 3-byte region [0x502000000010,0x502000000013)
+    ```
+
+    UBSan finds the signed shift on valid input. ASan finds the overread only when the
+    input is actually truncated, so sanitizers are only as good as the inputs the tests or a
+    fuzzer give them. The fix: check `length <= available - 1` and `length <= 4` before the
+    loop, and build the value in `uint32_t`.
 
 ??? note "Exercise 3: why volatile does not fix a race"
     `volatile` makes every access to the object actually happen, in program order relative to
@@ -227,6 +347,139 @@ Answers for the exercises that have one correct explanation. Try the exercise fi
     atomic read-modify-write), with a mutex, or by giving each thread its own counter and
     summing them at the end. For a flag that publishes data, see
     [case study 11](../failure-case-studies/11-spin-wait-data-race.md).
+
+??? note "Exercise 4: optimized versus unoptimized assembly"
+    ```c
+    #include <stddef.h>
+
+    int read_flag(const int *flag)
+    {
+        int value = *flag;          /* dereference first ... */
+
+        if (flag == NULL) {         /* ... then check: too late */
+            return -1;
+        }
+        return value;
+    }
+
+    int read_flag_fixed(const int *flag)
+    {
+        if (flag == NULL) {
+            return -1;
+        }
+        return *flag;
+    }
+    ```
+
+    GCC 13, x86-64, `read_flag`:
+
+    ```text
+    -O0                              -O2
+        movq  -24(%rbp), %rax            movl  (%rdi), %eax
+        movl  (%rax), %eax               ret
+        movl  %eax, -4(%rbp)
+        cmpq  $0, -24(%rbp)          # the null check is gone:
+        jne   .L2                    # *flag already proved
+        movl  $-1, %eax              # flag != NULL
+        ...
+    ```
+
+    `read_flag_fixed` keeps its `testq %rdi, %rdi` at `-O2`. Defined code means the same
+    thing at every level. In the invalid version, the dereference lets the compiler assume
+    the pointer is not null, and `-O2` removes the check. A null argument crashes instead of
+    returning -1. The reverse lesson also holds: `x + 1 > x` for a signed `x` is folded to
+    `1` by GCC 13 even at `-O0`. A lower optimization level is not "the unoptimized
+    behavior" of undefined code, because no such behavior is promised.
+
+??? note "Exercise 5: checked arithmetic for lengths and sizes"
+    ```c
+    #include <assert.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    bool size_add(size_t a, size_t b, size_t *out)
+    {
+        if (a > SIZE_MAX - b) {
+            return false;
+        }
+        *out = a + b;
+        return true;
+    }
+
+    bool size_mul(size_t a, size_t b, size_t *out)
+    {
+        if (a != 0 && b > SIZE_MAX / a) {
+            return false;
+        }
+        *out = a * b;
+        return true;
+    }
+
+    /* Bytes for a packet with header_size + count records of record_size. */
+    bool packet_bytes(size_t header_size, size_t count, size_t record_size, size_t *out)
+    {
+        size_t records;
+
+        return size_mul(count, record_size, &records)
+            && size_add(header_size, records, out);
+    }
+
+    int main(void)
+    {
+        size_t n;
+
+        assert(packet_bytes(8, 4, 16, &n) && n == 72);
+        assert(!packet_bytes(8, SIZE_MAX / 16 + 1, 16, &n));    /* multiplication wraps */
+        assert(!packet_bytes(16, SIZE_MAX / 16, 16, &n));       /* the addition wraps */
+        assert(size_mul(0, SIZE_MAX, &n) && n == 0);
+        return 0;
+    }
+    ```
+
+    Unsigned overflow is defined (it wraps), but the wrapped size is the bug: `malloc`
+    returns a small buffer and the caller writes the full count into it. GCC and Clang also
+    provide `__builtin_mul_overflow` and `__builtin_add_overflow`, and C23 standardizes them as
+    `ckd_mul` and `ckd_add` in `<stdckdint.h>`. Hide whichever you use behind these function
+    names.
+
+??? note "Exercise 6: a project rule for undefined-behavior warnings"
+    In the project's common compiler flags (a Makefile fragment; CMake's `add_compile_options`
+    takes the same list):
+
+    ```make
+    UB_ERRORS := \
+        -Werror=return-type \
+        -Werror=implicit-function-declaration \
+        -Werror=incompatible-pointer-types \
+        -Werror=int-conversion \
+        -Werror=sequence-point \
+        -Werror=shift-count-overflow \
+        -Werror=shift-count-negative \
+        -Werror=shift-negative-value \
+        -Werror=div-by-zero \
+        -Werror=array-bounds \
+        -Werror=stringop-overflow \
+        -Werror=strict-aliasing \
+        -Werror=uninitialized \
+        -Werror=aggressive-loop-optimizations
+
+    CFLAGS += -std=c17 -O2 -Wall -Wextra $(UB_ERRORS)
+    ```
+
+    All of these flags were accepted by GCC 13. The rule that makes it work:
+
+    - The listed warnings are errors in every build, including developers' builds. Other
+      warnings can stay warnings while they are being cleaned up.
+    - Several of them (`array-bounds`, `stringop-overflow`, `uninitialized`,
+      `strict-aliasing`) work only with optimization, so the CI build that enforces them
+      uses `-O2`.
+    - `-Wmaybe-uninitialized` is left as a warning, because it has false positives that
+      change between GCC versions.
+    - A suppression needs `#pragma GCC diagnostic` around the smallest region, with a comment
+      giving the reason and a review sign-off. It is never a global `-Wno-`.
+    - CI also runs the host tests under `-fsanitize=address,undefined
+      -fno-sanitize-recover=all`, so runtime findings fail the build too.
 
 ## Common Mistakes
 
