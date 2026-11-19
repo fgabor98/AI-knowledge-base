@@ -50,7 +50,7 @@ When a page is added, it prints the line to add here.
 
 ## Semantics And Memory
 
-- [ ] [Overview](semantics-and-memory/index.md)
+- [x] [Overview](semantics-and-memory/index.md)
 - [ ] [Test-Out Diagnostic](semantics-and-memory/test-out.md)
 - [ ] [Storage Duration, Scope, And Linkage](semantics-and-memory/storage-duration-scope-and-linkage.md)
 - [ ] [Pointer Fundamentals](semantics-and-memory/pointer-fundamentals.md)
