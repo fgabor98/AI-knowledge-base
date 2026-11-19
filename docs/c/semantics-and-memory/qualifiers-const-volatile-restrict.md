@@ -208,6 +208,207 @@ static const volatile uint32_t *status_register =
 5. Review every cast that removes const or adds volatile in a driver.
 6. Measure whether a volatile polling loop meets its timeout and power budget.
 
+### Model Answers
+
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
+
+??? note "Exercise 1: const-correct parameters and callers"
+    Before:
+
+    ```c
+    #include <stddef.h>
+
+    size_t count_char(char *text, char wanted);
+
+    size_t count_spaces(void)
+    {
+        return count_char("a b c", ' ');
+    }
+    ```
+
+    This compiles silently, because a string literal has type `char[]` in C, even though
+    writing to it is undefined. With `-Wwrite-strings`, GCC 13 reports the call:
+    `passing argument 1 of 'count_char' discards 'const' qualifier from pointer target type`.
+
+    After:
+
+    ```c
+    #include <stddef.h>
+
+    size_t count_char(const char *text, char wanted)
+    {
+        size_t count = 0;
+
+        for (; *text != '\0'; text++) {
+            count += *text == wanted;
+        }
+        return count;
+    }
+
+    size_t count_spaces(void)
+    {
+        return count_char("a b c", ' ');
+    }
+    ```
+
+    Callers passing `char *` need no change, since adding `const` is implicit. The callers
+    to fix are those that had a cast such as `(char *)name`, or that passed `const` data
+    and were warned. Removing those casts is the point of the exercise. If a callee
+    genuinely writes, the parameter stays non-`const`, and the caller that passed read-only
+    data had a real bug. See also
+    [Declarations exercise 4](../language-fundamentals/declarations-and-declarators.md#model-answers).
+
+??? note "Exercise 2: violating restrict on purpose"
+    <!-- c-check: expect-warning -->
+
+    ```c
+    #include <stdio.h>
+
+    void add_twice(int *restrict total, const int *restrict step)
+    {
+        *total += *step;
+        *total += *step;
+    }
+
+    int main(void)
+    {
+        int x = 1;
+
+        add_twice(&x, &x);          /* violates restrict: both point at x */
+        printf("x = %d\n", x);
+        return 0;
+    }
+    ```
+
+    ```text
+    rs.c:13:15: warning: passing argument 1 to 'restrict'-qualified parameter aliases with argument 2 [-Wrestrict]
+    -O0: x = 4
+    -O2: x = 3
+    ```
+
+    At `-O0` each `*step` is reloaded after `*total` changes: 1 + 1 = 2, then 2 + 2 = 4. At
+    `-O2`, `restrict` lets GCC load `*step` once: 1 + 1 + 1 = 3. Neither result is "the
+    right one". The call is undefined, and the two builds are only evidence that the
+    compiler used the promise. GCC caught this case because the aliasing is visible at the
+    call. Through pointers computed at run time it cannot, so restrict APIs need a
+    documented precondition, and ideally a debug check (see
+    [Conversions exercise 4](conversions-promotions-and-aliasing.md#model-answers)).
+
+??? note "Exercise 3: replacing a volatile flag with an atomic"
+    ```c
+    #include <pthread.h>
+    #include <stdatomic.h>
+    #include <stdbool.h>
+    #include <stdio.h>
+
+    static int sample;                              /* the data being published */
+    static atomic_bool ready;
+
+    static void *producer(void *arg)
+    {
+        (void)arg;
+        sample = 42;                                /* 1: write the data */
+        atomic_store_explicit(&ready, true, memory_order_release);   /* 2: publish */
+        return NULL;
+    }
+
+    int main(void)
+    {
+        pthread_t thread;
+
+        pthread_create(&thread, NULL, producer, NULL);
+        while (!atomic_load_explicit(&ready, memory_order_acquire)) {
+        }
+        printf("%d\n", sample);                     /* guaranteed to see 42 */
+        pthread_join(thread, NULL);
+        return 0;
+    }
+    ```
+
+    The ordering contract: the *release* store makes every write before it (`sample = 42`)
+    visible to a thread whose *acquire* load reads `true`. With `static volatile bool ready`
+    instead, ThreadSanitizer reports `WARNING: ThreadSanitizer: data race` on `ready`, and
+    nothing orders `sample` with respect to the flag. The atomic version runs clean under
+    TSan. On an RTOS, an event flag or semaphore gives the same guarantee and lets the
+    consumer block instead of spinning. An ISR-to-task flag on a single core still needs
+    the atomic, or an RTOS primitive, so the compiler cannot reorder the data write past
+    the flag.
+
+??? note "Exercise 4: classifying registers from a peripheral manual"
+    For a typical UART or timer chapter, sort each register by what its description says,
+    not by its name:
+
+    | Register (example) | Description says | Needs |
+    | --- | --- | --- |
+    | `DR` data | read pops the RX FIFO; write pushes TX | `volatile`; read exactly once per byte; never read "just to check" |
+    | `SR` status | bits set by hardware | `volatile` reads; re-read in every loop iteration |
+    | `ICR` interrupt clear | "write 1 to clear", reads as 0 | write only the bits to clear (`ICR = FLAG`), never `ICR \|= FLAG` |
+    | `CR1` control | reserved bits "must be kept at reset value" | read-modify-write that preserves unknown bits |
+    | `BSRR` bit set/reset | separate set and reset halves | the atomic alternative to read-modify-write of `ODR`; safe against interrupts |
+    | `CR1` enable before a DMA start | "the buffer must be written before enabling" | a barrier (`__DSB()` on Arm) between the buffer write and the enable |
+    | any register after clock enable | "wait 2 cycles after enabling the clock" | a dummy read-back or the documented delay |
+
+    `volatile` is needed for all of them, and it is never sufficient on its own. The other
+    columns come only from reading the register text, which is why this review is done
+    against the manual and not against the header.
+
+??? note "Exercise 5: reviewing qualifier casts"
+    Find them with `grep -nE '\((const )?(volatile )?[a-z_0-9]+ \*\)' drivers/foo/*.c`, and
+    compile once with `-Wcast-qual`, which flags every cast that drops a qualifier. Then
+    classify:
+
+    | Cast | Verdict |
+    | --- | --- |
+    | `legacy_write((char *)text)` where `legacy_write` only reads | acceptable as a temporary wrapper; fix `legacy_write`'s prototype instead |
+    | `memset((void *)cfg, 0, n)` where `cfg` is `const` | bug: writes a `const` object, which may be in flash |
+    | `(uint8_t *)rx_dma_buffer` dropping `volatile` for `memcpy` | acceptable *after* the ownership switch and cache invalidate; comment why |
+    | `(volatile uint32_t *)&shared_flag` to "make it work" | bug: `volatile` is not synchronization; use an atomic |
+    | `(volatile uint32_t *)(BASE + OFF)` | correct: this is how an MMIO address becomes a register pointer |
+
+    Removing `const` is defined only if the object was not defined `const` and is not written
+    through the result. Adding `volatile` at the point of access never makes a race safe.
+
+??? note "Exercise 6: measuring a volatile polling loop"
+    ```c
+    #include <stdbool.h>
+    #include <stdint.h>
+
+    #define DWT_CYCCNT (*(volatile uint32_t *)0xE0001004u)   /* Cortex-M cycle counter */
+    #define STATUS_READY 0x1u
+
+    extern volatile uint32_t *const status_register;
+
+    /* Returns the cycles spent waiting, or UINT32_MAX on timeout. */
+    uint32_t wait_ready_measured(uint32_t timeout_cycles)
+    {
+        uint32_t start = DWT_CYCCNT;
+
+        while ((*status_register & STATUS_READY) == 0u) {
+            if ((uint32_t)(DWT_CYCCNT - start) >= timeout_cycles) {
+                return UINT32_MAX;
+            }
+        }
+        return (uint32_t)(DWT_CYCCNT - start);
+    }
+    ```
+
+    The method, on the board:
+
+    1. **Timeout:** log the returned cycle count over many runs, and force the device to
+       stay busy to test the timeout path. The worst-case overshoot is one loop iteration
+       past the deadline. Read it from the disassembly or measure it.
+    2. **Cross-check:** toggle a GPIO around the call and measure the pulse with a scope or
+       logic analyzer. This catches a cycle counter that is not enabled, or one that stops in
+       sleep modes.
+    3. **Power:** measure supply current while polling. A busy poll keeps the core at full
+       run current for the whole wait. If the waits are long (more than tens of
+       microseconds, typically), use the device's ready interrupt and `WFI`, then measure
+       again.
+
+    The `DWT` address is the standard Cortex-M one; the counter must be enabled
+    (`DEMCR.TRCENA` and `DWT_CTRL.CYCCNTENA`) first, and Cortex-M0/M0+ cores do not have it.
+
 ## Common Mistakes
 
 - Treating const as deep immutability or thread safety.

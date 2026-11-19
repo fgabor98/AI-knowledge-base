@@ -112,6 +112,44 @@ Use one packet-processing component as a running exercise:
 6. Run host tests under AddressSanitizer and UndefinedBehaviorSanitizer.
 7. Review the component for every implementation-defined or target-specific assumption.
 
+### Model Answer
+
+??? note "The running exercise, step by step"
+    Each step has a worked answer on one of the chapter's pages:
+
+    | Step | Answer to build on |
+    | --- | --- |
+    | 1. Borrowed pointer and length | [`slice_from`](pointer-arithmetic-and-bounds.md#model-answers) (exercise 2): pointer and remaining length always travel together |
+    | 2. Caller-owned parsed structure | [`decode`](object-representation-alignment-and-padding.md#model-answers) (exercise 6): the caller owns `struct message`; `payload` is a view into the input |
+    | 3. Scratch arena with a reset point | [`arena_alloc`](memory-layout-and-allocation.md#model-answers) (exercise 4), reset once per packet |
+    | 4. Explicit serialization | [`store_be32` and friends](object-representation-alignment-and-padding.md#model-answers) (exercise 2): byte at a time, any alignment |
+    | 5. Hostile-input tests | below |
+    | 6. Sanitizers | `gcc -std=c17 -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=all` |
+    | 7. Assumption review | below |
+
+    The step-5 tests, one per property:
+
+    - **truncated:** every length from 0 to the full message, `decode` returns a short-input
+      error and never reads past `available` (ASan checks the read);
+    - **misaligned:** decode from `buffer + 1`, which must give the same result;
+    - **aliased:** encode the reply into the input buffer itself. Either the API forbids it
+      in writing, or the test passes;
+    - **concurrently modified:** a host thread rewrites the input while `decode` runs, under
+      TSan. The expected result is a reported race, which shows that the contract must
+      say the input is stable during the call. The fix is in the caller (copy first, or
+      own the buffer), not in `decode`.
+
+    The step-7 review, the assumptions to find and write down:
+
+    | Assumption | Where it hides |
+    | --- | --- |
+    | `CHAR_BIT == 8` | treating `uint8_t` as the wire octet |
+    | `int` is at least 32 bits | any shift such as `byte << 24` done without a cast |
+    | the arena storage alignment | the arena's first allocation |
+    | `size_t` width | length limits; overflow checks must use `SIZE_MAX`, not a constant |
+    | the target's cache and DMA behavior | where the input buffer comes from (see [Memory Safety exercise 4](memory-safety-and-lifetime.md#model-answers)) |
+    | single-threaded use of the arena | `arena_alloc` has no lock |
+
 ## Related Topics
 
 - [Language Fundamentals](../language-fundamentals/index.md)

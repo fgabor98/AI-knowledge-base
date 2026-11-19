@@ -197,7 +197,104 @@ A hardware address range may be contiguous numerically without being an ordinary
 
 ### Model Answers
 
-Answers for the exercises that have one correct explanation. Try the exercise first.
+Try each exercise before opening its answer. Where an exercise asks you to build
+something, the answer shows one good solution, not the only one.
+
+??? note "Exercise 1: a half-open range API"
+    ```c
+    #include <assert.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    /* [begin, end): begin points at the first element, end one past the last. */
+    struct u16_range {
+        const uint16_t *begin;
+        const uint16_t *end;
+    };
+
+    static size_t range_length(struct u16_range range)
+    {
+        return (size_t)(range.end - range.begin);
+    }
+
+    static uint32_t range_sum(struct u16_range range)
+    {
+        uint32_t sum = 0;
+
+        for (const uint16_t *p = range.begin; p != range.end; p++) {
+            sum += *p;
+        }
+        return sum;
+    }
+
+    static bool range_contains(struct u16_range range, const uint16_t *p)
+    {
+        for (const uint16_t *q = range.begin; q != range.end; q++) {
+            if (q == p) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    int main(void)
+    {
+        const uint16_t data[4] = { 1, 2, 3, 4 };
+        struct u16_range empty = { data, data };
+        struct u16_range one = { data + 3, data + 4 };
+        struct u16_range full = { data, data + 4 };     /* end is one past: valid, never read */
+
+        assert(range_length(empty) == 0 && range_sum(empty) == 0);
+        assert(range_length(one) == 1 && range_sum(one) == 4);
+        assert(range_length(full) == 4 && range_sum(full) == 10);
+        assert(!range_contains(full, data + 4));        /* end is not inside the range */
+        assert(range_contains(one, data + 3));
+        return 0;
+    }
+    ```
+
+    The half-open form needs no special case: empty is `begin == end`, and lengths add up
+    when ranges are split. `range_contains` compares with `==` only. Comparing with `<` would
+    be undefined for a pointer into a different array, while `==` is always defined.
+
+??? note "Exercise 2: a bounds-checked byte slice"
+    ```c
+    #include <assert.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    /* Gives the bytes from offset to the end. offset == length gives an empty slice. */
+    bool slice_from(const uint8_t *data, size_t length, size_t offset,
+                    const uint8_t **slice, size_t *remaining)
+    {
+        if (offset > length) {
+            return false;                    /* check before forming data + offset */
+        }
+        *slice = data + offset;
+        *remaining = length - offset;
+        return true;
+    }
+
+    int main(void)
+    {
+        const uint8_t frame[5] = { 1, 2, 3, 4, 5 };
+        const uint8_t *rest;
+        size_t remaining;
+
+        assert(slice_from(frame, 5, 2, &rest, &remaining) && rest[0] == 3 && remaining == 3);
+        assert(slice_from(frame, 5, 5, &rest, &remaining) && remaining == 0);   /* one past */
+        assert(!slice_from(frame, 5, 6, &rest, &remaining));
+        assert(!slice_from(frame, 5, SIZE_MAX, &rest, &remaining));
+        return 0;
+    }
+    ```
+
+    The check runs on the integer before the pointer is formed, because `data + offset`
+    beyond one past the end is already undefined, even if it is never dereferenced. The
+    pointer and the remaining length always come back together, so the caller cannot
+    pair a new pointer with an old length.
 
 ??? note "Exercise 3: subtracting pointers"
     Pointer subtraction is defined only when both pointers point into, or one past the end
@@ -224,6 +321,115 @@ Answers for the exercises that have one correct explanation. Try the exercise fi
     the same object. To measure the distance between unrelated objects, for example in a
     memory map, convert to `uintptr_t` first. That is implementation-defined, but it states
     clearly that you are doing address arithmetic rather than array arithmetic.
+
+??? note "Exercise 4: ring-buffer index advancement"
+    ```c
+    #include <assert.h>
+    #include <stddef.h>
+
+    static size_t ring_advance(size_t index, size_t capacity)
+    {
+        ++index;
+        return index == capacity ? 0u : index;
+    }
+
+    /* Faster variant, only for power-of-two capacities. */
+    static size_t ring_advance_pow2(size_t index, size_t capacity)
+    {
+        assert(capacity != 0 && (capacity & (capacity - 1)) == 0);
+        return (index + 1u) & (capacity - 1u);
+    }
+
+    int main(void)
+    {
+        assert(ring_advance(0, 1) == 0);                  /* capacity 1: always slot 0 */
+        assert(ring_advance(0, 2) == 1 && ring_advance(1, 2) == 0);
+        for (size_t i = 0; i < 8; i++) {
+            assert(ring_advance(i, 8) == ring_advance_pow2(i, 8));
+        }
+        assert(ring_advance(7, 8) == 0);
+        assert(ring_advance_pow2(0, 1) == 0);             /* mask 0 still works */
+        return 0;
+    }
+    ```
+
+    The comparison version works for every capacity, including 1, and never divides.
+    `index % capacity` would also work, but it costs a division on cores without a fast
+    divider. The mask version needs a power of two: with capacity 6 the mask is 5, and
+    index 5 + 1 = 6 masks to 4, not 0. The assertion catches that misuse. Capacity 0 has no
+    valid index, so it must be rejected when the ring is created.
+
+??? note "Exercise 5: an overflow-checked 2-D byte offset"
+    ```c
+    #include <assert.h>
+    #include <stdbool.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    /* Byte offset of element [row][column] in a rows x columns array of element_size. */
+    bool byte_offset_2d(size_t rows, size_t columns, size_t element_size,
+                        size_t row, size_t column, size_t *offset)
+    {
+        if (row >= rows || column >= columns || element_size == 0) {
+            return false;
+        }
+        if (columns > SIZE_MAX / element_size) {
+            return false;
+        }
+        size_t row_bytes = columns * element_size;
+        if (rows > SIZE_MAX / row_bytes) {
+            return false;                          /* the whole array is not addressable */
+        }
+        *offset = row * row_bytes + column * element_size;
+        return true;
+    }
+
+    int main(void)
+    {
+        size_t offset;
+
+        assert(byte_offset_2d(3, 4, 2, 2, 3, &offset) && offset == 22);   /* last element */
+        assert(!byte_offset_2d(3, 4, 2, 3, 0, &offset));                  /* row out of range */
+        assert(!byte_offset_2d(2, SIZE_MAX / 2, 4, 0, 0, &offset));       /* row size overflows */
+        assert(!byte_offset_2d(SIZE_MAX, 2, 1, 0, 0, &offset));           /* total overflows */
+        return 0;
+    }
+    ```
+
+    Checking that the *whole array* fits is enough. Once `rows * row_bytes` is known not to
+    overflow, every `row * row_bytes + column * element_size` with valid indexes is smaller
+    than the total, so it cannot overflow either. Checking the index bounds first also means
+    an out-of-range index is reported as such, not as an overflow.
+
+??? note "Exercise 6: reviewing pointer arithmetic over MMIO"
+    The most common MMIO arithmetic bug is mixing byte offsets and element counts:
+
+    ```c
+    #include <stdint.h>
+
+    #define TIMER_BASE 0x40000400u
+
+    static volatile uint32_t *const timer = (volatile uint32_t *)TIMER_BASE;
+
+    void timer_review_example(void)
+    {
+        timer[0x10] = 1u;       /* reaches TIMER_BASE + 0x40, not + 0x10 */
+        timer[0x10 / 4] = 1u;   /* reaches TIMER_BASE + 0x10 */
+    }
+    ```
+
+    For each access, record and compare with the reference manual:
+
+    | Access in code | Address it reaches | Manual says at that address | Width in code / required | Verdict |
+    | --- | --- | --- | --- | --- |
+    | `timer[0x10]` | base + 0x40 | `CCR1` (capture/compare 1) | 32 / 32 | bug: meant `CR2` at + 0x10 |
+    | `timer[0x10 / 4]` | base + 0x10 | `CR2` | 32 / 32 | correct, but use a named offset |
+    | `((volatile uint16_t *)timer)[1]` | base + 0x02 | reserved half of `CR1` | 16 / 32 only | bug: width not allowed |
+
+    The fix is to make arithmetic disappear from driver code: a vendor register structure
+    whose offsets are checked with `_Static_assert(offsetof(...))`, or named byte offsets
+    used through one accessor such as `reg_write32(TIMER_BASE + TIMER_CR2, value)`. The
+    addresses and register names here are illustrative; the method is the point.
 
 ## Common Mistakes
 
