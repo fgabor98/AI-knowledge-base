@@ -50,13 +50,13 @@ When a page is added, it prints the line to add here.
 
 ## Semantics And Memory
 
-- [ ] [Overview](semantics-and-memory/index.md)
+- [x] [Overview](semantics-and-memory/index.md)
 - [ ] [Test-Out Diagnostic](semantics-and-memory/test-out.md)
-- [ ] [Storage Duration, Scope, And Linkage](semantics-and-memory/storage-duration-scope-and-linkage.md)
-- [ ] [Pointer Fundamentals](semantics-and-memory/pointer-fundamentals.md)
-- [ ] [Pointer Arithmetic And Bounds](semantics-and-memory/pointer-arithmetic-and-bounds.md)
-- [ ] [Const, Volatile, And Restrict](semantics-and-memory/qualifiers-const-volatile-restrict.md)
-- [ ] [Conversions, Promotions, And Aliasing](semantics-and-memory/conversions-promotions-and-aliasing.md)
+- [x] [Storage Duration, Scope, And Linkage](semantics-and-memory/storage-duration-scope-and-linkage.md)
+- [x] [Pointer Fundamentals](semantics-and-memory/pointer-fundamentals.md)
+- [x] [Pointer Arithmetic And Bounds](semantics-and-memory/pointer-arithmetic-and-bounds.md)
+- [x] [Const, Volatile, And Restrict](semantics-and-memory/qualifiers-const-volatile-restrict.md)
+- [x] [Conversions, Promotions, And Aliasing](semantics-and-memory/conversions-promotions-and-aliasing.md)
 - [ ] [Object Representation, Alignment, And Padding](semantics-and-memory/object-representation-alignment-and-padding.md)
 - [ ] [Memory Layout And Allocation](semantics-and-memory/memory-layout-and-allocation.md)
 - [ ] [Undefined Behavior](semantics-and-memory/undefined-behavior.md)
