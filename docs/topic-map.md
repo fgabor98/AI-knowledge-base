@@ -1624,6 +1624,9 @@ Advanced system design:
   - module parameters
   - driver logging with `dev_*`
   - user-space hardware access vs kernel drivers
+  - exported symbols and symbol namespaces
+  - module loading races
+  - supporting several kernel versions
 - common driver interfaces
   - GPIO consumer API
   - GPIO controller drivers

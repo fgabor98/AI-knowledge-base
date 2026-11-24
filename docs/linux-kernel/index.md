@@ -169,6 +169,7 @@ official overview
 - module parameters
 - driver logging with `dev_*`
 - user-space hardware access vs kernel drivers
+- exported symbols and module dependencies
 
 ### Common Driver Interfaces
 
