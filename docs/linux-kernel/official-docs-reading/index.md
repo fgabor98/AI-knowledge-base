@@ -49,11 +49,14 @@ own words. For P0 documents, also locate the relevant headers and at least one
 in-tree driver.
 
 Use the [Knowledge Guide Companion Checklist](knowledge-guide-companion.md) to
-track all related Linux Kernel chapter pages in the same eight-stage order.
+track all related Linux Kernel chapter pages in the same eight-stage order. The
+same page tracks the reading of LKMPG in its
+[LKMPG Study Progress](knowledge-guide-companion.md#lkmpg-study-progress) list.
 
 ## Recommended Path
 
 - [ ] [Knowledge Guide Companion Checklist](knowledge-guide-companion.md)
+- [ ] [LKMPG Study Progress](knowledge-guide-companion.md#lkmpg-study-progress)
 - [ ] 1. [Development Process And Kernel Source](01-development-process-and-source.md)
 - [ ] 2. [Build System, Kconfig, And Development Tools](02-build-kconfig-and-devtools.md)
 - [ ] 3. [Core APIs, Concurrency, Memory, And DMA](03-core-api-concurrency-memory.md)
