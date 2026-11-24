@@ -14,3 +14,5 @@ examples/linux-kernel/**/Module.symvers
 examples/linux-kernel/**/modules.order
 examples/linux-kernel/**/*.dtbo
 examples/linux-kernel/**/trace.dat
+examples/linux-kernel/small-labs/10-ioctl/test_ioctl
+examples/linux-kernel/small-labs/11-poll/test_poll

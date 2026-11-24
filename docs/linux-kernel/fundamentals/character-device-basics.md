@@ -173,6 +173,26 @@ module_exit(demo_exit);
 
 Some older kernel trees use a different `class_create()` signature. Always follow the API in the kernel tree you build against.
 
+## The Short Form: Misc Devices
+
+A driver that needs one node per device does not need its own major number and class. A misc device replaces the four registration steps above:
+
+```c
+static struct miscdevice demo_misc = {
+    .minor = MISC_DYNAMIC_MINOR,
+    .name = "demo0",
+    .fops = &demo_fops,
+};
+
+ret = misc_register(&demo_misc);
+...
+misc_deregister(&demo_misc);
+```
+
+`/dev/demo0` appears when `misc_register()` announces the device. Inside `open()`, `file->private_data` initially points to the `struct miscdevice`, so a driver that embeds it finds its state with `container_of()`. Set `.parent = dev` when there is a hardware device.
+
+Use a full cdev with its own region when the driver has many minors or needs several nodes per device. Labs 10 and 11 use misc devices.
+
 ## Major And Minor Numbers
 
 A device number is stored in `dev_t`.
@@ -245,6 +265,32 @@ static int demo_open(struct inode *inode, struct file *file)
     return 0;
 }
 ```
+
+### `struct inode`, `struct file`, And File Descriptors
+
+| Object | One per | Use in a driver |
+| --- | --- | --- |
+| `struct inode` | device node | identifies the device (`i_cdev`, `iminor()`) |
+| `struct file` | successful `open()` | per-open state in `private_data`, flags, position |
+| file descriptor | entry in a process table | invisible to the driver |
+
+`dup()` and `fork()` create more descriptors for the same `struct file`. Therefore:
+
+- `open()` runs once per `open()` system call.
+- `release()` runs once, when the **last** descriptor is closed, possibly in another process. Free per-open state here.
+- `flush()` runs on every `close()`.
+- Two threads can issue operations on one `struct file` at the same time. Protect per-open state too. The kernel's file-position lock is applied to regular files and directories only, so it does not serialize `read()` and `write()` on a character device.
+
+The process that calls an operation is `current`. It is meaningful only in process context; an interrupt handler or timer sees whichever task was interrupted.
+
+### Exclusive Open
+
+```c
+if (test_and_set_bit(DEMO_OPEN, &demo->flags))
+    return -EBUSY;
+```
+
+with `clear_bit_unlock()` in `release()`. This limits the device to one `struct file`, not to one process. Do not use a plain `if (open_count++)`: two CPUs can pass it together.
 
 ## `read()`
 
@@ -429,9 +475,13 @@ if (!demo_data_available(demo)) {
 }
 ```
 
-Another reader can consume the data between the wakeup and the copy. Take the lock and check again before copying; [Wait Queues And Completions](../execution-and-concurrency/wait-queues-and-completions.md#blocking-reads) explains the wait itself.
+Another reader can consume the data between the wakeup and the copy. Take the lock and check again before copying; [Wait Queues And Completions](../execution-and-concurrency/wait-queues-and-completions.md#blocking-reads) explains the wait itself, and Lab 11 (`examples/linux-kernel/small-labs/11-poll`) is a complete example.
 
 Never sleep while holding a spinlock. Be careful when sleeping with a mutex if wakeup paths need the same lock.
+
+### Asynchronous Notification
+
+Older applications may expect `SIGIO` through `fcntl(F_SETFL, O_ASYNC)`. The driver side is a `.fasync` operation using `fasync_helper()` and a `kill_fasync()` call when data arrives. Recognize it in existing drivers; for new interfaces a correct `poll()` is enough.
 
 ## Lifetime With Open Files
 
@@ -560,6 +610,7 @@ Add `DEMO_IOC_RESET` that clears the buffer. Keep the command definition in a UA
 - [Sysfs Attributes](sysfs-attributes.md)
 - [Kernel Module Lifecycle](kernel-module-lifecycle.md)
 - [Reference Counting And Lifetime](../execution-and-concurrency/reference-counting-and-lifetime.md)
+- [Procfs And seq_file](procfs-and-seq-file.md)
 
 ## Official References
 
