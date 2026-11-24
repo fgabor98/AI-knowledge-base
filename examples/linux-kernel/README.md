@@ -11,6 +11,9 @@ per lab. Build a checkpoint against the exact kernel that will load it:
 make -C examples/linux-kernel/small-labs/01-hello
 ```
 
+[qemu-lab](qemu-lab) builds a debug kernel and boots it with the labs mounted, so
+experiments cannot damage the host.
+
 Kernel modules execute with kernel privileges. Read the checkpoint README
 before loading a module, unload modules in the documented order, and keep a
 known-good boot path available.
