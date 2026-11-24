@@ -170,6 +170,7 @@ official overview
 - driver logging with `dev_*`
 - user-space hardware access vs kernel drivers
 - exported symbols and module dependencies
+- procfs and seq_file
 
 ### Common Driver Interfaces
 
@@ -252,6 +253,7 @@ official overview
 - perf overview
 - debugfs
 - sysfs inspection
+- implementing debugfs interfaces
 - kgdb basics
 - crash and panic logs
 - watchdog reset diagnosis

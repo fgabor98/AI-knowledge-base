@@ -41,6 +41,7 @@ This chapter builds a practical debugging workflow:
 7. [Oops, Panic, And Crash Logs](oops-panic-crash-logs.md)
 8. [Watchdog Reset Diagnosis](watchdog-reset-diagnosis.md)
 9. [Probe Failure Debugging](probe-failure-debugging.md)
+10. [Implementing Debugfs Interfaces](implementing-debugfs-interfaces.md)
 
 ## Mental Model
 

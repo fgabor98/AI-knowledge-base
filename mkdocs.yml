@@ -833,6 +833,7 @@ nav:
           - Module Parameters And Driver Logging: linux-kernel/fundamentals/module-parameters-and-logging.md
           - User-Space Hardware Access Vs Kernel Drivers: linux-kernel/fundamentals/userspace-hardware-access-vs-kernel-drivers.md
           - Exported Symbols And Module Dependencies: linux-kernel/fundamentals/exported-symbols-and-module-dependencies.md
+          - Procfs And seq_file: linux-kernel/fundamentals/procfs-and-seq-file.md
       - Common Driver Interfaces:
           - Overview: linux-kernel/driver-interfaces/index.md
           - GPIO Consumer API: linux-kernel/driver-interfaces/gpio-consumer-api.md
@@ -904,6 +905,7 @@ nav:
           - Oops, Panic, And Crash Logs: linux-kernel/debugging/oops-panic-crash-logs.md
           - Watchdog Reset Diagnosis: linux-kernel/debugging/watchdog-reset-diagnosis.md
           - Probe Failure Debugging: linux-kernel/debugging/probe-failure-debugging.md
+          - Implementing Debugfs Interfaces: linux-kernel/debugging/implementing-debugfs-interfaces.md
       - Power Management:
           - Overview: linux-kernel/power-management/index.md
           - Runtime PM: linux-kernel/power-management/runtime-pm.md

@@ -1627,6 +1627,8 @@ Advanced system design:
   - exported symbols and symbol namespaces
   - module loading races
   - supporting several kernel versions
+  - procfs
+  - seq_file
 - common driver interfaces
   - GPIO consumer API
   - GPIO controller drivers
@@ -1713,6 +1715,7 @@ Advanced system design:
   - oops, panic, and crash logs
   - watchdog reset diagnosis
   - probe failure debugging
+  - implementing debugfs interfaces
 - power management
   - runtime PM
   - suspend and resume
