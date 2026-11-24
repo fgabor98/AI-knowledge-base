@@ -62,6 +62,15 @@ API before its controller/provider API unless the project implements a provider.
 - [ ] **P1** [Networking driver documentation](https://docs.kernel.org/networking/device_drivers/index.html)
 - [ ] **P1** [PHY abstraction layer](https://docs.kernel.org/networking/phy.html)
 
+## PCI, USB, And Network Devices
+
+- [ ] **P1** [How to write Linux PCI drivers](https://docs.kernel.org/PCI/pci.html)
+- [ ] **P1** [MSI driver guide](https://docs.kernel.org/PCI/msi-howto.html)
+- [ ] **P1** [Writing USB device drivers](https://docs.kernel.org/driver-api/usb/writing_usb_driver.html)
+- [ ] **P1** [USB request blocks](https://docs.kernel.org/driver-api/usb/URB.html)
+- [ ] **P1** [Network devices, the kernel, and you](https://docs.kernel.org/networking/netdevices.html)
+- [ ] **P1** [NAPI](https://docs.kernel.org/networking/napi.html)
+
 ## Storage, NVMEM, Watchdog, And Other Board Interfaces
 
 - [ ] **P0** [NVMEM subsystem](https://docs.kernel.org/driver-api/nvmem.html)

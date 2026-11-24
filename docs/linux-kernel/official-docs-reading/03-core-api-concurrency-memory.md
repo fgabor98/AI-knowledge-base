@@ -47,7 +47,10 @@ Knowledge-guide companion: [Stage 3](knowledge-guide-companion.md#stage-3-core-a
 - [ ] **P0** [`refcount_t` versus `atomic_t`](https://docs.kernel.org/core-api/refcount-vs-atomic.html)
 - [ ] **P0** [Linux kernel memory barriers](https://docs.kernel.org/core-api/wrappers/memory-barriers.html)
 - [ ] **P0** [Generic IRQ handling](https://docs.kernel.org/core-api/genericirq.html)
+- [ ] **P0** [What is RCU?](https://docs.kernel.org/RCU/whatisRCU.html)
 - [ ] **P1** [RCU handbook](https://docs.kernel.org/RCU/index.html)
+- [ ] **P1** [RCU and unloadable modules](https://docs.kernel.org/RCU/rcubarrier.html)
+- [ ] **P1** [Sequence counters and sequential locks](https://docs.kernel.org/locking/seqlock.html)
 - [ ] **P1** [Lockdep design](https://docs.kernel.org/locking/lockdep-design.html)
 - [ ] **P1** [Locking on PREEMPT_RT](https://docs.kernel.org/locking/locktypes.html#lock-categories)
 

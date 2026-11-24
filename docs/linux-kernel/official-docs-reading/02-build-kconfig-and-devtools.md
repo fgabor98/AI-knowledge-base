@@ -23,6 +23,7 @@ Knowledge-guide companion: [Stage 2](knowledge-guide-companion.md#stage-2-build-
 - [x] **P0** [Kconfig language](https://docs.kernel.org/kbuild/kconfig-language.html)
 - [x] **P0** [Kconfig macro language](https://docs.kernel.org/kbuild/kconfig-macro-language.html)
 - [x] **P0** [LLVM builds](https://docs.kernel.org/kbuild/llvm.html)
+- [ ] **P1** [Symbol namespaces](https://docs.kernel.org/core-api/symbol-namespaces.html)
 - [x] **P1** [Reproducible builds](https://docs.kernel.org/kbuild/reproducible-builds.html)
 - [x] **P1** [GCC plug-ins](https://docs.kernel.org/kbuild/gcc-plugins.html)
 - [x] **P1** [Kbuild issues](https://docs.kernel.org/kbuild/issues.html)

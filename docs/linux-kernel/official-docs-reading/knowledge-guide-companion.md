@@ -13,8 +13,7 @@ This checklist tracks the knowledge-guide pages that accompany the
 same eight stages so the official material, local explanations, source study,
 and labs can be completed together.
 
-All 115 Linux Kernel knowledge-guide pages that existed when this checklist was
-created are assigned exactly once. A page may relate to several stages, but it
+All 125 Linux Kernel knowledge-guide pages are assigned exactly once. A page may relate to several stages, but it
 has only one checkbox here so its completion state remains unambiguous.
 
 ## Synchronization Rule
@@ -47,6 +46,12 @@ Official tracker: [Development Process And Kernel Source](01-development-process
 - [x] [Small Lab Progression](../foundations/small-lab-progression.md)
 - [x] [Kernel Documentation Reading Guide For Beginners](../foundations/kernel-documentation-reading-guide-for-beginners.md)
 
+Added to completed pages since they were ticked:
+
+- [ ] [Branch Hints And Static Keys](../foundations/kernel-c-survival-guide.md#branch-hints-and-static-keys)
+- [ ] [QEMU Kernel Lab](../foundations/kernel-development-lab-setup.md#option-2-qemu-kernel-lab): build the kernel, boot it, load Lab 1
+- [ ] [Labs 10 to 19](../foundations/small-lab-progression.md#runnable-checkpoints): overview
+
 Stage completion:
 
 - [x] I can locate a driver's Kconfig, Makefile, registration, match, probe, runtime, and teardown paths.
@@ -62,6 +67,16 @@ Official tracker: [Build System, Kconfig, And Development Tools](02-build-kconfi
 - [x] [Kernel Build And Install Overview](../source-build-and-tailoring/kernel-build-and-install-overview.md)
 - [x] [Kernel Module Lifecycle](../fundamentals/kernel-module-lifecycle.md)
 - [x] [Built-In Drivers Vs Loadable Modules](../fundamentals/built-in-vs-loadable-modules.md)
+- [ ] [Exported Symbols And Module Dependencies](../fundamentals/exported-symbols-and-module-dependencies.md)
+
+Added to completed pages since they were ticked:
+
+- [ ] [Register Last, Unregister First](../fundamentals/kernel-module-lifecycle.md#register-last-unregister-first)
+- [ ] [Supporting Several Kernel Versions](../fundamentals/kernel-module-lifecycle.md#supporting-several-kernel-versions)
+
+Labs:
+
+- [ ] Lab 16: [Exported symbols](../foundations/small-lab-progression.md#lab-16-exported-symbols)
 
 Stage completion:
 
@@ -87,6 +102,8 @@ Official tracker: [Core APIs, Concurrency, Memory, And DMA](03-core-api-concurre
 - [ ] [Timekeeping And Kernel Timers](../execution-and-concurrency/timekeeping-and-kernel-timers.md)
 - [ ] [Wait Queues And Completions](../execution-and-concurrency/wait-queues-and-completions.md)
 - [ ] [Reference Counting And Lifetime](../execution-and-concurrency/reference-counting-and-lifetime.md)
+- [ ] [RCU](../execution-and-concurrency/rcu.md)
+- [ ] [Kernel Threads](../execution-and-concurrency/kernel-threads.md)
 
 ### Memory And I/O
 
@@ -98,6 +115,13 @@ Official tracker: [Core APIs, Concurrency, Memory, And DMA](03-core-api-concurre
 - [ ] [DMA Mapping Basics](../memory-and-io/dma-mapping-basics.md)
 - [ ] [Single-Buffer DMA](../memory-and-io/single-buffer-dma.md)
 - [ ] [Scatter-Gather DMA](../memory-and-io/scatter-gather-dma.md)
+
+### Labs
+
+- [ ] Lab 10: [ioctl ABI](../foundations/small-lab-progression.md#lab-10-ioctl-abi)
+- [ ] Lab 11: [Blocking I/O and poll](../foundations/small-lab-progression.md#lab-11-blocking-io-and-poll)
+- [ ] Lab 13: [Deferred contexts](../foundations/small-lab-progression.md#lab-13-deferred-contexts)
+- [ ] Lab 14: [RCU](../foundations/small-lab-progression.md#lab-14-rcu)
 
 Stage completion:
 
@@ -152,6 +176,15 @@ Official tracker: [Embedded Driver Subsystems](05-embedded-driver-subsystems.md)
 - [ ] [Polled Input Devices](../driver-interfaces/polled-input-devices.md)
 - [ ] [IRQ-Based Input Devices](../driver-interfaces/irq-based-input-devices.md)
 - [ ] [User-Space Hardware Access Vs Kernel Drivers](../fundamentals/userspace-hardware-access-vs-kernel-drivers.md)
+- [ ] [PCI And PCIe Device Drivers](../driver-interfaces/pci-drivers.md)
+- [ ] [USB Device Drivers](../driver-interfaces/usb-drivers.md)
+- [ ] [Network Device Drivers](../driver-interfaces/network-device-drivers.md)
+
+Labs:
+
+- [ ] Lab 15: [Virtual input device](../foundations/small-lab-progression.md#lab-15-virtual-input-device)
+- [ ] Lab 18: [PCI, MSI, and DMA](../foundations/small-lab-progression.md#lab-18-pci-msi-and-dma)
+- [ ] Lab 19: [Network device](../foundations/small-lab-progression.md#lab-19-network-device)
 
 Stage completion:
 
@@ -174,6 +207,13 @@ Official tracker: [Debugging, Tracing, And Testing](06-debugging-tracing-testing
 - [ ] [Oops, Panic, And Crash Logs](../debugging/oops-panic-crash-logs.md)
 - [ ] [Watchdog Reset Diagnosis](../debugging/watchdog-reset-diagnosis.md)
 - [ ] [Probe Failure Debugging](../debugging/probe-failure-debugging.md)
+- [ ] [Implementing Debugfs Interfaces](../debugging/implementing-debugfs-interfaces.md)
+- [ ] [Kprobes And Dynamic Probes](../debugging/kprobes-and-dynamic-probes.md)
+
+Labs:
+
+- [ ] Lab 12: [seq_file and debugfs](../foundations/small-lab-progression.md#lab-12-seq_file-and-debugfs)
+- [ ] Lab 17: [kprobe events](../foundations/small-lab-progression.md#lab-17-kprobe-events)
 
 Stage completion:
 
@@ -224,6 +264,7 @@ Official tracker: [Architecture, Userspace ABI, Administration, And Optional Are
 - [ ] [Kobjects And Sysfs Groups](../fundamentals/kobjects-and-sysfs-groups.md)
 - [ ] [Pollable Sysfs Attributes](../fundamentals/pollable-sysfs-attributes.md)
 - [ ] [Module Parameters And Driver Logging](../fundamentals/module-parameters-and-logging.md)
+- [ ] [Procfs And seq_file](../fundamentals/procfs-and-seq-file.md)
 
 ### Configuration And Product Policy
 
@@ -240,6 +281,7 @@ Official tracker: [Architecture, Userspace ABI, Administration, And Optional Are
 ### Coverage Audit
 
 - [ ] [Madieu Book Topic Coverage](../book-coverage.md)
+- [ ] [LKMPG Topic Coverage](../lkmpg-coverage.md)
 
 Stage completion:
 
@@ -248,8 +290,10 @@ Stage completion:
 
 ## Overall Completion
 
-- [ ] All 115 knowledge-guide page checkboxes are complete.
+- [ ] All 125 knowledge-guide page checkboxes are complete.
+- [ ] All topic-lab checkboxes (Labs 10 to 19) are complete.
 - [ ] All eight official-documentation stage checkboxes are complete.
+- [ ] The [LKMPG Study Progress](#lkmpg-study-progress) list is complete.
 - [ ] I have recorded version-specific differences between upstream and the active vendor kernel.
 - [ ] I have completed at least one end-to-end driver or board-integration lab.
 - [ ] I have a list of topics that require another pass or a project-specific deep dive.
