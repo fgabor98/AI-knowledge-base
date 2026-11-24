@@ -172,6 +172,39 @@ dmesg | grep -i 'module verification'
 
 Availability and exact behavior depend on kernel configuration and platform.
 
+### Signing Your Own Module On A Secure Boot PC
+
+On a distribution kernel with Secure Boot, an unsigned module is refused with `Key was rejected by service` or `Operation not permitted`, and `dmesg` reports lockdown. Instead of disabling Secure Boot, enroll a Machine Owner Key (MOK) and sign with it.
+
+```sh
+sudo apt install mokutil openssl
+mokutil --sb-state
+
+# 1. Create a key pair. Keep MOK.priv private; it can sign kernel code.
+openssl req -new -x509 -newkey rsa:2048 -nodes -days 3650 \
+    -subj "/CN=Kernel module development/" \
+    -addext "extendedKeyUsage=codeSigning" \
+    -keyout MOK.priv -outform DER -out MOK.der
+chmod 600 MOK.priv
+
+# 2. Request enrollment, choose a one-time password, reboot.
+sudo mokutil --import MOK.der
+```
+
+At the next boot the blue MOK Manager screen appears: choose *Enroll MOK*, *Continue*, *Yes*, enter the password, and reboot. This step needs physical console access by design.
+
+```sh
+# 3. Check that the key is trusted, then sign after every build.
+mokutil --list-enrolled | grep 'module development'
+/lib/modules/$(uname -r)/build/scripts/sign-file sha256 MOK.priv MOK.der demo.ko
+modinfo demo.ko | grep -E '^(signer|sig_hashalgo)'
+sudo insmod demo.ko
+```
+
+Sign last: stripping or rebuilding removes the signature. DKMS on Ubuntu and Debian can use a MOK automatically. To revoke, run `sudo mokutil --delete MOK.der` and confirm at the next boot.
+
+For kernel learning a [QEMU guest](../foundations/kernel-development-lab-setup.md#option-2-qemu-kernel-lab) is the better answer: no signing, and a crash costs nothing. A MOK that is enrolled on a workstation is a production secret of that workstation.
+
 ## Hardening Options
 
 Hardening options vary by architecture and kernel version, but common areas include:
