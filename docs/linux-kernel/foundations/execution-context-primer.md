@@ -425,7 +425,7 @@ Update-side code uses different rules and must wait for readers before freeing r
 
 Beginner rule:
 
-- recognize RCU when reading kernel internals
+- recognize RCU when reading kernel internals; [RCU](../execution-and-concurrency/rcu.md) explains it fully
 - do not introduce RCU into a simple driver until mutexes, spinlocks, and lifetime rules are clearly insufficient
 - never free RCU-protected data with ordinary `kfree` immediately after publishing a replacement
 

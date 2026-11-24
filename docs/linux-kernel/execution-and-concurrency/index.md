@@ -46,6 +46,7 @@ This chapter teaches the execution rules and synchronization primitives that kee
 9. [Timekeeping And Kernel Timers](timekeeping-and-kernel-timers.md)
 10. [Wait Queues And Completions](wait-queues-and-completions.md)
 11. [Reference Counting And Lifetime](reference-counting-and-lifetime.md)
+12. [RCU](rcu.md)
 
 ## Mental Model
 

@@ -212,6 +212,7 @@ official overview
 - wait queues
 - completions
 - lifetime and reference counting
+- RCU
 
 ### Kernel Memory And I/O
 

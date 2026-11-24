@@ -1668,6 +1668,9 @@ Advanced system design:
   - wait queues
   - completions
   - lifetime and reference counting
+  - RCU and SRCU
+  - reader/writer spinlocks and sequence locks
+  - bit operations
 - kernel memory and I/O
   - kernel memory allocation
   - allocation flags
