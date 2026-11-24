@@ -415,20 +415,21 @@ Use poll for character devices that produce asynchronous data. Do not fake readi
 
 ## Blocking And Nonblocking I/O
 
-Check:
+`O_NONBLOCK` only changes what happens when the operation would block. If data is already available, a nonblocking read must return it:
 
 ```c
-if (file->f_flags & O_NONBLOCK)
-    return -EAGAIN;
+if (!demo_data_available(demo)) {
+    if (file->f_flags & O_NONBLOCK)
+        return -EAGAIN;
+
+    ret = wait_event_interruptible(demo->readq,
+                                   demo_data_available(demo));
+    if (ret)
+        return ret;
+}
 ```
 
-Blocking read pattern:
-
-```c
-ret = wait_event_interruptible(demo->readq, demo_data_available(demo));
-if (ret)
-    return ret;
-```
+Another reader can consume the data between the wakeup and the copy. Take the lock and check again before copying; [Wait Queues And Completions](../execution-and-concurrency/wait-queues-and-completions.md#blocking-reads) explains the wait itself.
 
 Never sleep while holding a spinlock. Be careful when sleeping with a mutex if wakeup paths need the same lock.
 
