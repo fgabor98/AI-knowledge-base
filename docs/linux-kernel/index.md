@@ -200,6 +200,7 @@ official overview
 - interrupt processing model
 - PCI and PCIe device drivers
 - USB device drivers
+- network device drivers and NAPI
 
 ### Kernel Execution And Concurrency
 

@@ -862,6 +862,7 @@ nav:
           - IRQ-Based Input Devices: linux-kernel/driver-interfaces/irq-based-input-devices.md
           - PCI And PCIe Device Drivers: linux-kernel/driver-interfaces/pci-drivers.md
           - USB Device Drivers: linux-kernel/driver-interfaces/usb-drivers.md
+          - Network Device Drivers: linux-kernel/driver-interfaces/network-device-drivers.md
       - Kernel Execution And Concurrency:
           - Overview: linux-kernel/execution-and-concurrency/index.md
           - Context Rules: linux-kernel/execution-and-concurrency/context-rules.md

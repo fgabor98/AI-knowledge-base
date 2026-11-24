@@ -1658,6 +1658,7 @@ Advanced system design:
   - IRQ-based input devices
   - PCI and PCIe device drivers
   - USB device drivers
+  - network device drivers and NAPI
 - kernel execution and concurrency
   - interrupt context vs process context
   - sleepable vs atomic code

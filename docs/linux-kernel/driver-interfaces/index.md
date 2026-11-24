@@ -58,6 +58,7 @@ This chapter teaches the common interfaces that prevent drivers from hard-coding
 24. [IRQ-Based Input Devices](irq-based-input-devices.md)
 25. [PCI And PCIe Device Drivers](pci-drivers.md)
 26. [USB Device Drivers](usb-drivers.md)
+27. [Network Device Drivers](network-device-drivers.md)
 
 ## Mental Model
 
