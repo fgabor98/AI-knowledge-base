@@ -178,7 +178,7 @@ cancel_delayed_work_sync(&priv->dwork);
 Timer:
 
 ```c
-del_timer_sync(&priv->timer);
+timer_shutdown_sync(&priv->timer);
 ```
 
 Tasklet in older code:

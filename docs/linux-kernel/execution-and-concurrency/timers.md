@@ -74,26 +74,46 @@ Arm or rearm it:
 mod_timer(&priv->timeout, jiffies + msecs_to_jiffies(250));
 ```
 
-Cancel it during teardown:
+Stop it, with the possibility of arming it again later:
 
 ```c
-del_timer_sync(&priv->timeout);
+timer_delete_sync(&priv->timeout);
 ```
 
-On modern kernels, prefer `timer_shutdown_sync()` for final teardown when the timer must not be rearmed after shutdown:
+For final teardown use `timer_shutdown_sync()`, which also makes any later attempt to rearm the timer a no-op:
 
 ```c
 timer_shutdown_sync(&priv->timeout);
 ```
 
-Use the API available in your target kernel, but preserve the invariant: after teardown synchronization returns, no timer callback may run or be rearmed against freed state.
+Preserve the invariant: after teardown synchronization returns, no timer callback may run or be rearmed against freed state.
+
+## Timer API Names By Kernel Version
+
+The timer API was renamed in stages. This page uses the current names. Older books, vendor drivers, and forum answers use the old ones, which no longer compile:
+
+| Current name | Old name | Current name since | Old name removed in |
+| --- | --- | --- | --- |
+| `timer_setup()` with a `struct timer_list *` callback | `setup_timer()`, `init_timer()` with an `unsigned long` callback | 4.14 | 4.15 |
+| `timer_delete()` | `del_timer()` | 6.2 | 6.15 |
+| `timer_delete_sync()` | `del_timer_sync()` | 6.2 | 6.15 |
+| `timer_shutdown_sync()` | no equivalent | 6.2 | - |
+| `timer_container_of()` | `from_timer()` | 6.16 | 6.16 |
+
+Check the tree you build against rather than trusting a table:
+
+```sh
+grep -nE 'timer_(container_of|delete_sync|shutdown_sync)|from_timer|del_timer' include/linux/timer.h
+```
+
+If one source file must build on both sides of the 6.16 rename, plain `container_of(t, struct demo_priv, timeout)` works everywhere.
 
 ## Timer Callback Example
 
 ```c
 static void demo_timeout_fn(struct timer_list *t)
 {
-    struct demo_priv *priv = from_timer(priv, t, timeout);
+    struct demo_priv *priv = timer_container_of(priv, t, timeout);
     unsigned long flags;
 
     spin_lock_irqsave(&priv->lock, flags);
@@ -132,7 +152,7 @@ timer_shutdown_sync(&priv->timeout);
 cancel_work_sync(&priv->timeout_work);
 ```
 
-If using older timer APIs, use `del_timer_sync()` plus a separate rearm-prevention flag.
+On kernels older than 6.2, which lack `timer_shutdown_sync()`, use `del_timer_sync()` plus a separate rearm-prevention flag.
 
 ## Why Timer Callbacks Cannot Sleep
 
@@ -196,7 +216,7 @@ static irqreturn_t demo_irq(int irq, void *data)
     priv->cmd_done = true;
     spin_unlock_irqrestore(&priv->lock, flags);
 
-    del_timer(&priv->cmd_timer);
+    timer_delete(&priv->cmd_timer);
     wake_up_interruptible(&priv->wait);
 
     return IRQ_HANDLED;
@@ -208,7 +228,7 @@ Timeout callback:
 ```c
 static void demo_cmd_timeout_fn(struct timer_list *t)
 {
-    struct demo_priv *priv = from_timer(priv, t, cmd_timer);
+    struct demo_priv *priv = timer_container_of(priv, t, cmd_timer);
     unsigned long flags;
 
     spin_lock_irqsave(&priv->lock, flags);
@@ -240,7 +260,7 @@ A periodic timer rearms itself from the callback.
 ```c
 static void demo_periodic_fn(struct timer_list *t)
 {
-    struct demo_priv *priv = from_timer(priv, t, periodic);
+    struct demo_priv *priv = timer_container_of(priv, t, periodic);
 
     if (READ_ONCE(priv->stopping))
         return;
@@ -274,7 +294,7 @@ static irqreturn_t demo_gpio_irq(int irq, void *data)
 
 static void demo_debounce_fn(struct timer_list *t)
 {
-    struct demo_priv *priv = from_timer(priv, t, debounce_timer);
+    struct demo_priv *priv = timer_container_of(priv, t, debounce_timer);
     int value;
 
     value = gpiod_get_value(priv->gpiod);
@@ -308,9 +328,9 @@ If the timer callback immediately queues work and does nothing else, delayed wor
 
 | API | Use |
 | --- | --- |
-| `del_timer()` | cancel pending timer, does not wait for running callback |
-| `del_timer_sync()` | cancel and wait for running callback |
-| `timer_shutdown_sync()` | final shutdown; prevents future rearm on modern kernels |
+| `timer_delete()` | cancel pending timer, does not wait for running callback |
+| `timer_delete_sync()` | cancel and wait for running callback |
+| `timer_shutdown_sync()` | final shutdown; waits and prevents future rearm |
 | `timer_pending()` | test whether a timer is pending |
 
 For teardown, use a synchronous API. A non-synchronous delete is rarely enough before freeing state.
@@ -319,7 +339,7 @@ Do not hold a lock needed by the timer callback while calling the synchronous de
 
 ```c
 spin_lock_irqsave(&priv->lock, flags);
-del_timer_sync(&priv->timer); /* wrong if callback takes lock */
+timer_delete_sync(&priv->timer); /* wrong if callback takes lock */
 spin_unlock_irqrestore(&priv->lock, flags);
 ```
 
@@ -327,7 +347,7 @@ Better:
 
 ```c
 WRITE_ONCE(priv->stopping, true);
-del_timer_sync(&priv->timer);
+timer_delete_sync(&priv->timer);
 
 spin_lock_irqsave(&priv->lock, flags);
 demo_finish_locked(priv);
@@ -339,7 +359,7 @@ spin_unlock_irqrestore(&priv->lock, flags);
 The common timer teardown bug is:
 
 ```text
-CPU0 remove: del_timer_sync() returns
+CPU0 remove: timer_delete_sync() returns
 CPU1 work: mod_timer() arms timer again
 CPU0 remove: frees driver data
 timer fires and uses freed data
@@ -406,7 +426,7 @@ That fails around wraparound.
 | sleep warning | timer callback called sleepable API | callback body |
 | use-after-free after unload | timer not synchronously stopped | remove path |
 | timer fires after shutdown | another callback rearms it | rearm sites |
-| deadlock in remove | lock held across `del_timer_sync()` | callback locks |
+| deadlock in remove | lock held across `timer_delete_sync()` | callback locks |
 | timeout too short/long | wrong units or jiffies conversion | conversion helpers |
 | high CPU usage | periodic timer interval too small | rearm rate |
 | missed timeout | command completion and timeout state race | shared lock/condition |
@@ -422,7 +442,7 @@ timer_setup()
 mod_timer()
 timeout flag
 wait queue wakeup
-del_timer_sync() or timer_shutdown_sync() in teardown
+timer_shutdown_sync() in teardown
 ```
 
 Explain which fields are protected by a spinlock.

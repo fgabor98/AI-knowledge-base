@@ -341,7 +341,7 @@ cancel_work_sync(&priv->rx_work);
 destroy_workqueue(priv->wq);
 ```
 
-Use `timer_delete_sync()` or the older `del_timer_sync()` style only when your target kernel uses that API and you have separately prevented rearming. For final teardown in modern kernels, `timer_shutdown_sync()` is designed to prevent rearming.
+`timer_shutdown_sync()` is the final-teardown call because it also prevents rearming. Use `timer_delete_sync()` only when the timer may legitimately be armed again, or when rearming has been prevented separately. See [Timer API Names By Kernel Version](timers.md#timer-api-names-by-kernel-version) for the older names.
 
 ## Deadlock Patterns
 

@@ -199,7 +199,7 @@ Timer callback cannot sleep:
 ```c
 static void demo_timer_fn(struct timer_list *t)
 {
-    struct demo_priv *priv = from_timer(priv, t, timer);
+    struct demo_priv *priv = timer_container_of(priv, t, timer);
 
     schedule_work(&priv->work);
 }

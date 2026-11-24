@@ -449,7 +449,7 @@ Use explicit cleanup for active behavior:
 
 ```c
 cancel_work_sync(&priv->work);
-del_timer_sync(&priv->timer);
+timer_shutdown_sync(&priv->timer);
 ```
 
 Use locking and reference counting when userspace or asynchronous callbacks can outlive parts of teardown.
