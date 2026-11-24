@@ -115,9 +115,11 @@ static const struct file_operations demo_fops = {
     .release = demo_release,
     .read = demo_read,
     .write = demo_write,
-    .llseek = no_llseek,
+    .llseek = noop_llseek,
 };
 ```
+
+`noop_llseek` accepts a seek but leaves the position unchanged. For a stream that must reject seeking with `-ESPIPE`, leave `.llseek` unset and call `nonseekable_open()` or `stream_open()` from `open()`. The old `no_llseek` helper was removed in 6.12 because an unset `.llseek` already means the same thing.
 
 Registration:
 
