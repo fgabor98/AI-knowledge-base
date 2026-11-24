@@ -1716,6 +1716,7 @@ Advanced system design:
   - watchdog reset diagnosis
   - probe failure debugging
   - implementing debugfs interfaces
+  - kprobes and kprobe events
 - power management
   - runtime PM
   - suspend and resume

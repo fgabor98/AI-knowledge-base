@@ -906,6 +906,7 @@ nav:
           - Watchdog Reset Diagnosis: linux-kernel/debugging/watchdog-reset-diagnosis.md
           - Probe Failure Debugging: linux-kernel/debugging/probe-failure-debugging.md
           - Implementing Debugfs Interfaces: linux-kernel/debugging/implementing-debugfs-interfaces.md
+          - Kprobes And Dynamic Probes: linux-kernel/debugging/kprobes-and-dynamic-probes.md
       - Power Management:
           - Overview: linux-kernel/power-management/index.md
           - Runtime PM: linux-kernel/power-management/runtime-pm.md

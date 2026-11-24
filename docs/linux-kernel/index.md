@@ -254,6 +254,7 @@ official overview
 - debugfs
 - sysfs inspection
 - implementing debugfs interfaces
+- kprobes and dynamic probes
 - kgdb basics
 - crash and panic logs
 - watchdog reset diagnosis
