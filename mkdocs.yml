@@ -860,6 +860,7 @@ nav:
           - Input Subsystem: linux-kernel/driver-interfaces/input-subsystem.md
           - Polled Input Devices: linux-kernel/driver-interfaces/polled-input-devices.md
           - IRQ-Based Input Devices: linux-kernel/driver-interfaces/irq-based-input-devices.md
+          - PCI And PCIe Device Drivers: linux-kernel/driver-interfaces/pci-drivers.md
       - Kernel Execution And Concurrency:
           - Overview: linux-kernel/execution-and-concurrency/index.md
           - Context Rules: linux-kernel/execution-and-concurrency/context-rules.md

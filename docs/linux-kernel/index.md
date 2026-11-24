@@ -198,6 +198,7 @@ official overview
 - polled input devices
 - IRQ-based input devices
 - interrupt processing model
+- PCI and PCIe device drivers
 
 ### Kernel Execution And Concurrency
 
