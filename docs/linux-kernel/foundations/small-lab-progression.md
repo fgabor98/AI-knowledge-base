@@ -41,21 +41,21 @@ This page defines a staged lab sequence. Each lab should produce observable evid
 ## Runnable Checkpoints
 
 The source tree contains one buildable checkpoint for each lab under
-[`examples/linux-kernel/small-labs/`](../../../examples/linux-kernel/small-labs/README.md).
+`examples/linux-kernel/small-labs/`.
 Build and inspect the checkpoint before changing it; keep the previous one as
 a known-good comparison.
 
 | Lab | Checkpoint | Artifact |
 | --- | --- | --- |
-| 1 | [Hello module](../../../examples/linux-kernel/small-labs/01-hello/README.md) | `hello.ko` |
-| 2 | [Module parameters](../../../examples/linux-kernel/small-labs/02-parameters/README.md) | `lab_params.ko` |
-| 3 | [Dummy character device](../../../examples/linux-kernel/small-labs/03-char-device/README.md) | `lab_char.ko` |
-| 4 | [Software platform driver](../../../examples/linux-kernel/small-labs/04-platform-driver/README.md) | driver + device-helper modules |
-| 5 | [Device Tree matching](../../../examples/linux-kernel/small-labs/05-device-tree/README.md) | module + overlay |
-| 6 | [GPIO consumer](../../../examples/linux-kernel/small-labs/06-gpio-consumer/README.md) | module + overlay |
-| 7 | [I2C client](../../../examples/linux-kernel/small-labs/07-i2c-client/README.md) | driver + client-helper modules |
-| 8 | [Threaded virtual IRQ](../../../examples/linux-kernel/small-labs/08-threaded-irq/README.md) | `lab_irq.ko` |
-| 9 | [Basic tracing](../../../examples/linux-kernel/small-labs/09-tracing/README.md) | `trace-demo.sh` |
+| 1 | Hello module (`01-hello`) | `hello.ko` |
+| 2 | Module parameters (`02-parameters`) | `lab_params.ko` |
+| 3 | Dummy character device (`03-char-device`) | `lab_char.ko` |
+| 4 | Software platform driver (`04-platform-driver`) | driver + device-helper modules |
+| 5 | Device Tree matching (`05-device-tree`) | module + overlay |
+| 6 | GPIO consumer (`06-gpio-consumer`) | module + overlay |
+| 7 | I2C client (`07-i2c-client`) | driver + client-helper modules |
+| 8 | Threaded virtual IRQ (`08-threaded-irq`) | `lab_irq.ko` |
+| 9 | Basic tracing (`09-tracing`) | `trace-demo.sh` |
 
 Labs 4 and 7 include helper modules because the driver needs a software device
 to bind to. Labs 5 and 6 include Device Tree overlays, but applying an overlay
