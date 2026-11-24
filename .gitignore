@@ -4,3 +4,13 @@ site/
 __pycache__/
 *.pyc
 examples/c/build/
+# Kernel module build output and trace captures
+examples/linux-kernel/**/*.ko
+examples/linux-kernel/**/*.o
+examples/linux-kernel/**/*.mod
+examples/linux-kernel/**/*.mod.c
+examples/linux-kernel/**/.*.cmd
+examples/linux-kernel/**/Module.symvers
+examples/linux-kernel/**/modules.order
+examples/linux-kernel/**/*.dtbo
+examples/linux-kernel/**/trace.dat
