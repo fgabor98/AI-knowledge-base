@@ -306,7 +306,8 @@ static void demo_debounce_fn(struct timer_list *t)
 But if the GPIO provider can sleep, use delayed work:
 
 ```c
-mod_delayed_work(system_wq, &priv->debounce_work, msecs_to_jiffies(20));
+mod_delayed_work(system_percpu_wq, &priv->debounce_work,
+                 msecs_to_jiffies(20));
 ```
 
 Then call `gpiod_get_value_cansleep()` from the work function.

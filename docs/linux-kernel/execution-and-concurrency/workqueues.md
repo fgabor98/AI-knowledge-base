@@ -259,8 +259,10 @@ The requeue check is not optional. Without it, teardown can cancel the currently
 `mod_delayed_work()` is useful when you want to start or update the delay for the same delayed work item.
 
 ```c
-mod_delayed_work(system_wq, &priv->poll_work, msecs_to_jiffies(100));
+mod_delayed_work(system_percpu_wq, &priv->poll_work, msecs_to_jiffies(100));
 ```
+
+Before 6.17 this queue is called `system_wq`. See [System Workqueues](concurrency-managed-workqueues.md#system-workqueues).
 
 Example: debounce a GPIO edge.
 
@@ -269,7 +271,7 @@ static irqreturn_t demo_gpio_irq(int irq, void *data)
 {
     struct demo_priv *priv = data;
 
-    mod_delayed_work(system_wq, &priv->debounce_work,
+    mod_delayed_work(system_percpu_wq, &priv->debounce_work,
                      msecs_to_jiffies(20));
     return IRQ_HANDLED;
 }
@@ -298,7 +300,7 @@ Most drivers start with system workqueues:
 ```c
 schedule_work(&priv->work);
 schedule_delayed_work(&priv->dwork, delay);
-queue_work(system_wq, &priv->work);
+queue_work(system_percpu_wq, &priv->work);
 ```
 
 This is appropriate for short, bounded work that does not need special ordering or forward-progress guarantees.

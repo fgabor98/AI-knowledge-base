@@ -310,7 +310,7 @@ static enum hrtimer_restart demo_reset_deadline(struct hrtimer *timer)
     struct demo_priv *priv =
         container_of(timer, struct demo_priv, reset_timer);
 
-    queue_work(system_wq, &priv->reset_work);
+    schedule_work(&priv->reset_work);
     return HRTIMER_NORESTART;
 }
 

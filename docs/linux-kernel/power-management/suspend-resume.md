@@ -288,7 +288,7 @@ static int demo_resume(struct device *dev)
     priv->suspended = false;
     mutex_unlock(&priv->lock);
 
-    queue_delayed_work(system_wq, &priv->poll_work, 0);
+    schedule_delayed_work(&priv->poll_work, 0);
 
     return 0;
 }
