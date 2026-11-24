@@ -1671,6 +1671,8 @@ Advanced system design:
   - RCU and SRCU
   - reader/writer spinlocks and sequence locks
   - bit operations
+  - kernel threads
+  - BH workqueues
 - kernel memory and I/O
   - kernel memory allocation
   - allocation flags

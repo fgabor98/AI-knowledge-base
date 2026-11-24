@@ -47,6 +47,7 @@ This chapter teaches the execution rules and synchronization primitives that kee
 10. [Wait Queues And Completions](wait-queues-and-completions.md)
 11. [Reference Counting And Lifetime](reference-counting-and-lifetime.md)
 12. [RCU](rcu.md)
+13. [Kernel Threads](kernel-threads.md)
 
 ## Mental Model
 

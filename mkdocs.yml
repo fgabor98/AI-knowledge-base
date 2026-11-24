@@ -872,6 +872,7 @@ nav:
           - Wait Queues And Completions: linux-kernel/execution-and-concurrency/wait-queues-and-completions.md
           - Reference Counting And Lifetime: linux-kernel/execution-and-concurrency/reference-counting-and-lifetime.md
           - RCU: linux-kernel/execution-and-concurrency/rcu.md
+          - Kernel Threads: linux-kernel/execution-and-concurrency/kernel-threads.md
       - Kernel Memory And I/O:
           - Overview: linux-kernel/memory-and-io/index.md
           - Kernel Memory Allocation: linux-kernel/memory-and-io/kernel-memory-allocation.md

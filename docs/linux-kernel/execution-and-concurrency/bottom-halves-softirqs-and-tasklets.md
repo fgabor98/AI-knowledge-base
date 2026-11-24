@@ -31,6 +31,7 @@ In modern driver work, the most common choices are threaded IRQs and workqueues.
 - hard IRQ
 - softirq
 - tasklet
+- BH workqueue
 - threaded IRQ
 - workqueue
 - atomic context
@@ -117,6 +118,34 @@ Properties:
 
 When maintaining old code, check whether the tasklet does anything sleepable or too long-running. If so, migrate it.
 
+## BH Workqueues
+
+Since 6.9 a workqueue can execute in softirq context. This is the intended replacement for tasklets whose work is short and must stay atomic:
+
+```c
+static void demo_bh_work(struct work_struct *work)
+{
+    struct demo_priv *priv = container_of(work, struct demo_priv, bh_work);
+
+    demo_drain_status(priv);    /* must not sleep */
+}
+
+INIT_WORK(&priv->bh_work, demo_bh_work);
+queue_work(system_bh_wq, &priv->bh_work);
+```
+
+| Tasklet | BH work |
+| --- | --- |
+| `tasklet_setup()` | `INIT_WORK()` |
+| `tasklet_schedule()` | `queue_work(system_bh_wq, ...)` |
+| `tasklet_hi_schedule()` | `queue_work(system_bh_highpri_wq, ...)` |
+| `tasklet_kill()` | `cancel_work_sync()` |
+| `tasklet_disable()` / `tasklet_enable()` | `disable_work_sync()` / `enable_and_queue_work()` |
+
+The work function obeys tasklet rules: it cannot sleep, and one work item never runs on two CPUs at once. A private queue is `alloc_workqueue(name, WQ_BH, 0)`; only `WQ_HIGHPRI` and, on newer kernels, `WQ_PERCPU` may be combined with `WQ_BH`.
+
+Lab 13 (`examples/linux-kernel/small-labs/13-deferred-contexts`) shows BH work, normal work, and a kthread side by side.
+
 ## Threaded IRQs As Modern Bottom Halves
 
 Threaded IRQs are often the cleanest bottom-half replacement for interrupt-driven devices:
@@ -157,7 +186,9 @@ Workqueues can sleep, but must be canceled or flushed during teardown.
 | Periodic sleepable polling | delayed work |
 | Precise atomic timeout callback | hrtimer |
 | Existing networking fast path | softirq/NAPI patterns |
-| Legacy atomic deferred callback | tasklet, but consider migration |
+| Short atomic follow-up, 6.9 and later | BH work |
+| Continuous loop with its own state | [kernel thread](kernel-threads.md) |
+| Legacy atomic deferred callback | tasklet, but migrate to BH work or a threaded IRQ |
 
 ## Teardown
 

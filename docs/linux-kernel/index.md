@@ -213,6 +213,7 @@ official overview
 - completions
 - lifetime and reference counting
 - RCU
+- kernel threads and BH workqueues
 
 ### Kernel Memory And I/O
 
