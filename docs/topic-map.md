@@ -1657,6 +1657,7 @@ Advanced system design:
   - polled input devices
   - IRQ-based input devices
   - PCI and PCIe device drivers
+  - USB device drivers
 - kernel execution and concurrency
   - interrupt context vs process context
   - sleepable vs atomic code

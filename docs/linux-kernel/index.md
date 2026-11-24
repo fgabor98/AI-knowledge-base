@@ -199,6 +199,7 @@ official overview
 - IRQ-based input devices
 - interrupt processing model
 - PCI and PCIe device drivers
+- USB device drivers
 
 ### Kernel Execution And Concurrency
 
