@@ -166,7 +166,7 @@ Platform driver registration:
 ```c
 static struct platform_driver demo_driver = {
     .probe = demo_probe,
-    .remove_new = demo_remove,
+    .remove = demo_remove,
     .driver = {
         .name = "demo",
         .pm = &demo_pm_ops,
@@ -174,6 +174,9 @@ static struct platform_driver demo_driver = {
     },
 };
 ```
+
+`.remove` returns `void` since 6.11. Kernels 6.3 to 6.12 also have a transitional
+`.remove_new` member with the same prototype; it was removed in 6.13.
 
 The actual callbacks may be provided through a subsystem macro or helper. Follow
 the subsystem's established pattern when one exists.
