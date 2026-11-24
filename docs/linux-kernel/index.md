@@ -26,6 +26,7 @@ For kernel build mechanics, start with the [Linux Kernel Build System](../build-
 10. [Power Management](power-management/index.md)
 11. [Remoteproc, RPMsg, And Heterogeneous SoCs](remoteproc-rpmsg/index.md)
 12. [Madieu Book Topic Coverage](book-coverage.md)
+13. [LKMPG Topic Coverage](lkmpg-coverage.md)
 
 ## Chapter Boundaries
 

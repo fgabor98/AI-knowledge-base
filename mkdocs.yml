@@ -930,6 +930,7 @@ nav:
           - Remote Core Logs And Crashes: linux-kernel/remoteproc-rpmsg/remote-core-logs-and-crashes.md
           - Device Tree Nodes For Remote Cores: linux-kernel/remoteproc-rpmsg/device-tree-nodes-for-remote-cores.md
       - Madieu Book Topic Coverage: linux-kernel/book-coverage.md
+      - LKMPG Topic Coverage: linux-kernel/lkmpg-coverage.md
   - Embedded Productization:
       - embedded-productization/index.md
   - Templates:
