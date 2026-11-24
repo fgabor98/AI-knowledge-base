@@ -27,6 +27,10 @@ This page defines a staged lab sequence. Each lab should produce observable evid
 - IRQ handling
 - threaded IRQ
 - tracing
+- ioctl ABI, blocking I/O, and poll
+- seq_file and debugfs
+- deferred contexts, kernel threads, and RCU
+- input, PCI, and network devices
 - known-good checkpoint
 
 ## Lab Rules
@@ -56,10 +60,26 @@ a known-good comparison.
 | 7 | I2C client (`07-i2c-client`) | driver + client-helper modules |
 | 8 | Threaded virtual IRQ (`08-threaded-irq`) | `lab_irq.ko` |
 | 9 | Basic tracing (`09-tracing`) | `trace-demo.sh` |
+| 10 | ioctl ABI (`10-ioctl`) | `lab_ioctl.ko` and `test_ioctl` |
+| 11 | Blocking I/O and poll (`11-poll`) | `lab_poll.ko` and `test_poll` |
+| 12 | seq_file and debugfs (`12-seq-file-debugfs`) | `lab_seq.ko` |
+| 13 | Deferred contexts (`13-deferred-contexts`) | `lab_defer.ko` |
+| 14 | RCU (`14-rcu`) | `lab_rcu.ko` |
+| 15 | Virtual input device (`15-virtual-input`) | `lab_input.ko` |
+| 16 | Exported symbols (`16-symbol-exports`) | provider + consumer modules |
+| 17 | kprobe events (`17-kprobe-events`) | `kprobe-demo.sh` |
+| 18 | PCI, MSI, and DMA (`18-pci-edu`) | `lab_edu.ko`, QEMU only |
+| 19 | Network device (`19-netdev`) | `lab_net.ko` |
+
+Labs 1 to 9 form the beginner sequence. Labs 10 to 19 are independent of each
+other and can be taken when the matching topic is studied; they cover the
+material that the Linux Kernel Module Programming Guide adds. Run them in the
+[QEMU lab](kernel-development-lab-setup.md#option-2-qemu-kernel-lab), where a
+kernel with KASAN and lockdep checks them.
 
 Labs 4 and 7 include helper modules because the driver needs a software device
 to bind to. Labs 5 and 6 include Device Tree overlays, but applying an overlay
-is target-specific. Lab 8 uses a timer-driven virtual IRQ so the hard-handler
+is target-specific. Lab 8 raises a virtual IRQ from hard interrupt context so the hard-handler
 and threaded-handler split can be observed without claiming a real hardware
 interrupt. Lab 9 traces Lab 8 and therefore does not add another module.
 
@@ -485,6 +505,126 @@ Common failures:
 - tracing too broadly
 - forgetting to disable tracing
 - missing debugfs/tracing filesystem mount
+
+## Lab 10: ioctl ABI
+
+Goal:
+
+- design a small command interface and prove its error behavior from userspace
+
+Concepts: misc device, `_IOR`/`_IOW`, fixed-width structures, reserved fields, `-ENOTTY`, `-EFAULT`, compat ioctl.
+
+Success evidence: every line of `test_ioctl` starts with `ok`.
+
+Theory: [Userspace Copy And ioctl ABI](../memory-and-io/userspace-copy-and-ioctl-abi.md).
+
+## Lab 11: Blocking I/O And poll
+
+Goal:
+
+- make a reader sleep until data exists, and support `O_NONBLOCK` and `poll()`
+
+Concepts: wait queue, recheck loop, `poll_wait()`, kfifo, delayed work as a producer, unload while a file is open.
+
+Success evidence: every line of `test_poll` starts with `ok`; `rmmod` is refused while a reader is open.
+
+Theory: [Wait Queues And Completions](../execution-and-concurrency/wait-queues-and-completions.md).
+
+## Lab 12: seq_file And debugfs
+
+Goal:
+
+- print a list of arbitrary length and add diagnostic controls
+
+Concepts: `seq_operations`, `DEFINE_SHOW_ATTRIBUTE`, typed debugfs helpers, removal order.
+
+Success evidence: `wc -l /proc/lab_seq` reports 5003 after adding 5000 items.
+
+Theory: [Procfs And seq_file](../fundamentals/procfs-and-seq-file.md), [Implementing Debugfs Interfaces](../debugging/implementing-debugfs-interfaces.md).
+
+## Lab 13: Deferred Contexts
+
+Goal:
+
+- show in which context a timer, BH work, normal work, and a kernel thread run
+
+Concepts: `in_task()`, softirq, `WQ_BH`, `kthread_should_stop()`, producer-first teardown.
+
+Success evidence: the context table in the lab README matches the log.
+
+Theory: [Bottom Halves, Softirqs, And Tasklets](../execution-and-concurrency/bottom-halves-softirqs-and-tasklets.md), [Kernel Threads](../execution-and-concurrency/kernel-threads.md).
+
+## Lab 14: RCU
+
+Goal:
+
+- compare publishing a new object with editing a live one
+
+Concepts: `rcu_dereference()`, `rcu_replace_pointer()`, `kfree_rcu()`, per-CPU counter, kernel threads.
+
+Success evidence: `torn=0` in RCU mode, a large count with `broken=1`.
+
+Theory: [RCU](../execution-and-concurrency/rcu.md).
+
+## Lab 15: Virtual Input Device
+
+Goal:
+
+- report key events from a driver without hardware
+
+Concepts: `input_dev` lifetime, `input_sync()`, `module_param_cb()`.
+
+Success evidence: `evtest` shows press and release for each request.
+
+Theory: [Input Subsystem](../driver-interfaces/input-subsystem.md), [parameter callbacks](../fundamentals/module-parameters-and-logging.md#parameter-callbacks).
+
+## Lab 16: Exported Symbols
+
+Goal:
+
+- build one module on top of another
+
+Concepts: `EXPORT_SYMBOL_NS_GPL()`, `MODULE_IMPORT_NS()`, modpost, module references.
+
+Success evidence: loading fails without the provider, and the provider cannot be removed while it is used.
+
+Theory: [Exported Symbols And Module Dependencies](../fundamentals/exported-symbols-and-module-dependencies.md).
+
+## Lab 17: kprobe Events
+
+Goal:
+
+- observe the arguments and the return value of Lab 3 without changing it
+
+Concepts: `kprobe_events`, fetch arguments, kretprobe, cleanup.
+
+Success evidence: entry and return events for both writes, including the short write.
+
+Theory: [Kprobes And Dynamic Probes](../debugging/kprobes-and-dynamic-probes.md).
+
+## Lab 18: PCI, MSI, And DMA
+
+Goal:
+
+- drive an enumerated device with registers, an interrupt, and DMA
+
+Concepts: ID table, BAR, MSI vector, completion, streaming DMA mapping, managed teardown order.
+
+Success evidence: `10! = 3628800` and `DMA round trip: ok`.
+
+Theory: [PCI And PCIe Device Drivers](../driver-interfaces/pci-drivers.md), [Single-Buffer DMA](../memory-and-io/single-buffer-dma.md).
+
+## Lab 19: Network Device
+
+Goal:
+
+- exchange packets between two virtual interfaces
+
+Concepts: `net_device_ops`, skb ownership, NAPI budget, statistics, RTNL.
+
+Success evidence: ping between the interfaces across a network namespace.
+
+Theory: [Network Device Drivers](../driver-interfaces/network-device-drivers.md).
 
 ## Lab Review Checklist
 
