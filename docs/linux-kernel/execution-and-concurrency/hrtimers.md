@@ -64,6 +64,14 @@ struct demo_priv {
 Initialize:
 
 ```c
+hrtimer_setup(&priv->sample_timer, demo_sample_timer_fn,
+              CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+```
+
+`hrtimer_setup()` exists since 6.13 and takes the callback as an argument. Kernels up to 6.14 also accept the older two-step form, which was removed in 6.15:
+
+```c
+/* before 6.13 */
 hrtimer_init(&priv->sample_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 priv->sample_timer.function = demo_sample_timer_fn;
 ```
@@ -222,7 +230,7 @@ Common APIs:
 
 | API | Use |
 | --- | --- |
-| `hrtimer_init()` | initialize timer |
+| `hrtimer_setup()` | initialize timer and set its callback |
 | `hrtimer_start()` | arm or rearm |
 | `hrtimer_cancel()` | cancel and wait for running callback |
 | `hrtimer_try_to_cancel()` | attempt cancellation without waiting if callback is running |
