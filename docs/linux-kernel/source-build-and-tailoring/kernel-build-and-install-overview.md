@@ -178,10 +178,7 @@ Do not switch compiler families casually for a product kernel. Compiler choice c
 
 | Target | Purpose |
 | --- | --- |
-| `defconfig` | Generate a baseline `.config`. |
-| `<board>_defconfig` | Generate a board/vendor baseline `.config`. |
-| `olddefconfig` | Refresh config using defaults for new options. |
-| `menuconfig` | Interactive config editor. |
+| `defconfig`, `<board>_defconfig`, `olddefconfig`, `menuconfig` | Configuration targets; see [Configuration Commands](kernel-configuration-and-tailoring.md#configuration-commands). |
 | `Image` | Common uncompressed Arm/Arm64 boot image. |
 | `zImage` | Common compressed 32-bit Arm boot image. |
 | `bzImage` | Common x86 boot image. |
@@ -197,26 +194,17 @@ Do not switch compiler families casually for a product kernel. Compiler choice c
 
 Use `clean` and `mrproper` carefully in a shared or valuable build directory. They remove generated state you may still need for debugging.
 
-## First Full Build Workflow
+## Finding Build Outputs
 
-A typical driver-development kernel build:
+After a cross build, print the release string and locate the outputs:
 
 ```sh
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor_board_defconfig
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- menuconfig
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) Image dtbs modules
 make O=build-arm64 ARCH=arm64 kernelrelease
-```
-
-Find outputs:
-
-```sh
 find build-arm64 -name Image -o -name '*.dtb' -o -name '*.ko'
 ls -l build-arm64/vmlinux build-arm64/System.map build-arm64/Module.symvers
 ```
 
-Expected artifact groups:
+Expected artifact groups (see [Artifact Groups](index.md#artifact-groups) for why they are kept separate):
 
 ```text
 boot:
@@ -307,22 +295,28 @@ Common layouts:
 /boot/extlinux/extlinux.conf
 ```
 
-A manual staging layout:
+A manual staging layout keeps files that go to the target apart from files that stay on the development machine for analysis:
+
+```text
+work/
+  linux/
+  build-arm64/
+  fragments/
+  deploy/
+    boot/       Image, board.dtb
+    rootfs/     lib/modules/<kernelrelease>/
+    debug/      vmlinux, System.map, .config, Module.symvers
+    logs/       build.log, install.log
+```
 
 ```sh
-mkdir -p deploy/boot deploy/rootfs deploy/debug
+mkdir -p deploy/boot deploy/rootfs deploy/debug deploy/logs
 cp build-arm64/arch/arm64/boot/Image deploy/boot/
 cp build-arm64/arch/arm64/boot/dts/vendor/example-board.dtb deploy/boot/
 cp build-arm64/vmlinux build-arm64/System.map build-arm64/.config build-arm64/Module.symvers deploy/debug/
 ```
 
-Then install modules:
-
-```sh
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-  INSTALL_MOD_PATH=$PWD/deploy/rootfs \
-  modules_install
-```
+Then run the `modules_install` command from the previous section with `INSTALL_MOD_PATH=$PWD/deploy/rootfs`.
 
 The exact copy destination may be:
 
@@ -364,64 +358,18 @@ find /proc/device-tree -maxdepth 3 -name compatible -print
 cat /proc/cmdline
 ```
 
-If a DTS edit does not affect runtime, check:
+If a DTS edit does not affect runtime, compare the checksum of the built DTB with the deployed one (`sha256sum`), then check:
 
-- Did you rebuild `dtbs`?
-- Did you copy the generated DTB?
-- Does the bootloader load that filename?
-- Does a FIT image contain another DTB?
+- Did you rebuild `dtbs`, and did you edit the DTS for the board that actually boots?
+- Is the node overridden later by an included `.dtsi`?
+- Did you copy the generated DTB, and does the bootloader load that filename?
+- Does a FIT image contain another DTB, or need regeneration?
 - Are overlays replacing or modifying the node?
-- Does U-Boot use a separate DTB workflow?
+- Does U-Boot use a separate DTB workflow or path?
 
 ## External Module Build
 
-External modules are built outside the kernel source tree but still use the kernel build system.
-
-Minimal module source:
-
-```c
-#include <linux/init.h>
-#include <linux/module.h>
-
-static int __init hello_init(void)
-{
-    pr_info("hello module loaded\n");
-    return 0;
-}
-
-static void __exit hello_exit(void)
-{
-    pr_info("hello module unloaded\n");
-}
-
-module_init(hello_init);
-module_exit(hello_exit);
-
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Minimal external module example");
-MODULE_AUTHOR("Example");
-```
-
-Minimal Makefile:
-
-```make
-obj-m += hello.o
-
-KDIR ?= /lib/modules/$(shell uname -r)/build
-
-all:
-	$(MAKE) -C $(KDIR) M=$(PWD) modules
-
-clean:
-	$(MAKE) -C $(KDIR) M=$(PWD) clean
-```
-
-Build for the host:
-
-```sh
-make
-modinfo hello.ko
-```
+External modules are built outside the kernel source tree but still use the kernel build system. The minimal `hello.c` source and its host-build Makefile are in [Kernel Module Lifecycle](../fundamentals/kernel-module-lifecycle.md#minimal-external-module); that Makefile defaults `KDIR` to the host's `/lib/modules/$(uname -r)/build`, which is wrong for an embedded target.
 
 Build for an embedded target using a prepared build tree:
 
@@ -444,21 +392,7 @@ make -C /path/to/build-arm64 \
   modules
 ```
 
-Verify:
-
-```sh
-modinfo hello.ko | grep -E 'filename|vermagic|depends|srcversion'
-make -C /path/to/linux-source O=/path/to/build-arm64 ARCH=arm64 kernelrelease
-```
-
-Before loading on target:
-
-```sh
-uname -r
-modinfo /tmp/hello.ko | grep vermagic
-```
-
-If the release strings do not match, stop and fix the build identity.
+Before loading the module on the target, run the [Module Compatibility Checks](#module-compatibility-checks) below. If the release strings do not match, stop and fix the build identity.
 
 ## External Module Install
 
@@ -480,82 +414,38 @@ Then update dependencies:
 depmod -b rootfs-staging <kernelrelease>
 ```
 
-On target, prefer `modprobe` for normal dependency handling:
-
-```sh
-modprobe hello
-```
-
-Use `insmod` for direct experiments:
-
-```sh
-insmod /tmp/hello.ko
-rmmod hello
-dmesg | tail -n 50
-```
-
-`insmod` does not resolve dependencies automatically. If a module depends on another module, `modprobe` is normally the better test.
+On the target, load it with `modprobe` (resolves dependencies through `depmod` metadata) or `insmod` (one exact file, no dependency handling); the difference is explained in [Kernel Module Lifecycle](../fundamentals/kernel-module-lifecycle.md#insmod-versus-modprobe).
 
 ## Module Compatibility Checks
 
-Check the running kernel:
+This section is the single place for diagnosing a module that does not match its kernel. Compare the running kernel, the module, and the build tree:
 
 ```sh
+# target
 uname -r
 cat /proc/version
-```
+dmesg | tail -n 50
 
-Check the module:
+# module
+modinfo ./my_driver.ko | grep -E 'vermagic|depends'
 
-```sh
-modinfo ./hello.ko
-modinfo ./hello.ko | grep vermagic
-```
-
-Check the build tree:
-
-```sh
+# build tree
 make O=build-arm64 ARCH=arm64 kernelrelease
 grep '^CONFIG_MODVERSIONS' build-arm64/.config
 test -f build-arm64/Module.symvers
 ```
 
-Common interpretations:
+Interpretations:
 
-| Evidence | Meaning |
+| Evidence | Likely Causes |
 | --- | --- |
-| `vermagic` release differs from `uname -r` | Built against a different kernel release. |
-| architecture differs | Built for the wrong target. |
-| `Unknown symbol` in `dmesg` | Missing dependency, missing export, or symbol version mismatch. |
+| `Invalid module format`; `vermagic` release differs from `uname -r` | Built against a different kernel release, or different preemption/SMP/module configuration. |
+| `Invalid module format`; architecture differs (`file my_driver.ko`) | Built for the wrong target, or the Makefile defaulted to host `/lib/modules`. |
+| `Invalid module format` with matching release | Module versioning (`CONFIG_MODVERSIONS`) or compiler/toolchain mismatch. |
+| `Unknown symbol` in `dmesg` | Dependency module not loaded, required feature built out, symbol not exported, wrong `Module.symvers`, or vendor kernel lacks a symbol present upstream. Check the `depends:` line from `modinfo` and search `build-arm64/Module.symvers` for the symbol. |
 | module path under wrong `/lib/modules/` directory | Installed to the wrong rootfs or kernel release. |
 | `modprobe` cannot find module | `modules_install` or `depmod` did not run for the target rootfs. |
 | module signing error | Kernel enforces signature policy and module is unsigned or signed by wrong key. |
-
-## Build Output Inspection
-
-Useful commands:
-
-```sh
-make O=build-arm64 ARCH=arm64 kernelrelease
-grep '^CONFIG_LOCALVERSION' build-arm64/.config
-find build-arm64 -name '*.ko' | sort
-find build-arm64 -name '*.dtb' | sort
-ls -lh build-arm64/vmlinux build-arm64/System.map build-arm64/Module.symvers
-```
-
-Inspect an object build command:
-
-```sh
-make O=build-arm64 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- V=1 drivers/i2c/busses/
-```
-
-Search for a missing module:
-
-```sh
-grep '^CONFIG_EXAMPLE_DRIVER' build-arm64/.config
-rg "CONFIG_EXAMPLE_DRIVER|example_driver" drivers
-find build-arm64 -name '*example*'
-```
 
 ## Runtime Verification After Boot
 
@@ -596,15 +486,11 @@ Runtime verification closes the loop. Without it, you only know that artifacts w
 
 ## Common Build And Install Scenarios
 
+For a Device Tree edit with no effect, see [Device Tree Build And Deploy Checks](#device-tree-build-and-deploy-checks). For `Invalid module format` and `Unknown symbol`, see [Module Compatibility Checks](#module-compatibility-checks).
+
 ### Scenario: Build Succeeds But Module Missing
 
-Checks:
-
-```sh
-grep '^CONFIG_MY_DRIVER' build-arm64/.config
-rg "MY_DRIVER|my_driver" drivers
-find build-arm64 -name '*my*driver*.ko'
-```
+Check the symbol in the final `.config` and search the right `O=` directory (`find build-arm64 -name '*my*driver*.ko'`). Tracing a driver from source to Kconfig symbol is covered in [Finding The Symbol For A Driver](kernel-configuration-and-tailoring.md#finding-the-symbol-for-a-driver).
 
 Likely explanations:
 
@@ -639,63 +525,6 @@ Likely explanations:
 - bootloader environment points to another filename
 - A/B update slot booted the previous slot
 
-### Scenario: Device Tree Edit Has No Effect
-
-Checks:
-
-```sh
-make O=build-arm64 ARCH=arm64 dtbs
-find build-arm64 -name '*board*.dtb'
-sha256sum build-arm64/arch/arm64/boot/dts/vendor/board.dtb
-tr -d '\0' < /proc/device-tree/model
-```
-
-Likely explanations:
-
-- old DTB deployed
-- wrong board DTB edited
-- included `.dtsi` overridden later
-- overlay changes runtime tree
-- U-Boot loads another DTB path
-- FIT image needs regeneration
-
-### Scenario: `Invalid module format`
-
-Checks:
-
-```sh
-uname -r
-modinfo ./my_driver.ko | grep vermagic
-dmesg | tail -n 50
-```
-
-Likely explanations:
-
-- wrong kernel release
-- wrong architecture
-- different preemption/SMP/module configuration
-- module versioning mismatch
-- compiler/toolchain mismatch
-- module signing enforcement
-
-### Scenario: `Unknown symbol`
-
-Checks:
-
-```sh
-dmesg | grep -i 'unknown symbol'
-modinfo ./my_driver.ko | grep depends
-grep 'symbol_name' build-arm64/Module.symvers
-```
-
-Likely explanations:
-
-- dependency module not loaded
-- required feature built out
-- symbol not exported
-- wrong `Module.symvers`
-- vendor kernel lacks a symbol present upstream
-
 ### Scenario: Build Uses Wrong Architecture
 
 Checks:
@@ -712,51 +541,9 @@ Likely explanations:
 - build framework set environment variables differently
 - external module Makefile defaulted to host `/lib/modules`
 
-## Staging Layout For Driver Development
-
-Use a predictable local layout:
-
-```text
-work/
-  linux/
-  build-arm64/
-  fragments/
-  deploy/
-    boot/
-      Image
-      board.dtb
-    rootfs/
-      lib/modules/<kernelrelease>/
-    debug/
-      vmlinux
-      System.map
-      .config
-      Module.symvers
-    logs/
-      build.log
-      install.log
-```
-
-This layout makes it clear which files go to the target and which files stay on the development machine for analysis.
-
 ## Release Artifacts To Keep
 
-For any kernel build used by other people, archived in CI, or tested meaningfully, keep:
-
-- kernel image actually deployed
-- DTB/DTBO or FIT image actually deployed
-- loadable modules
-- final `.config`
-- `Module.symvers`
-- `vmlinux`
-- `System.map`
-- build log
-- source commit and patch list
-- compiler version
-- artifact checksums
-- target runtime evidence if available
-
-Losing `vmlinux` or `System.map` makes later crash analysis much harder. Losing `Module.symvers` makes external module rebuilds less reliable.
+For any kernel build used by other people, archived in CI, or tested meaningfully, archive the files listed in the [Example Artifact Manifest](index.md#example-artifact-manifest), using the deployed artifacts (not just the build-tree copies), plus target runtime evidence if available.
 
 ## Common Mistakes
 

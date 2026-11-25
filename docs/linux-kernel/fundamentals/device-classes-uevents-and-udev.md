@@ -246,6 +246,44 @@ priv = dev_get_drvdata(dev);
 
 If you expose sysfs attributes on the class device, this links callbacks back to private state.
 
+## Static Classes And Class Attributes
+
+A class can be defined statically and registered with `class_register()`. That allows attributes on the class itself, for control files that belong to no single device, such as the `export` file of the old GPIO sysfs interface:
+
+```c
+static ssize_t export_store(const struct class *class,
+                            const struct class_attribute *attr,
+                            const char *buf, size_t count)
+{
+    unsigned int id;
+    int ret;
+
+    ret = kstrtouint(buf, 0, &id);
+    if (ret)
+        return ret;
+
+    ret = demo_create_instance(id);
+    return ret ? ret : count;
+}
+static CLASS_ATTR_WO(export);
+
+static struct attribute *demo_class_attrs[] = {
+    &class_attr_export.attr,
+    NULL
+};
+ATTRIBUTE_GROUPS(demo_class);
+
+static const struct class demo_class = {
+    .name = "demo",
+    .class_groups = demo_class_groups,
+    .dev_groups = demo_dev_groups,  /* attributes of every device */
+};
+
+ret = class_register(&demo_class);
+```
+
+`dev_groups` is the preferred way to give class devices their attributes: they exist before the `add` uevent, so udev rules can rely on them. The `const` qualifiers in the callback date from 6.4; older kernels use non-const pointers.
+
 ## Module Autoloading And Modalias
 
 Uevents can also trigger module loading through modaliases.

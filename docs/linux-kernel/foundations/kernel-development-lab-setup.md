@@ -68,17 +68,58 @@ Use it for:
 - crash and panic experiments
 - ARM or RISC-V architecture practice
 
-Example conceptual boot command:
+The repository contains a ready-made lab in `examples/linux-kernel/qemu-lab`. It builds a debug kernel with KASAN, lockdep, sleep-in-atomic checks, object debugging, and kmemleak, and boots it with a BusyBox shell from an initramfs. No disk image and no root privileges are needed.
+
+Install the tools once:
 
 ```bash
-qemu-system-x86_64 \
-  -kernel arch/x86/boot/bzImage \
-  -append "console=ttyS0 root=/dev/sda rw" \
-  -drive file=rootfs.img,format=raw \
-  -nographic
+sudo apt install build-essential flex bison bc libelf-dev libssl-dev cpio \
+    busybox-static qemu-system-x86
 ```
 
-The exact command depends on architecture and root filesystem layout.
+Download a kernel and build it outside its source tree:
+
+```bash
+cd ~/src
+curl -O https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.65.tar.xz
+tar xf linux-6.18.65.tar.xz
+LAB=~/work/AI-knowledge-base/examples/linux-kernel     # adjust
+$LAB/qemu-lab/build-kernel.sh linux-6.18.65 ~/src/kernel-lab
+```
+
+Build a lab against *that* kernel, then boot:
+
+```bash
+make -C $LAB/small-labs/01-hello KDIR=$HOME/src/kernel-lab
+$LAB/qemu-lab/boot.sh ~/src/kernel-lab
+```
+
+In the guest, `/mnt` is the host's `small-labs` directory, so modules rebuilt on the host are visible at once:
+
+```text
+insmod /mnt/01-hello/hello.ko
+dmesg | tail
+rmmod hello
+poweroff -f
+```
+
+Test programs run in the guest only if linked statically: `make TEST_CFLAGS=-static KDIR=...` for the labs that have one.
+
+Debug the guest with GDB from a second terminal. `boot.sh` starts the GDB server and disables KASLR:
+
+```bash
+gdb ~/src/kernel-lab/vmlinux -ex 'target remote :1234' -ex 'break do_init_module' -ex continue
+```
+
+After each experiment check for leaks and warnings:
+
+```text
+echo scan > /sys/kernel/debug/kmemleak; sleep 6; echo scan > /sys/kernel/debug/kmemleak
+cat /sys/kernel/debug/kmemleak
+dmesg | grep -E 'BUG|WARNING|KASAN|possible|leak'
+```
+
+LKMPG has a similar environment under `devtools/` (`setup.sh`, `build-modules.sh`, `boot.sh`, `test-modules.sh`), which is convenient for running the examples of that guide.
 
 ### Option 3: Spare Embedded Board
 

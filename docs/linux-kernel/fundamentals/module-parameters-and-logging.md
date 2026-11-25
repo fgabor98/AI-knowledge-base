@@ -170,6 +170,35 @@ mutex_unlock(&priv->lock);
 
 If changing the value safely is complex, make the parameter read-only.
 
+### Parameter Callbacks
+
+With `module_param_cb()` a write runs your function, at load time and through sysfs. The value can be validated before it is stored, and the driver can react to a change:
+
+```c
+static unsigned int timeout_ms = 1000;
+
+static int timeout_set(const char *val, const struct kernel_param *kp)
+{
+    return param_set_uint_minmax(val, kp, 10, 60000);
+}
+
+static const struct kernel_param_ops timeout_ops = {
+    .set = timeout_set,
+    .get = param_get_uint,
+};
+
+module_param_cb(timeout_ms, &timeout_ops, &timeout_ms, 0644);
+MODULE_PARM_DESC(timeout_ms, "Operation timeout in milliseconds (10..60000)");
+```
+
+`insmod demo.ko timeout_ms=5` now fails with `-EINVAL`, and so does the sysfs write. Remember:
+
+- At load time the callback runs *before* module init. State that init sets up does not exist yet.
+- At runtime the write is concurrent with the driver. `kernel_param_lock(THIS_MODULE)` protects readers of a string or a multi-word parameter; a single integer needs `READ_ONCE()`.
+- For built-in code the callback runs very early in boot, when allocation may not be possible.
+
+Lab 15 (`examples/linux-kernel/small-labs/15-virtual-input`) triggers an action from such a callback. A bounded, read-mostly knob is what parameters are for; per-device settings belong in sysfs.
+
 ## Parameters For Built-In Drivers
 
 Module parameters can also apply to built-in code. They are usually set on the kernel command line using:

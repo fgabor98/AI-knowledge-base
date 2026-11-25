@@ -26,6 +26,7 @@ For kernel build mechanics, start with the [Linux Kernel Build System](../build-
 10. [Power Management](power-management/index.md)
 11. [Remoteproc, RPMsg, And Heterogeneous SoCs](remoteproc-rpmsg/index.md)
 12. [Madieu Book Topic Coverage](book-coverage.md)
+13. [LKMPG Topic Coverage](lkmpg-coverage.md)
 
 ## Chapter Boundaries
 
@@ -169,6 +170,8 @@ official overview
 - module parameters
 - driver logging with `dev_*`
 - user-space hardware access vs kernel drivers
+- exported symbols and module dependencies
+- procfs and seq_file
 
 ### Common Driver Interfaces
 
@@ -196,6 +199,9 @@ official overview
 - polled input devices
 - IRQ-based input devices
 - interrupt processing model
+- PCI and PCIe device drivers
+- USB device drivers
+- network device drivers and NAPI
 
 ### Kernel Execution And Concurrency
 
@@ -212,6 +218,8 @@ official overview
 - wait queues
 - completions
 - lifetime and reference counting
+- RCU
+- kernel threads and BH workqueues
 
 ### Kernel Memory And I/O
 
@@ -249,6 +257,8 @@ official overview
 - perf overview
 - debugfs
 - sysfs inspection
+- implementing debugfs interfaces
+- kprobes and dynamic probes
 - kgdb basics
 - crash and panic logs
 - watchdog reset diagnosis

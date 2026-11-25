@@ -266,6 +266,38 @@ The failure path mirrors the successful registrations. This pattern appears ever
 
 Where possible in real device drivers, use `devm_*` helpers so per-device resources are tied to the device lifecycle. Module-global registrations still often require explicit cleanup.
 
+## Register Last, Unregister First
+
+A registered interface can be used *before* init returns. The moment `cdev_add()`, `misc_register()`, `proc_create()`, `request_irq()`, or `device_create_file()` succeeds, another CPU may call into the module.
+
+Wrong:
+
+```c
+ret = misc_register(&demo_misc);    /* open() may run now */
+if (ret)
+    return ret;
+mutex_init(&demo_lock);             /* too late */
+demo_buf = kzalloc(DEMO_SIZE, GFP_KERNEL);
+```
+
+Right:
+
+```c
+mutex_init(&demo_lock);
+demo_buf = kzalloc(DEMO_SIZE, GFP_KERNEL);
+if (!demo_buf)
+    return -ENOMEM;
+
+ret = misc_register(&demo_misc);    /* last step */
+if (ret)
+    kfree(demo_buf);
+return ret;
+```
+
+The same reasoning gives the exit order: unregister the interface first, so that no new caller can enter, then stop asynchronous work, then free the data.
+
+If a step after the registration fails, the error path must unregister and wait like the exit path does, because a caller may already be inside. Keeping registration last avoids that case. For the same reason, do not create sysfs files after the device is announced; pass them as [attribute groups](kobjects-and-sysfs-groups.md#attribute-groups) so that they exist before the uevent.
+
 ## `__init` And `__exit`
 
 The annotations:
@@ -350,37 +382,35 @@ Always read `dmesg` after a load failure:
 dmesg | tail -n 80
 ```
 
-The user-facing error often hides the exact kernel reason.
+The user-facing error often hides the exact kernel reason. The first two rows are build-identity problems, not lifecycle bugs; diagnose them with [Module Compatibility Checks](../source-build-and-tailoring/kernel-build-and-install-overview.md#module-compatibility-checks).
 
-## External Module Compatibility
+The Makefile above builds against the host kernel. For an embedded target, build against the target's prepared build tree as shown in [External Module Build](../source-build-and-tailoring/kernel-build-and-install-overview.md#external-module-build).
 
-Check the running kernel:
+## Supporting Several Kernel Versions
 
-```sh
-uname -r
-cat /proc/version
+Kernel-internal APIs change in every release. An out-of-tree module that must build for several kernels uses the version macros:
+
+```c
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
+    cls = class_create("demo");
+#else
+    cls = class_create(THIS_MODULE, "demo");
+#endif
 ```
 
-Check the module:
+Keep this manageable:
+
+- Put the differences into one `compat.h` with wrapper macros or inline functions written in the style of the *newest* API, so that old branches can simply be deleted later.
+- A version number describes mainline. Vendor and distribution kernels backport changes, so a 5.14 enterprise kernel may have a 6.x API. Where a feature macro or Kconfig symbol exists, test that instead.
+- Record the versions you build and test. Untested branches do not work.
+- Code intended for mainline has no version checks at all.
+
+Useful when a symbol disappeared:
 
 ```sh
-modinfo hello.ko | grep vermagic
-```
-
-Check the build tree:
-
-```sh
-make -C /lib/modules/$(uname -r)/build kernelrelease
-```
-
-For embedded targets, do not accidentally build against host headers:
-
-```sh
-make -C /path/to/linux-source \
-  O=/path/to/build-arm64 \
-  ARCH=arm64 \
-  CROSS_COMPILE=aarch64-linux-gnu- \
-  M=$PWD modules
+git log --oneline -S'del_timer_sync' -- include/linux/timer.h
 ```
 
 ## Practice Exercises
@@ -456,6 +486,7 @@ This teaches why matching source/build/runtime identity matters.
 - [Module Parameters And Driver Logging](module-parameters-and-logging.md)
 - [Built-In Drivers Vs Loadable Modules](built-in-vs-loadable-modules.md)
 - [Driver Binding, Probe, And Remove](driver-binding-probe-remove.md)
+- [Exported Symbols And Module Dependencies](exported-symbols-and-module-dependencies.md)
 
 ## Official References
 

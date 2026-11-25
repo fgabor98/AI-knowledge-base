@@ -832,6 +832,8 @@ nav:
           - Pollable Sysfs Attributes: linux-kernel/fundamentals/pollable-sysfs-attributes.md
           - Module Parameters And Driver Logging: linux-kernel/fundamentals/module-parameters-and-logging.md
           - User-Space Hardware Access Vs Kernel Drivers: linux-kernel/fundamentals/userspace-hardware-access-vs-kernel-drivers.md
+          - Exported Symbols And Module Dependencies: linux-kernel/fundamentals/exported-symbols-and-module-dependencies.md
+          - Procfs And seq_file: linux-kernel/fundamentals/procfs-and-seq-file.md
       - Common Driver Interfaces:
           - Overview: linux-kernel/driver-interfaces/index.md
           - GPIO Consumer API: linux-kernel/driver-interfaces/gpio-consumer-api.md
@@ -858,6 +860,9 @@ nav:
           - Input Subsystem: linux-kernel/driver-interfaces/input-subsystem.md
           - Polled Input Devices: linux-kernel/driver-interfaces/polled-input-devices.md
           - IRQ-Based Input Devices: linux-kernel/driver-interfaces/irq-based-input-devices.md
+          - PCI And PCIe Device Drivers: linux-kernel/driver-interfaces/pci-drivers.md
+          - USB Device Drivers: linux-kernel/driver-interfaces/usb-drivers.md
+          - Network Device Drivers: linux-kernel/driver-interfaces/network-device-drivers.md
       - Kernel Execution And Concurrency:
           - Overview: linux-kernel/execution-and-concurrency/index.md
           - Context Rules: linux-kernel/execution-and-concurrency/context-rules.md
@@ -871,6 +876,8 @@ nav:
           - Timekeeping And Kernel Timers: linux-kernel/execution-and-concurrency/timekeeping-and-kernel-timers.md
           - Wait Queues And Completions: linux-kernel/execution-and-concurrency/wait-queues-and-completions.md
           - Reference Counting And Lifetime: linux-kernel/execution-and-concurrency/reference-counting-and-lifetime.md
+          - RCU: linux-kernel/execution-and-concurrency/rcu.md
+          - Kernel Threads: linux-kernel/execution-and-concurrency/kernel-threads.md
       - Kernel Memory And I/O:
           - Overview: linux-kernel/memory-and-io/index.md
           - Kernel Memory Allocation: linux-kernel/memory-and-io/kernel-memory-allocation.md
@@ -901,6 +908,8 @@ nav:
           - Oops, Panic, And Crash Logs: linux-kernel/debugging/oops-panic-crash-logs.md
           - Watchdog Reset Diagnosis: linux-kernel/debugging/watchdog-reset-diagnosis.md
           - Probe Failure Debugging: linux-kernel/debugging/probe-failure-debugging.md
+          - Implementing Debugfs Interfaces: linux-kernel/debugging/implementing-debugfs-interfaces.md
+          - Kprobes And Dynamic Probes: linux-kernel/debugging/kprobes-and-dynamic-probes.md
       - Power Management:
           - Overview: linux-kernel/power-management/index.md
           - Runtime PM: linux-kernel/power-management/runtime-pm.md
@@ -921,6 +930,7 @@ nav:
           - Remote Core Logs And Crashes: linux-kernel/remoteproc-rpmsg/remote-core-logs-and-crashes.md
           - Device Tree Nodes For Remote Cores: linux-kernel/remoteproc-rpmsg/device-tree-nodes-for-remote-cores.md
       - Madieu Book Topic Coverage: linux-kernel/book-coverage.md
+      - LKMPG Topic Coverage: linux-kernel/lkmpg-coverage.md
   - Embedded Productization:
       - embedded-productization/index.md
   - Templates:

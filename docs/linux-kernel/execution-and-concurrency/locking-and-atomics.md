@@ -33,7 +33,8 @@ If two callbacks can access the same state at the same time, the driver needs a 
 
 - mutex
 - spinlock
-- rwsem
+- rwsem, `rwlock_t`, seqlock
+- trylock
 - atomic variables
 - memory ordering overview
 - lock ordering
@@ -284,6 +285,62 @@ Do not use `rw_semaphore` in hard IRQ or timer callbacks.
 
 For many drivers, a mutex is simpler and good enough. Use reader/writer locking only when it solves a measured or structurally clear problem.
 
+## Reader/Writer Spinlocks
+
+`rwlock_t` is the spinning counterpart of an rwsem: many concurrent readers or one writer, usable in atomic context.
+
+```c
+unsigned long flags;
+
+read_lock(&priv->table_lock);
+entry = demo_lookup(priv, key);
+read_unlock(&priv->table_lock);
+
+write_lock_irqsave(&priv->table_lock, flags);
+demo_insert(priv, entry);
+write_unlock_irqrestore(&priv->table_lock, flags);
+```
+
+You must be able to read this code, but rarely need to write it. Every reader still writes to the lock's cache line, so short sections scale no better than a spinlock, and a stream of readers can delay a writer. If readers are hot, use [RCU](rcu.md); otherwise use a spinlock.
+
+If an interrupt handler only reads, process-context readers may use plain `read_lock()`, but writers must disable interrupts.
+
+## Sequence Locks
+
+A seqlock suits a few plain values that are read often and where the writer must never wait, such as a timestamp pair updated by an interrupt. Readers take no lock; they detect a concurrent update and retry.
+
+```c
+seqlock_t lock;         /* seqlock_init(&priv->lock) */
+
+/* writer: excludes other writers */
+write_seqlock_irqsave(&priv->lock, flags);
+priv->hw_time = hw_time;
+priv->sys_time = sys_time;
+write_sequnlock_irqrestore(&priv->lock, flags);
+
+/* reader */
+unsigned int seq;
+
+do {
+    seq = read_seqbegin(&priv->lock);
+    hw_time = priv->hw_time;
+    sys_time = priv->sys_time;
+} while (read_seqretry(&priv->lock, seq));
+```
+
+Inside the loop a reader may see inconsistent values. It must only copy them: no pointer dereference, no side effects. If the writer already holds a lock, use `seqcount_spinlock_t` associated with that lock instead of a second one.
+
+## Trylock
+
+`mutex_trylock()` and `spin_trylock()` return nonzero on success and never wait. Use them when skipping the work is correct, for example a statistics update that the next call will do anyway:
+
+```c
+if (!mutex_trylock(&priv->lock))
+    return;
+```
+
+`mutex_trylock()` follows the *opposite* return convention of `mutex_lock_interruptible()`, which returns 0 on success. It is still a mutex operation: do not call it from interrupt context. Retrying in a loop until it succeeds is a hidden lock-order problem, not a solution.
+
 ## Atomics
 
 Atomic variables are for operations that are truly atomic enough by themselves.
@@ -314,6 +371,25 @@ if (atomic_read(&priv->available) > 0) {
 ```
 
 The check and the buffer use are a compound invariant. Another CPU can change the state between operations. Use a lock or a proper atomic compare/exchange pattern and protect the associated data.
+
+### Bit Operations
+
+Flags in an `unsigned long` can be updated atomically without affecting their neighbors:
+
+```c
+enum { DEMO_BUSY, DEMO_GONE };
+
+unsigned long state;
+
+if (test_and_set_bit(DEMO_BUSY, &priv->state))
+    return -EBUSY;
+/* exclusive work */
+clear_bit_unlock(DEMO_BUSY, &priv->state);
+```
+
+The argument is a bit *number*, not a mask, and the type must be `unsigned long`. `__set_bit()` and other double-underscore forms are not atomic. `test_and_set_bit()` is fully ordered, but plain `clear_bit()` implies no ordering, hence `clear_bit_unlock()` when the bit protects data.
+
+A claimed bit makes the *second* user fail instead of wait. That suits an exclusive `open()`. To wait, use a mutex.
 
 ## `atomic_t` Is Not A Lock
 
@@ -620,6 +696,7 @@ Replace reference counts with `refcount_t` or `kref`.
 
 ## Related Topics
 
+- [RCU](rcu.md)
 - [Context Rules](context-rules.md)
 - [Wait Queues And Completions](wait-queues-and-completions.md)
 - [Kernel Debugging Basics](../debugging/index.md)
@@ -628,5 +705,7 @@ Replace reference counts with `refcount_t` or `kref`.
 ## Official References
 
 - [Unreliable Guide To Locking](https://docs.kernel.org/kernel-hacking/locking.html)
+- [Sequence counters and sequential locks](https://docs.kernel.org/locking/seqlock.html)
+- [Lock types and their rules](https://docs.kernel.org/locking/locktypes.html)
 - [refcount_t API compared to atomic_t](https://docs.kernel.org/core-api/refcount-vs-atomic.html)
 - [Linux generic IRQ handling](https://docs.kernel.org/core-api/genericirq.html)

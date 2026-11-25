@@ -97,10 +97,10 @@ Common system queues include:
 
 | Queue | Typical Use |
 | --- | --- |
-| `system_wq` | general short work |
+| `system_percpu_wq` | general short work; the queue behind `schedule_work()` |
 | `system_highpri_wq` | high-priority short work |
 | `system_long_wq` | longer-running work that should not block normal short work |
-| `system_unbound_wq` | work that should not be CPU-local |
+| `system_dfl_wq` | unbound work that should not be CPU-local |
 | `system_freezable_wq` | work that participates in suspend freezer behavior |
 | `system_power_efficient_wq` | work where power-efficient placement is preferred |
 
@@ -113,8 +113,12 @@ schedule_work(&priv->work);
 or:
 
 ```c
-queue_work(system_wq, &priv->work);
+queue_work(system_percpu_wq, &priv->work);
 ```
+
+`system_percpu_wq` and `system_dfl_wq` are the names since 6.17. Earlier kernels call the same queues `system_wq` and `system_unbound_wq`; the old names still compile for now but are marked for removal. `schedule_work()` and `schedule_delayed_work()` need no queue name, so they are the portable choice.
+
+The same change added the `WQ_PERCPU` flag. `alloc_workqueue()` has always defaulted to per-CPU when `WQ_UNBOUND` was absent; new code should state the choice by passing either `WQ_PERCPU` or `WQ_UNBOUND`. The examples below omit it so they also build on kernels before 6.17.
 
 Use a named system queue only when its policy matches the driver requirement. For example, use `system_long_wq` for bounded but longer work, not for arbitrary unbounded blocking.
 
@@ -341,7 +345,7 @@ cancel_work_sync(&priv->rx_work);
 destroy_workqueue(priv->wq);
 ```
 
-Use `timer_delete_sync()` or the older `del_timer_sync()` style only when your target kernel uses that API and you have separately prevented rearming. For final teardown in modern kernels, `timer_shutdown_sync()` is designed to prevent rearming.
+`timer_shutdown_sync()` is the final-teardown call because it also prevents rearming. Use `timer_delete_sync()` only when the timer may legitimately be armed again, or when rearming has been prevented separately. See [Timer API Names By Kernel Version](timers.md#timer-api-names-by-kernel-version) for the older names.
 
 ## Deadlock Patterns
 

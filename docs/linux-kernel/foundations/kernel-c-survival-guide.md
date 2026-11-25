@@ -35,6 +35,7 @@ This page teaches the patterns you need to recognize before reading or writing d
 - no floating point in normal kernel code
 - `const` data tables
 - compile-time helpers
+- branch hints and static keys
 
 ## Kernel C Is Not Userspace C
 
@@ -703,6 +704,29 @@ Reasons:
 - the table is not modified at runtime
 - the compiler can place it in read-only data
 - the intent is clear to readers
+
+## Branch Hints And Static Keys
+
+Recognize these in core code. Ordinary drivers rarely need them.
+
+```c
+if (unlikely(status & DEMO_FATAL))
+    return demo_handle_fatal(priv);
+```
+
+`likely()` and `unlikely()` tell the compiler which path to lay out as the straight line. They do not change behavior. Use them only on a measured hot path; a wrong hint makes code slower.
+
+```c
+static DEFINE_STATIC_KEY_FALSE(demo_trace_key);
+
+if (static_branch_unlikely(&demo_trace_key))
+    demo_trace(priv);
+
+static_branch_enable(&demo_trace_key);      /* slow, may sleep */
+```
+
+A static key removes even the test: the branch is a no-op instruction that is patched at runtime when the key is switched. Tracepoints and dynamic debug use this, which is why disabled ones cost almost nothing. Switching is expensive and must happen in process context.
+
 
 ## A Minimal Pattern Recognition Example
 

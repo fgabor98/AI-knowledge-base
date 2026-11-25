@@ -60,6 +60,8 @@ This track teaches that bridge. It focuses on concepts that appear in almost eve
 13. [Pollable Sysfs Attributes](pollable-sysfs-attributes.md)
 14. [Module Parameters And Driver Logging](module-parameters-and-logging.md)
 15. [User-Space Hardware Access Vs Kernel Drivers](userspace-hardware-access-vs-kernel-drivers.md)
+16. [Exported Symbols And Module Dependencies](exported-symbols-and-module-dependencies.md)
+17. [Procfs And seq_file](procfs-and-seq-file.md)
 
 ## Mental Model
 

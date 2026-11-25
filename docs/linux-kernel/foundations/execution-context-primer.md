@@ -236,7 +236,7 @@ Example:
 ```c
 static void demo_timer_fn(struct timer_list *t)
 {
-        struct demo_dev *demo = from_timer(demo, t, timer);
+        struct demo_dev *demo = timer_container_of(demo, t, timer);
 
         demo->expired = true;
         schedule_work(&demo->work);
@@ -248,7 +248,7 @@ Do not call sleepable APIs directly from timer callbacks. Defer to workqueue whe
 Teardown:
 
 ```c
-del_timer_sync(&demo->timer);
+timer_shutdown_sync(&demo->timer);
 cancel_work_sync(&demo->work);
 ```
 
@@ -425,7 +425,7 @@ Update-side code uses different rules and must wait for readers before freeing r
 
 Beginner rule:
 
-- recognize RCU when reading kernel internals
+- recognize RCU when reading kernel internals; [RCU](../execution-and-concurrency/rcu.md) explains it fully
 - do not introduce RCU into a simple driver until mutexes, spinlocks, and lifetime rules are clearly insufficient
 - never free RCU-protected data with ordinary `kfree` immediately after publishing a replacement
 

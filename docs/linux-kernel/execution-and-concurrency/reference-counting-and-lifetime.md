@@ -329,7 +329,7 @@ static bool demo_queue_work(struct demo_priv *priv)
     if (!kref_get_unless_zero(&priv->ref))
         return false;
 
-    if (!queue_work(system_wq, &priv->work)) {
+    if (!schedule_work(&priv->work)) {
         demo_put(priv);
         return false;
     }

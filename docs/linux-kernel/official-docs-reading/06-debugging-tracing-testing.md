@@ -22,6 +22,7 @@ Knowledge-guide companion: [Stage 6](knowledge-guide-companion.md#stage-6-debugg
 - [ ] **P0** [Dynamic debug HOWTO](https://docs.kernel.org/admin-guide/dynamic-debug-howto.html)
 - [ ] **P0** [DebugFS](https://docs.kernel.org/filesystems/debugfs.html)
 - [ ] **P0** [Sysfs](https://docs.kernel.org/filesystems/sysfs.html)
+- [ ] **P1** [The seq_file interface](https://docs.kernel.org/filesystems/seq_file.html)
 - [ ] **P0** [Magic SysRq](https://docs.kernel.org/admin-guide/sysrq.html)
 - [ ] **P1** [KGDB and KDB](https://docs.kernel.org/dev-tools/kgdb.html)
 - [ ] **P1** [Ramoops persistent logs](https://docs.kernel.org/admin-guide/ramoops.html)
@@ -40,6 +41,8 @@ Knowledge-guide companion: [Stage 6](knowledge-guide-companion.md#stage-6-debugg
 - [ ] **P1** [Boot-time tracing](https://docs.kernel.org/trace/boottime-trace.html)
 - [ ] **P1** Read the `trace-cmd` man pages supplied with the exact userspace tool version used in the lab.
 - [ ] **P1** [Kernel probes](https://docs.kernel.org/trace/kprobes.html)
+- [ ] **P2** [Fprobe-based event tracing](https://docs.kernel.org/trace/fprobetrace.html)
+- [ ] **P2** [Static keys](https://docs.kernel.org/staging/static-keys.html)
 
 ## Sanitizers And Dynamic Checkers
 

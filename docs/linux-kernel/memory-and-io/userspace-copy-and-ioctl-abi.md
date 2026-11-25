@@ -24,6 +24,7 @@ Userspace pointers are untrusted. They may be invalid, unmapped, changed by anot
 - `ioctl`
 - fixed-width types
 - ABI versioning
+- exception table, SMAP, PAN
 - compatibility
 
 ## Mental Model
@@ -186,6 +187,31 @@ if (copy_to_user(buf, &status, sizeof(status)))
 ```
 
 Snapshot under the atomic lock, then copy outside it.
+
+## Why The Helpers Work
+
+A direct dereference of a userspace pointer is wrong even when the address is valid:
+
+- **Hardware blocks it.** SMAP on x86 and PAN on arm64 make kernel accesses to user pages fault. The helpers open and close that window around their own instructions.
+- **Faults are recoverable only there.** Each access instruction in a helper is listed in the kernel's exception table together with a fixup address. If the page cannot be supplied, execution continues at the fixup and the helper reports the bytes not copied. The same fault in ordinary code is an oops.
+- **The range is checked.** `access_ok()` rejects pointers into the kernel half. A `__copy_from_user()` without that check is an arbitrary kernel read.
+
+A fault may also bring in a page from storage, which is why the helpers can sleep.
+
+## Partial Copies
+
+The return value is the number of bytes **not** copied. For a fixed-size structure any nonzero value is `-EFAULT`. For a stream, report progress if there was any:
+
+```c
+left = copy_to_user(buf, data, len);
+if (left == len)
+    return -EFAULT;
+
+*ppos += len - left;
+return len - left;
+```
+
+Do not consume data that could not be delivered: advance the FIFO or position only by what was copied.
 
 ## Avoid TOCTOU With Userspace Data
 

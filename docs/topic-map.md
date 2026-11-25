@@ -1624,6 +1624,11 @@ Advanced system design:
   - module parameters
   - driver logging with `dev_*`
   - user-space hardware access vs kernel drivers
+  - exported symbols and symbol namespaces
+  - module loading races
+  - supporting several kernel versions
+  - procfs
+  - seq_file
 - common driver interfaces
   - GPIO consumer API
   - GPIO controller drivers
@@ -1651,6 +1656,9 @@ Advanced system design:
   - input subsystem
   - polled input devices
   - IRQ-based input devices
+  - PCI and PCIe device drivers
+  - USB device drivers
+  - network device drivers and NAPI
 - kernel execution and concurrency
   - interrupt context vs process context
   - sleepable vs atomic code
@@ -1668,6 +1676,11 @@ Advanced system design:
   - wait queues
   - completions
   - lifetime and reference counting
+  - RCU and SRCU
+  - reader/writer spinlocks and sequence locks
+  - bit operations
+  - kernel threads
+  - BH workqueues
 - kernel memory and I/O
   - kernel memory allocation
   - allocation flags
@@ -1705,6 +1718,8 @@ Advanced system design:
   - oops, panic, and crash logs
   - watchdog reset diagnosis
   - probe failure debugging
+  - implementing debugfs interfaces
+  - kprobes and kprobe events
 - power management
   - runtime PM
   - suspend and resume
