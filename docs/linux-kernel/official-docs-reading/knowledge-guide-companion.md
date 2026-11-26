@@ -326,8 +326,8 @@ Open questions:
 
 #### 2–3. Headers And Examples
 
-- [ ] 2 Kernel headers
-- [ ] 3 Examples
+- [x] 2 Kernel headers
+- [x] 3 Examples
 
 #### 4. Hello World
 
