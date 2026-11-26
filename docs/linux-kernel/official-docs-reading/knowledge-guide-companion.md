@@ -316,13 +316,13 @@ Open questions:
 
 #### 1. Introduction
 
-- [ ] 1.1–1.2 Authorship and acknowledgements *(optional)*
-- [ ] 1.3 What is a kernel module?
-- [ ] 1.4 Kernel module package
-- [ ] 1.5 What modules are in my kernel?
-- [ ] 1.6 Is there a need to download and compile the kernel?
-- [ ] 1.7 Before we begin
-- [ ] 1.8 QEMU-based development environment
+- [x] 1.1–1.2 Authorship and acknowledgements *(optional)*
+- [x] 1.3 What is a kernel module?
+- [x] 1.4 Kernel module package
+- [x] 1.5 What modules are in my kernel?
+- [x] 1.6 Is there a need to download and compile the kernel?
+- [x] 1.7 Before we begin
+- [x] 1.8 QEMU-based development environment
 
 #### 2–3. Headers And Examples
 
